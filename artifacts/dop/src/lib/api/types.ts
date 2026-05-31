@@ -32,6 +32,7 @@ export interface ExecFile {
   linesAdded: number;
   linesRemoved: number;
   diff: string;          // unified diff content
+  error?: string;        // present when this file's change failed
 }
 export interface ExecTask {
   id: string;

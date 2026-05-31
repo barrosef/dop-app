@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Progress } from './ui/progress';
-import { ExecData, ExecFile, ExecTask, StageStatus } from '../lib/api/types';
+import { ExecData, ExecFile, StageStatus } from '../lib/api/types';
 import {
-  CheckCircle2, Circle, Loader2, GitBranch,
+  CheckCircle2, Clock, Loader2, GitBranch, AlertCircle,
   ChevronDown, ChevronRight, Zap, FileCode
 } from 'lucide-react';
 
 interface Props { execData: ExecData; stageStatus: StageStatus; }
 
-type FileStatus = 'pending' | 'active' | 'done';
+type FileStatus = 'pending' | 'active' | 'done' | 'fail';
 
 function fk(f: ExecFile) { return `${f.repo}::${f.path}`; }
 
@@ -59,7 +59,7 @@ export function ExecStageView({ execData, stageStatus }: Props) {
   }, [execData]);
 
   const [statuses, setStatuses] = useState<Record<string, FileStatus>>(() => {
-    if (isDone) return Object.fromEntries(execData.files.map(f => [fk(f), 'done' as FileStatus]));
+    if (isDone) return Object.fromEntries(execData.files.map(f => [fk(f), (f.error ? 'fail' : 'done') as FileStatus]));
     const s: Record<string, FileStatus> = {};
     for (const files of Object.values(filesByRepo))
       files.forEach((f, i) => { s[fk(f)] = i === 0 ? 'active' : 'pending'; });
@@ -81,9 +81,14 @@ export function ExecStageView({ execData, stageStatus }: Props) {
           anyRunning = true;
           const k = fk(files[idx]);
           if (prev[k] === 'active') {
-            next[k] = 'done';
-            repoIdxRef.current[repo] = idx + 1;
-            if (idx + 1 < files.length) next[fk(files[idx + 1])] = 'active';
+            if (files[idx].error) {
+              next[k] = 'fail';
+              repoIdxRef.current[repo] = files.length; // a failure halts this repo
+            } else {
+              next[k] = 'done';
+              repoIdxRef.current[repo] = idx + 1;
+              if (idx + 1 < files.length) next[fk(files[idx + 1])] = 'active';
+            }
           }
         }
         if (!anyRunning) clearInterval(tick);
@@ -103,18 +108,6 @@ export function ExecStageView({ execData, stageStatus }: Props) {
   const numRepos    = Object.keys(filesByRepo).length;
   const isParallel  = execData.tasks.some((t, _, arr) =>
     arr.some(t2 => t2.id !== t.id && t2.parallelGroup === t.parallelGroup));
-
-  // Group tasks by parallel group for timeline display
-  const taskGroups = useMemo(() => {
-    const groups: Record<number, ExecTask[]> = {};
-    for (const t of execData.tasks) {
-      if (!groups[t.parallelGroup]) groups[t.parallelGroup] = [];
-      groups[t.parallelGroup].push(t);
-    }
-    return Object.entries(groups)
-      .sort(([a], [b]) => Number(a) - Number(b))
-      .map(([g, tasks]) => ({ group: Number(g), tasks }));
-  }, [execData.tasks]);
 
   return (
     <div className="space-y-4">
@@ -138,45 +131,6 @@ export function ExecStageView({ execData, stageStatus }: Props) {
         </div>
       </div>
 
-      {/* ── Task timeline ── */}
-      <div className="overflow-x-auto">
-        <div className="flex items-start gap-1 min-w-max">
-          {taskGroups.map(({ group, tasks }, gi) => (
-            <React.Fragment key={group}>
-              {gi > 0 && (
-                <div className="flex items-center self-stretch py-1">
-                  <div className="w-3 h-px bg-border/60 self-center" />
-                  <span className="text-[9px] text-muted-foreground/50 mx-0.5 self-center">▶</span>
-                  <div className="w-3 h-px bg-border/60 self-center" />
-                </div>
-              )}
-              <div className={`flex flex-col gap-1 ${tasks.length > 1 ? 'border border-primary/20 rounded-md p-1 bg-primary/5' : ''}`}>
-                {tasks.length > 1 && (
-                  <div className="flex items-center gap-1 px-1 pb-0.5">
-                    <Zap className="w-2.5 h-2.5 text-primary/60" />
-                    <span className="text-[9px] text-primary/60 font-medium">paralelo</span>
-                  </div>
-                )}
-                {tasks.map(t => (
-                  <div key={t.id} className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] border whitespace-nowrap ${
-                    t.status === 'done'
-                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                      : t.status === 'running'
-                      ? 'border-primary/30 bg-primary/10 text-primary'
-                      : 'border-border/30 bg-muted/20 text-muted-foreground'
-                  }`}>
-                    {t.status === 'done'    && <CheckCircle2 className="w-3 h-3 shrink-0" />}
-                    {t.status === 'running' && <Loader2      className="w-3 h-3 shrink-0 animate-spin" />}
-                    {t.status === 'pending' && <Circle       className="w-3 h-3 shrink-0" />}
-                    <span className="font-medium">{t.label}</span>
-                  </div>
-                ))}
-              </div>
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-
       {/* ── Active file indicator ── */}
       {activeFiles.length > 0 && (
         <div className="flex items-center gap-2.5 p-2.5 rounded-md bg-primary/10 border border-primary/20 animate-pulse">
@@ -194,10 +148,12 @@ export function ExecStageView({ execData, stageStatus }: Props) {
 
       {/* ── Repo sections ── */}
       {Object.entries(filesByRepo).map(([repo, files]) => {
-        const repoDone    = files.filter(f => statuses[fk(f)] === 'done').length;
-        const repoActive  = files.some(f => statuses[fk(f)] === 'active');
-        const branch      = files[0]?.branch ?? '';
-        const repoPct     = files.length > 0 ? (repoDone / files.length) * 100 : 0;
+        const repoDone     = files.filter(f => statuses[fk(f)] === 'done').length;
+        const repoActive   = files.some(f => statuses[fk(f)] === 'active');
+        const repoFailed   = files.some(f => statuses[fk(f)] === 'fail');
+        const branch       = files[0]?.branch ?? '';
+        const repoPct      = files.length > 0 ? (repoDone / files.length) * 100 : 0;
+        const repoFinished = repoFailed || repoDone === files.length;
 
         return (
           <div key={repo} className="rounded-lg border border-border/40 overflow-hidden">
@@ -213,7 +169,12 @@ export function ExecStageView({ execData, stageStatus }: Props) {
                   <Loader2 className="w-3 h-3 animate-spin" /> em andamento
                 </span>
               )}
-              {!repoActive && repoDone === files.length && (
+              {!repoActive && repoFailed && (
+                <span className="flex items-center gap-1 text-[10px] text-red-400">
+                  <AlertCircle className="w-3 h-3" /> falhou
+                </span>
+              )}
+              {!repoActive && !repoFailed && repoDone === files.length && (
                 <span className="flex items-center gap-1 text-[10px] text-emerald-400">
                   <CheckCircle2 className="w-3 h-3" /> concluído
                 </span>
@@ -221,10 +182,12 @@ export function ExecStageView({ execData, stageStatus }: Props) {
               <span className="text-[10px] text-muted-foreground font-mono">{repoDone}/{files.length}</span>
             </div>
 
-            {/* Per-repo progress bar */}
-            <div className="px-3 pt-2 pb-1.5 bg-muted/10">
-              <Progress value={repoPct} className="h-1" />
-            </div>
+            {/* Per-repo progress bar — visible only during runtime */}
+            {!repoFinished && (
+              <div className="px-3 pt-2 pb-1.5 bg-muted/10">
+                <Progress value={repoPct} className="h-1" />
+              </div>
+            )}
 
             {/* File list */}
             <div className="divide-y divide-border/20">
@@ -242,19 +205,38 @@ export function ExecStageView({ execData, stageStatus }: Props) {
                     <div className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/10 transition-colors group">
                       {st === 'done'    && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                       {st === 'active'  && <Loader2      className="w-3.5 h-3.5 text-primary animate-spin shrink-0" />}
-                      {st === 'pending' && <Circle       className="w-3.5 h-3.5 text-muted-foreground/20 shrink-0" />}
+                      {st === 'pending' && <Clock        className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />}
+                      {st === 'fail'    && <AlertCircle  className="w-3.5 h-3.5 text-red-500 shrink-0" />}
 
                       <div className="flex-1 min-w-0 flex items-center gap-1">
-                        <FileCode className={`w-3 h-3 shrink-0 ${st === 'pending' ? 'text-muted-foreground/25' : 'text-muted-foreground/70'}`} />
+                        <FileCode className={`w-3 h-3 shrink-0 ${
+                          st === 'pending' ? 'text-muted-foreground/25' :
+                          st === 'fail'    ? 'text-red-400/70' :
+                          'text-muted-foreground/70'
+                        }`} />
                         {dirPath && (
                           <span className="text-[10px] text-muted-foreground/40 font-mono truncate max-w-[140px]">{dirPath}/</span>
                         )}
-                        <span className={`text-xs font-mono font-semibold truncate ${st === 'pending' ? 'text-muted-foreground/35' : 'text-foreground'}`}>
+                        <span className={`text-xs font-mono font-semibold truncate ${
+                          st === 'pending' ? 'text-muted-foreground/35' :
+                          st === 'fail'    ? 'text-red-300' :
+                          'text-foreground'
+                        }`}>
                           {filename}
                         </span>
                         {st === 'active' && (
                           <span className="text-[9px] text-primary bg-primary/10 border border-primary/25 rounded px-1 ml-1">
                             escrevendo...
+                          </span>
+                        )}
+                        {st === 'pending' && (
+                          <span className="text-[9px] text-muted-foreground/50 bg-muted/40 border border-border/40 rounded px-1 ml-1">
+                            na fila
+                          </span>
+                        )}
+                        {st === 'fail' && (
+                          <span className="text-[9px] text-red-400 bg-red-500/10 border border-red-500/25 rounded px-1 ml-1">
+                            falhou
                           </span>
                         )}
                       </div>
@@ -280,6 +262,15 @@ export function ExecStageView({ execData, stageStatus }: Props) {
                         </button>
                       )}
                     </div>
+
+                    {/* Failure detail */}
+                    {st === 'fail' && file.error && (
+                      <div className="px-9 pb-2">
+                        <p className="text-[11px] text-red-300 font-mono bg-red-500/5 border border-red-500/20 rounded px-2 py-1.5 break-words">
+                          {file.error}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Diff panel */}
                     {expanded && (

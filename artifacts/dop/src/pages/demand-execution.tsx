@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDemand, useSendChatMessage, useWorkspace } from '../hooks/use-api';
 import { Badge } from '../components/ui/badge';
 import { ScrollArea } from '../components/ui/scroll-area';
-import { Progress } from '../components/ui/progress';
 import {
   CheckCircle2, Circle, AlertCircle, Loader2,
   GitBranch, GitMerge, ScrollText, Server, MessageSquare,
