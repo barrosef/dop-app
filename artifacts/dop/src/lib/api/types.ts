@@ -59,7 +59,7 @@ export interface DemandDossier {
   startedAt?: string; finishedAt?: string; elapsedSeconds?: number;
 }
 export interface ChatMessage { id: string; author: 'dev' | 'claude'; text: string; at: string; actions?: string[]; }
-export interface LogLine { source: 'app' | 'test' | 'infra'; service: string; line: string; at: string; }
+export interface LogLine { source: 'app' | 'test' | 'infra'; service: string; line: string; at: string; testType?: 'unit' | 'e2e'; testRepo?: string; }
 export interface Demand {
   id: string; jiraKey: string; title: string; assignee: string;
   jiraStatus: string; dopStatus: DopStatus;

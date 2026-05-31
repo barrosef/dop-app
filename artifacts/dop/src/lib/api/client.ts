@@ -9,5 +9,5 @@ export interface DopApi {
   listAllDemands(): Promise<Demand[]>;
   getDemand(workspaceId: string, demandId: string): Promise<Demand>;
   sendChatMessage(demandId: string, text: string): Promise<ChatMessage>;
-  streamLogs(demandId: string, source: LogLine['source']): AsyncIterable<LogLine>;
+  streamLogs(demandId: string, source: LogLine['source'], filter?: { testType?: 'unit' | 'e2e'; testRepo?: string }): AsyncIterable<LogLine>;
 }

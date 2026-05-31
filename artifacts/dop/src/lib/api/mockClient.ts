@@ -132,6 +132,40 @@ const TEST_LOGS = [
   '  ◌ protected route e2e — running...',
 ];
 
+// Repo + type specific test log pools
+const REPO_TEST_LOGS: Record<string, Partial<Record<'unit' | 'e2e', string[]>>> = {
+  'portal-backend': {
+    unit: [
+      'PASS src/auth/tokenService.test.ts',
+      '  ✓ tokenService > generateAccessToken (3ms)',
+      '  ✓ tokenService > generateRefreshToken (1ms)',
+      '  ✓ tokenService > rotateToken (2ms)',
+      '  ✓ authMiddleware > valid bearer (1ms)',
+      '  ✗ authMiddleware > missing token returns 401',
+      '    Expected status: 401, Received: 200',
+      '    at Object.<anonymous> (src/auth/authMiddleware.test.ts:34)',
+      'Test Suites: 1 failed, 1 passed, 2 total',
+      'Tests: 1 failed, 4 passed, 5 total',
+    ],
+  },
+  'portal-frontend': {
+    unit: [
+      'PASS src/session/session.test.ts',
+      '  ✓ session > signRefreshToken is async (150ms)',
+      'Test Suites: 1 passed, 1 total',
+      'Tests: 1 passed, 1 total',
+    ],
+    e2e: [
+      '[playwright] launching chromium',
+      '[playwright] navigating to http://localhost:3000',
+      '[playwright] ✓ login flow (1204ms)',
+      '[playwright] → checking redirect to /dashboard',
+      '[playwright] ○ protected route — skipped (dependency pending)',
+      '[playwright] Browser closed',
+    ],
+  },
+};
+
 class MockDopApi implements DopApi {
   private workspaces = [...mockWorkspaces];
   private demands = [...mockDemands];
@@ -209,21 +243,36 @@ class MockDopApi implements DopApi {
     return devMsg;
   }
 
-  async *streamLogs(demandId: string, source: LogLine['source']): AsyncIterable<LogLine> {
-    const lines = source === 'app' ? APP_LOGS : source === 'test' ? TEST_LOGS : [];
+  async *streamLogs(
+    demandId: string,
+    source: LogLine['source'],
+    filter?: { testType?: 'unit' | 'e2e'; testRepo?: string },
+  ): AsyncIterable<LogLine> {
     let idx = 0;
     while (true) {
       await delay(900 + Math.random() * 400);
       if (source === 'infra') {
-        // Round-robin across all infra services
         const services = ['mysql', 'redis', 'postgres'];
-        const svc = services[Math.floor(Math.random() * services.length)];
+        const svc  = services[Math.floor(Math.random() * services.length)];
         const pool = INFRA_LOGS[svc] ?? INFRA_LOGS['db-container'];
-        const line = pool[Math.floor(Math.random() * pool.length)];
-        yield { source, service: svc, line, at: new Date().toISOString() };
+        yield { source, service: svc, line: pool[Math.floor(Math.random() * pool.length)], at: new Date().toISOString() };
+      } else if (source === 'test' && filter?.testRepo && filter?.testType) {
+        // Repo + type specific test logs
+        const repoLogs = REPO_TEST_LOGS[filter.testRepo]?.[filter.testType] ?? TEST_LOGS;
+        yield {
+          source,
+          service: filter.testRepo,
+          testType: filter.testType,
+          testRepo: filter.testRepo,
+          line: repoLogs[idx % repoLogs.length],
+          at: new Date().toISOString(),
+        };
+        idx++;
+      } else if (source === 'app') {
+        yield { source, service: 'api-server', line: APP_LOGS[idx % APP_LOGS.length], at: new Date().toISOString() };
+        idx++;
       } else {
-        const pool = lines.length ? lines : [`[INFO] ${source} log entry for demand ${demandId}`];
-        yield { source, service: source === 'app' ? 'api-server' : 'jest', line: pool[idx % pool.length], at: new Date().toISOString() };
+        yield { source, service: 'jest', line: TEST_LOGS[idx % TEST_LOGS.length], at: new Date().toISOString() };
         idx++;
       }
     }

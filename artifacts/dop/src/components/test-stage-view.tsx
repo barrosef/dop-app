@@ -49,18 +49,11 @@ function TestRow({ test }: { test: TestResult }) {
   );
 }
 
-function RepoStatusIcon({ failCount, runCount, finished }: { failCount: number; runCount: number; finished: boolean }) {
-  if (runCount > 0) return <Loader2 className="w-3 h-3 text-primary animate-spin shrink-0" />;
-  if (finished)     return failCount > 0
-    ? <XCircle      className="w-3 h-3 text-red-500 shrink-0" />
-    : <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />;
-  return null;
-}
-
 function RepoGroup({ repo, tests }: { repo: string; tests: TestResult[] }) {
   const [open, setOpen] = useState(true);
 
   const doneCount = tests.filter(isDone).length;
+  const passCount = tests.filter(t => t.status === 'success').length;
   const failCount = tests.filter(t => t.status === 'fail').length;
   const skipCount = tests.filter(t => t.status === 'skipped').length;
   const runCount  = tests.filter(t => t.status === 'running').length;
@@ -69,21 +62,27 @@ function RepoGroup({ repo, tests }: { repo: string; tests: TestResult[] }) {
 
   return (
     <div className="border-t border-border/20 first:border-0">
-      {/* Repo header — clickable to collapse */}
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full px-3 pt-2 pb-1.5 bg-muted/10 hover:bg-muted/20 transition-colors text-left"
       >
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {open
             ? <ChevronDown  className="w-3 h-3 text-muted-foreground/50 shrink-0" />
             : <ChevronRight className="w-3 h-3 text-muted-foreground/50 shrink-0" />}
           <GitBranch className="w-3 h-3 text-primary shrink-0" />
           <span className="text-[11px] font-mono font-bold">{repo}</span>
-          <RepoStatusIcon failCount={failCount} runCount={runCount} finished={repoFinished} />
+          <span className="text-[10px] text-muted-foreground font-mono">{doneCount}/{tests.length}</span>
+
+          {/* Status badges */}
           {failCount > 0 && (
-            <span className="text-[9px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">
-              {failCount} falhou
+            <span className="flex items-center gap-0.5 text-[9px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">
+              <XCircle className="w-2.5 h-2.5" /> {failCount} falhou
+            </span>
+          )}
+          {passCount > 0 && (
+            <span className="flex items-center gap-0.5 text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+              <CheckCircle2 className="w-2.5 h-2.5" /> {passCount} passou
             </span>
           )}
           {skipCount > 0 && (
@@ -91,7 +90,18 @@ function RepoGroup({ repo, tests }: { repo: string; tests: TestResult[] }) {
               {skipCount} pulado
             </span>
           )}
-          <span className="ml-auto text-[10px] text-muted-foreground font-mono">{doneCount}/{tests.length}</span>
+
+          {/* Right-aligned status */}
+          {repoFinished && (
+            <span className="ml-auto flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
+              <CheckCircle2 className="w-3 h-3" /> concluído
+            </span>
+          )}
+          {!repoFinished && runCount > 0 && (
+            <span className="ml-auto flex items-center gap-1 text-[10px] text-primary">
+              <Loader2 className="w-3 h-3 animate-spin" /> rodando
+            </span>
+          )}
         </div>
         {!repoFinished && open && <Progress value={pct} className="h-0.5 mt-1" />}
       </button>
@@ -131,30 +141,52 @@ function TestTypeSection({ title, icon, tests }: {
 
   return (
     <div className="rounded-lg border border-border/40 overflow-hidden">
-      {/* Section header — clickable to collapse */}
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full px-3 py-2.5 bg-muted/25 hover:bg-muted/35 transition-colors text-left"
       >
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {open
             ? <ChevronDown  className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
             : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />}
           {icon}
           <span className="text-xs font-bold">Testes {title}</span>
-          {sectionFinished && (failCount > 0
-            ? <XCircle      className="w-3.5 h-3.5 text-red-500 shrink-0" />
-            : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />)}
-          <span className="text-[10px] text-muted-foreground font-mono">{passCount}/{tests.length}</span>
-          {failCount > 0 && <span className="text-[10px] text-red-400 font-semibold ml-1">{failCount} falhou</span>}
-          {runCount  > 0 && <span className="text-[10px] text-primary ml-1">{runCount} rodando</span>}
-          {skipCount > 0 && <span className="text-[10px] text-muted-foreground/60 ml-1">{skipCount} pulado</span>}
+          <span className="text-[10px] text-muted-foreground font-mono">{doneCount}/{tests.length}</span>
+
+          {/* Status badges */}
+          {failCount > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 font-semibold">
+              <XCircle className="w-3 h-3" /> {failCount} falhou
+            </span>
+          )}
+          {passCount > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-semibold">
+              <CheckCircle2 className="w-3 h-3" /> {passCount} passou
+            </span>
+          )}
+          {skipCount > 0 && (
+            <span className="text-[10px] text-muted-foreground/60 ml-0.5">{skipCount} pulado</span>
+          )}
+          {runCount > 0 && (
+            <span className="flex items-center gap-1 text-[10px] text-primary ml-0.5">
+              <Loader2 className="w-3 h-3 animate-spin" /> {runCount} rodando
+            </span>
+          )}
+
+          {/* Right-aligned concluído */}
+          {sectionFinished && (
+            <span className={`ml-auto flex items-center gap-1 text-[10px] font-semibold ${failCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+              {failCount > 0
+                ? <XCircle className="w-3 h-3" />
+                : <CheckCircle2 className="w-3 h-3" />}
+              {failCount > 0 ? 'com falhas' : 'concluído'}
+            </span>
+          )}
         </div>
       </button>
 
       {open && (
         <>
-          {/* Section progress bar — only while running */}
           {!sectionFinished && (
             <div className="px-3 pt-2 pb-1.5 bg-muted/10 border-t border-border/30">
               <Progress value={pct} className="h-1.5" />
@@ -165,7 +197,6 @@ function TestTypeSection({ title, icon, tests }: {
               </div>
             </div>
           )}
-          {/* Repo groups */}
           <div className="divide-y divide-border/20 border-t border-border/30">
             {byRepo.map(([repo, repoTests]) => (
               <RepoGroup key={repo} repo={repo} tests={repoTests} />
@@ -186,14 +217,38 @@ const LOG_SOURCES: { key: LogSource; label: string }[] = [
 export function TestStageView({ tests, demandId }: Props) {
   const [tab,       setTab]       = useState<PanelTab>('results');
   const [logSource, setLogSource] = useState<LogSource>('test');
+  const [logType,   setLogType]   = useState<'unit' | 'e2e' | null>(null);
+  const [logRepo,   setLogRepo]   = useState<string | null>(null);
   const [stageLogs, setStageLogs] = useState<LogLine[]>([]);
   const logsEndRef                = useRef<HTMLDivElement>(null);
 
+  // Unique repos from test results for filter pills
+  const allRepos = useMemo(() => {
+    const repos = new Set<string>();
+    for (const t of tests) { if (t.repo) repos.add(t.repo); }
+    return [...repos];
+  }, [tests]);
+
+  // Repos that have a specific test type (for disabling irrelevant combos)
+  const reposForType = useMemo(() => {
+    if (!logType) return new Set(allRepos);
+    const s = new Set<string>();
+    for (const t of tests) { if (t.type === logType && t.repo) s.add(t.repo); }
+    return s;
+  }, [tests, logType, allRepos]);
+
+  // Only stream when source is chosen + (for test source: type+repo also chosen)
+  const logsReady = logSource !== 'test' || (logType !== null && logRepo !== null);
+
   useEffect(() => {
+    if (!logsReady) { setStageLogs([]); return; }
     setStageLogs([]);
     let active = true;
+    const filter = logSource === 'test'
+      ? { testType: logType ?? undefined, testRepo: logRepo ?? undefined }
+      : undefined;
     const consume = async () => {
-      for await (const line of api.streamLogs(demandId, logSource)) {
+      for await (const line of api.streamLogs(demandId, logSource, filter)) {
         if (!active) break;
         setStageLogs(prev => [...prev, line]);
         setTimeout(() => logsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
@@ -201,7 +256,7 @@ export function TestStageView({ tests, demandId }: Props) {
     };
     consume();
     return () => { active = false; };
-  }, [demandId, logSource]);
+  }, [demandId, logSource, logType, logRepo, logsReady]);
 
   const unitTests = tests.filter(t => t.type === 'unit');
   const e2eTests  = tests.filter(t => t.type === 'e2e');
@@ -277,14 +332,16 @@ export function TestStageView({ tests, demandId }: Props) {
       {/* ── Logs ── */}
       {tab === 'logs' && (
         <div className="rounded-lg border border-border/40 overflow-hidden">
+
+          {/* Source row */}
           <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/40">
             <Terminal className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex-1">Logs</span>
-            <div className="flex gap-1">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fonte</span>
+            <div className="flex gap-1 ml-1">
               {LOG_SOURCES.map(({ key, label }) => (
                 <button
                   key={key}
-                  onClick={() => setLogSource(key)}
+                  onClick={() => { setLogSource(key); setLogType(null); setLogRepo(null); }}
                   data-testid={`log-source-${key}`}
                   className={`text-[10px] px-2 py-0.5 rounded transition-colors ${
                     logSource === key
@@ -297,20 +354,86 @@ export function TestStageView({ tests, demandId }: Props) {
               ))}
             </div>
           </div>
-          <div className="bg-[#0d0d0f] h-72 overflow-y-auto p-3 font-mono text-[11px] leading-relaxed">
-            {stageLogs.length === 0 && (
-              <span className="text-[#555] italic">Aguardando logs...</span>
-            )}
-            {stageLogs.map((log, i) => (
-              <div key={i} className="flex gap-2 mb-0.5 hover:bg-white/5 px-1 rounded">
-                <span className="text-[#555] shrink-0 select-none">{log.at.substring(11, 19)}</span>
-                <span className={`shrink-0 font-semibold ${
-                  log.source === 'test'  ? 'text-purple-400' :
-                  log.source === 'infra' ? 'text-amber-400'  : 'text-blue-400'
-                }`}>[{log.service}]</span>
-                <span className="text-[#c8d3f5] break-all">{log.line}</span>
+
+          {/* Test sub-filters (type + repo) — only for test source */}
+          {logSource === 'test' && (
+            <div className="px-3 py-2 bg-muted/15 border-b border-border/30 space-y-2">
+
+              {/* Type filter */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] text-muted-foreground w-10 shrink-0">Tipo</span>
+                {(['unit', 'e2e'] as const).map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setLogType(prev => prev === type ? null : type)}
+                    className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+                      logType === type
+                        ? 'bg-purple-500/20 border-purple-500/50 text-purple-300 font-semibold'
+                        : 'border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                    }`}
+                  >
+                    {type === 'unit' ? '⚗ Unitários' : '🌐 E2E'}
+                  </button>
+                ))}
               </div>
-            ))}
+
+              {/* Repo filter */}
+              {allRepos.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] text-muted-foreground w-10 shrink-0">Repo</span>
+                  {allRepos.map(repo => {
+                    const available = reposForType.has(repo);
+                    const selected  = logRepo === repo;
+                    return (
+                      <button
+                        key={repo}
+                        disabled={!available}
+                        onClick={() => setLogRepo(prev => prev === repo ? null : repo)}
+                        className={`text-[10px] px-2 py-0.5 rounded border font-mono transition-colors ${
+                          !available
+                            ? 'border-border/20 text-muted-foreground/30 cursor-not-allowed'
+                            : selected
+                              ? 'bg-primary/20 border-primary/50 text-primary font-semibold'
+                              : 'border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                        }`}
+                      >
+                        {repo}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Log panel */}
+          <div className="bg-[#0d0d0f] h-72 overflow-y-auto p-3 font-mono text-[11px] leading-relaxed">
+            {!logsReady ? (
+              <div className="h-full flex flex-col items-center justify-center gap-2 text-center">
+                <Terminal className="w-5 h-5 text-muted-foreground/30" />
+                <p className="text-[#555] italic text-xs">
+                  Selecione o tipo de teste e o repositório<br/>para visualizar os logs
+                </p>
+              </div>
+            ) : stageLogs.length === 0 ? (
+              <span className="text-[#555] italic">Aguardando logs...</span>
+            ) : (
+              stageLogs.map((log, i) => (
+                <div key={i} className="flex gap-2 mb-0.5 hover:bg-white/5 px-1 rounded">
+                  <span className="text-[#555] shrink-0 select-none">{log.at.substring(11, 19)}</span>
+                  <span className={`shrink-0 font-semibold ${
+                    log.source === 'test'  ? 'text-purple-400' :
+                    log.source === 'infra' ? 'text-amber-400'  : 'text-blue-400'
+                  }`}>[{log.service}]</span>
+                  {log.testType && (
+                    <span className="shrink-0 text-[10px] text-muted-foreground/50">
+                      {log.testType === 'unit' ? '⚗' : '🌐'}
+                    </span>
+                  )}
+                  <span className="text-[#c8d3f5] break-all">{log.line}</span>
+                </div>
+              ))
+            )}
             <div ref={logsEndRef} />
           </div>
         </div>
