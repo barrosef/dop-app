@@ -102,6 +102,12 @@ export function ExecStageView({ execData, stageStatus }: Props) {
   const toggleDiff = (k: string) =>
     setExpandedDiffs(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
+  // Collapsible repos — default all open (missing key = open)
+  const [closedRepos, setClosedRepos] = useState<Set<string>>(new Set());
+  const isRepoOpen   = (repo: string) => !closedRepos.has(repo);
+  const toggleRepo   = (repo: string) =>
+    setClosedRepos(prev => { const n = new Set(prev); n.has(repo) ? n.delete(repo) : n.add(repo); return n; });
+
   const totalFiles  = execData.files.length;
   const doneCount   = Object.values(statuses).filter(s => s === 'done').length;
   const activeFiles = execData.files.filter(f => statuses[fk(f)] === 'active');
@@ -158,8 +164,14 @@ export function ExecStageView({ execData, stageStatus }: Props) {
         return (
           <div key={repo} className="rounded-lg border border-border/40 overflow-hidden">
 
-            {/* Repo header */}
-            <div className="px-3 py-2.5 bg-muted/25 border-b border-border/30 flex items-center gap-2 flex-wrap">
+            {/* Repo header — clickable to collapse/expand */}
+            <button
+              onClick={() => toggleRepo(repo)}
+              className="w-full px-3 py-2.5 bg-muted/25 border-b border-border/30 flex items-center gap-2 flex-wrap hover:bg-muted/35 transition-colors text-left"
+            >
+              {isRepoOpen(repo)
+                ? <ChevronDown  className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
               <GitBranch className="w-3.5 h-3.5 text-primary shrink-0" />
               <span className="text-xs font-bold font-mono">{repo}</span>
               <span className="text-[10px] text-muted-foreground font-mono">⎇ {branch}</span>
@@ -180,8 +192,10 @@ export function ExecStageView({ execData, stageStatus }: Props) {
                 </span>
               )}
               <span className="text-[10px] text-muted-foreground font-mono">{repoDone}/{files.length}</span>
-            </div>
+            </button>
 
+            {isRepoOpen(repo) && (
+              <>
             {/* Per-repo progress bar — visible only during runtime */}
             {!repoFinished && (
               <div className="px-3 pt-2 pb-1.5 bg-muted/10">
@@ -286,6 +300,8 @@ export function ExecStageView({ execData, stageStatus }: Props) {
                 );
               })}
             </div>
+              </>
+            )}
           </div>
         );
       })}

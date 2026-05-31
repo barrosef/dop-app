@@ -4,7 +4,8 @@ import { api } from '../lib/api/mockClient';
 import { TestResult, LogLine } from '../lib/api/types';
 import {
   CheckCircle2, XCircle, SkipForward, Loader2,
-  FlaskConical, Terminal, GitBranch
+  FlaskConical, Terminal, GitBranch,
+  ChevronDown, ChevronRight
 } from 'lucide-react';
 
 interface Props { tests: TestResult[]; demandId: string; }
@@ -57,6 +58,8 @@ function RepoStatusIcon({ failCount, runCount, finished }: { failCount: number; 
 }
 
 function RepoGroup({ repo, tests }: { repo: string; tests: TestResult[] }) {
+  const [open, setOpen] = useState(true);
+
   const doneCount = tests.filter(isDone).length;
   const failCount = tests.filter(t => t.status === 'fail').length;
   const skipCount = tests.filter(t => t.status === 'skipped').length;
@@ -66,8 +69,15 @@ function RepoGroup({ repo, tests }: { repo: string; tests: TestResult[] }) {
 
   return (
     <div className="border-t border-border/20 first:border-0">
-      <div className="px-3 pt-2 pb-1.5 bg-muted/10">
-        <div className="flex items-center gap-2 mb-1 flex-wrap">
+      {/* Repo header — clickable to collapse */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full px-3 pt-2 pb-1.5 bg-muted/10 hover:bg-muted/20 transition-colors text-left"
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          {open
+            ? <ChevronDown  className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+            : <ChevronRight className="w-3 h-3 text-muted-foreground/50 shrink-0" />}
           <GitBranch className="w-3 h-3 text-primary shrink-0" />
           <span className="text-[11px] font-mono font-bold">{repo}</span>
           <RepoStatusIcon failCount={failCount} runCount={runCount} finished={repoFinished} />
@@ -83,11 +93,13 @@ function RepoGroup({ repo, tests }: { repo: string; tests: TestResult[] }) {
           )}
           <span className="ml-auto text-[10px] text-muted-foreground font-mono">{doneCount}/{tests.length}</span>
         </div>
-        {!repoFinished && <Progress value={pct} className="h-0.5" />}
-      </div>
-      <div className="divide-y divide-border/10">
-        {tests.map((t, i) => <TestRow key={i} test={t} />)}
-      </div>
+        {!repoFinished && open && <Progress value={pct} className="h-0.5 mt-1" />}
+      </button>
+      {open && (
+        <div className="divide-y divide-border/10">
+          {tests.map((t, i) => <TestRow key={i} test={t} />)}
+        </div>
+      )}
     </div>
   );
 }
@@ -95,6 +107,8 @@ function RepoGroup({ repo, tests }: { repo: string; tests: TestResult[] }) {
 function TestTypeSection({ title, icon, tests }: {
   title: string; icon: React.ReactNode; tests: TestResult[];
 }) {
+  const [open, setOpen] = useState(true);
+
   if (tests.length === 0) return null;
 
   const byRepo = useMemo(() => {
@@ -117,35 +131,48 @@ function TestTypeSection({ title, icon, tests }: {
 
   return (
     <div className="rounded-lg border border-border/40 overflow-hidden">
-      {/* Section header */}
-      <div className="px-3 py-2.5 bg-muted/25 border-b border-border/30 flex items-center gap-2 flex-wrap">
-        {icon}
-        <span className="text-xs font-bold">Testes {title}</span>
-        {sectionFinished && (failCount > 0
-          ? <XCircle      className="w-3.5 h-3.5 text-red-500 shrink-0" />
-          : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />)}
-        <span className="text-[10px] text-muted-foreground font-mono">{passCount}/{tests.length}</span>
-        {failCount > 0 && <span className="text-[10px] text-red-400 font-semibold ml-1">{failCount} falhou</span>}
-        {runCount  > 0 && <span className="text-[10px] text-primary ml-1">{runCount} rodando</span>}
-        {skipCount > 0 && <span className="text-[10px] text-muted-foreground/60 ml-1">{skipCount} pulado</span>}
-      </div>
-      {/* Section progress bar — only while running */}
-      {!sectionFinished && (
-        <div className="px-3 pt-2 pb-1.5 bg-muted/10">
-          <Progress value={pct} className="h-1.5" />
-          <div className="flex items-center gap-3 text-[10px] mt-1.5">
-            <span className="text-emerald-400">✓ {passCount} passou</span>
-            <span className="text-red-400">✗ {failCount} falhou</span>
-            <span className="text-muted-foreground/60">⊘ {skipCount} pulado</span>
-          </div>
+      {/* Section header — clickable to collapse */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full px-3 py-2.5 bg-muted/25 hover:bg-muted/35 transition-colors text-left"
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          {open
+            ? <ChevronDown  className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
+            : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />}
+          {icon}
+          <span className="text-xs font-bold">Testes {title}</span>
+          {sectionFinished && (failCount > 0
+            ? <XCircle      className="w-3.5 h-3.5 text-red-500 shrink-0" />
+            : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />)}
+          <span className="text-[10px] text-muted-foreground font-mono">{passCount}/{tests.length}</span>
+          {failCount > 0 && <span className="text-[10px] text-red-400 font-semibold ml-1">{failCount} falhou</span>}
+          {runCount  > 0 && <span className="text-[10px] text-primary ml-1">{runCount} rodando</span>}
+          {skipCount > 0 && <span className="text-[10px] text-muted-foreground/60 ml-1">{skipCount} pulado</span>}
         </div>
+      </button>
+
+      {open && (
+        <>
+          {/* Section progress bar — only while running */}
+          {!sectionFinished && (
+            <div className="px-3 pt-2 pb-1.5 bg-muted/10 border-t border-border/30">
+              <Progress value={pct} className="h-1.5" />
+              <div className="flex items-center gap-3 text-[10px] mt-1.5">
+                <span className="text-emerald-400">✓ {passCount} passou</span>
+                <span className="text-red-400">✗ {failCount} falhou</span>
+                <span className="text-muted-foreground/60">⊘ {skipCount} pulado</span>
+              </div>
+            </div>
+          )}
+          {/* Repo groups */}
+          <div className="divide-y divide-border/20 border-t border-border/30">
+            {byRepo.map(([repo, repoTests]) => (
+              <RepoGroup key={repo} repo={repo} tests={repoTests} />
+            ))}
+          </div>
+        </>
       )}
-      {/* Repo groups */}
-      <div className="divide-y divide-border/20">
-        {byRepo.map(([repo, repoTests]) => (
-          <RepoGroup key={repo} repo={repo} tests={repoTests} />
-        ))}
-      </div>
     </div>
   );
 }
