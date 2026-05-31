@@ -418,13 +418,14 @@ export const mockDemands: Demand[] = [
         { path: 'portal-backend/tests/unit/tokenService.test.ts',    kind: 'test',   change: 'modified' }
       ],
       tests: [
-        { name: 'tokenService > sign token',                   type: 'unit', status: 'success' },
-        { name: 'tokenService > verify valid token',           type: 'unit', status: 'success' },
-        { name: 'tokenService > reject expired token',         type: 'unit', status: 'success' },
-        { name: 'authMiddleware > valid bearer',               type: 'unit', status: 'success' },
-        { name: 'authMiddleware > missing token returns 401',  type: 'unit', status: 'fail'    },
-        { name: 'login flow e2e',                              type: 'e2e',  status: 'running' },
-        { name: 'protected route e2e',                         type: 'e2e',  status: 'skipped' }
+        { name: 'tokenService > generateAccessToken',         type: 'unit', status: 'success', repo: 'portal-backend',  durationMs: 89  },
+        { name: 'tokenService > generateRefreshToken',        type: 'unit', status: 'success', repo: 'portal-backend',  durationMs: 72  },
+        { name: 'tokenService > rotateToken',                 type: 'unit', status: 'success', repo: 'portal-backend',  durationMs: 94  },
+        { name: 'authMiddleware > valid bearer',              type: 'unit', status: 'success', repo: 'portal-backend',  durationMs: 61  },
+        { name: 'authMiddleware > missing token returns 401', type: 'unit', status: 'fail',    repo: 'portal-backend',  durationMs: 42  },
+        { name: 'session > signRefreshToken is async',        type: 'unit', status: 'success', repo: 'portal-frontend', durationMs: 150 },
+        { name: 'auth flow > login with valid credentials',   type: 'e2e',  status: 'running', repo: 'portal-frontend'                  },
+        { name: 'auth flow > protected route redirects',      type: 'e2e',  status: 'skipped', repo: 'portal-frontend'                  },
       ],
       startedAt: new Date(Date.now() - 7200000).toISOString(),
       elapsedSeconds: 6200

@@ -44,7 +44,13 @@ export interface ExecData { tasks: ExecTask[]; files: ExecFile[]; }
 export interface Stage { key: string; title: string; status: StageStatus; summary?: string; document?: string; execData?: ExecData; startedAt?: string; finishedAt?: string; }
 export interface PullRequest { id: string; repo: string; sourceBranch: string; targetBranch: string; url: string; merged: boolean; approver?: string; hasConflict: boolean; }
 export interface FileTouched { path: string; kind: 'plan' | 'context' | 'adr' | 'source' | 'test'; change: 'created' | 'modified'; }
-export interface TestResult { name: string; type: 'unit' | 'e2e'; status: TestStatus; }
+export interface TestResult {
+  name: string;
+  repo?: string;       // for hierarchical grouping by repository
+  type: 'unit' | 'e2e';
+  status: TestStatus;
+  durationMs?: number; // execution time in ms
+}
 export interface DemandDossier {
   repos: string[]; branches: string[]; commits: number;
   prs: PullRequest[]; files: FileTouched[]; tests: TestResult[];

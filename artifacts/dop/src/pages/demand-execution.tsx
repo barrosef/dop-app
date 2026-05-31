@@ -15,6 +15,7 @@ import { LogLine, Stage } from '../lib/api/types';
 import { api } from '../lib/api/mockClient';
 import { DocViewer } from '../components/doc-viewer';
 import { ExecStageView } from '../components/exec-stage-view';
+import { TestStageView } from '../components/test-stage-view';
 
 type SectionKey = 'chat' | 'repos' | 'branches' | 'dossier' | 'infra';
 
@@ -102,8 +103,6 @@ export default function DemandExecution() {
 
   const [activeSection, setActiveSection]         = useState<SectionKey>('chat');
   const [selectedStage, setSelectedStage]         = useState<string | null>(null);
-  const [logSource, setLogSource]                 = useState<'app' | 'test' | 'infra'>('test');
-  const [stageLogs, setStageLogs]                 = useState<LogLine[]>([]);
   const [infraLogService, setInfraLogService]     = useState<string | null>(null);
   const [infraLogs, setInfraLogs]                 = useState<LogLine[]>([]);
   const [message, setMessage]                     = useState('');
@@ -112,7 +111,7 @@ export default function DemandExecution() {
   const [editedDocs, setEditedDocs]               = useState<Record<string, string>>({});
 
   const chatScrollRef  = useRef<HTMLDivElement>(null);
-  const stageLogsEnd   = useRef<HTMLDivElement>(null);
+
   const infraLogsEnd   = useRef<HTMLDivElement>(null);
   const inputRef       = useRef<HTMLInputElement>(null);
 
@@ -131,22 +130,6 @@ export default function DemandExecution() {
     if (chatScrollRef.current)
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
   }, [demand?.chat, sendChat.isPending]);
-
-  // Stage logs streaming
-  useEffect(() => {
-    if (!demandId) return;
-    setStageLogs([]);
-    let active = true;
-    const consume = async () => {
-      for await (const line of api.streamLogs(demandId, logSource)) {
-        if (!active) break;
-        setStageLogs(prev => [...prev, line]);
-        setTimeout(() => stageLogsEnd.current?.scrollIntoView({ behavior: 'smooth' }), 50);
-      }
-    };
-    consume();
-    return () => { active = false; };
-  }, [demandId, logSource]);
 
   // Infra overlay log streaming
   useEffect(() => {
@@ -216,13 +199,6 @@ export default function DemandExecution() {
 
   const currentStageDef  = STAGE_DEFS.find(d => d.key === currentStageKey)!;
   const currentStageData = getStage(currentStageKey);
-
-  const unitTests = demand.dossier.tests.filter(t => t.type === 'unit');
-  const e2eTests  = demand.dossier.tests.filter(t => t.type === 'e2e');
-  const passUnit  = unitTests.filter(t => t.status === 'success').length;
-  const passE2e   = e2eTests.filter(t => t.status === 'success').length;
-  const failUnit  = unitTests.filter(t => t.status === 'fail').length;
-  const failE2e   = e2eTests.filter(t => t.status === 'fail').length;
 
   const elapsed    = demand.dossier.elapsedSeconds;
   const elapsedStr = elapsed
@@ -703,77 +679,12 @@ export default function DemandExecution() {
                 </div>
               )}
 
-              {/* Test stage extras */}
-              {currentStageDef?.hasLogs && (
-                <div className="space-y-4">
-                  {(unitTests.length > 0 || e2eTests.length > 0) && (
-                    <div className="space-y-3">
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                        <FlaskConical className="w-3.5 h-3.5" /> Resultados dos testes
-                      </h3>
-                      {unitTests.length > 0 && (
-                        <div className="bg-muted/20 border border-border/40 rounded-lg p-3 space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-medium">Testes unitários</span>
-                            <span className="text-muted-foreground font-mono">{passUnit}/{unitTests.length}</span>
-                          </div>
-                          <Progress value={(passUnit / unitTests.length) * 100} className="h-1.5" />
-                          <div className="flex gap-3 text-[10px]">
-                            <span className="text-emerald-400">{passUnit} passou</span>
-                            <span className="text-red-400">{failUnit} falhou</span>
-                            <span className="text-muted-foreground">{unitTests.filter(t => t.status === 'skipped').length} pulado</span>
-                          </div>
-                        </div>
-                      )}
-                      {e2eTests.length > 0 && (
-                        <div className="bg-muted/20 border border-border/40 rounded-lg p-3 space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-medium">Testes e2e</span>
-                            <span className="text-muted-foreground font-mono">{passE2e}/{e2eTests.length}</span>
-                          </div>
-                          <Progress value={(passE2e / e2eTests.length) * 100} className="h-1.5" />
-                          <div className="flex gap-3 text-[10px]">
-                            <span className="text-emerald-400">{passE2e} passou</span>
-                            <span className="text-red-400">{failE2e} falhou</span>
-                            <span className="text-muted-foreground">{e2eTests.filter(t => t.status === 'skipped').length} pulado</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Stage log streaming */}
-                  <div className="border border-border/40 rounded-lg overflow-hidden">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/40">
-                      <Terminal className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Logs</span>
-                      <div className="flex gap-1 ml-auto">
-                        {(['test', 'app', 'infra'] as const).map(src => (
-                          <button key={src} onClick={() => setLogSource(src)} data-testid={`log-source-${src}`}
-                            className={`text-[10px] px-2 py-0.5 rounded transition-colors ${
-                              logSource === src ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                            }`}>
-                            {src === 'test' ? 'Testes' : src === 'app' ? 'App' : 'Infra'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="bg-[#0d0d0f] h-56 overflow-y-auto p-3 font-mono text-[11px] leading-relaxed">
-                      {stageLogs.length === 0 && <span className="text-[#555] italic">Aguardando logs...</span>}
-                      {stageLogs.map((log, i) => (
-                        <div key={i} className="flex gap-2 mb-0.5 hover:bg-white/5 px-1 rounded">
-                          <span className="text-[#555] shrink-0 select-none">{log.at.substring(11, 19)}</span>
-                          <span className={`shrink-0 font-semibold ${
-                            log.source === 'test'  ? 'text-purple-400' :
-                            log.source === 'infra' ? 'text-amber-400'  : 'text-blue-400'
-                          }`}>[{log.service}]</span>
-                          <span className="text-[#c8d3f5] break-all">{log.line}</span>
-                        </div>
-                      ))}
-                      <div ref={stageLogsEnd} />
-                    </div>
-                  </div>
-                </div>
+              {/* ── Test stage ── */}
+              {currentStageKey === 'test' && currentStageData && demandId && (
+                <TestStageView
+                  tests={demand.dossier.tests}
+                  demandId={demandId}
+                />
               )}
             </div>
           </>
