@@ -471,16 +471,23 @@ export default function DemandExecution() {
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Aplicações</p>
                   {infraApps.map(app => (
-                    <div key={app.name} className="mb-2 p-2.5 rounded-md bg-muted/30 border border-border/40">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium">{app.name}</span>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
-                          app.role === 'frontend'
-                            ? 'bg-blue-500/15 text-blue-400 border-blue-500/25'
-                            : 'bg-amber-500/15 text-amber-400 border-amber-500/25'
-                        }`}>{app.role}</span>
+                    <div key={app.name} className="flex items-center justify-between p-2.5 rounded-md bg-muted/30 border border-border/40 mb-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Layers className={`w-3.5 h-3.5 shrink-0 ${
+                          app.role === 'frontend' ? 'text-blue-400' : 'text-amber-400'
+                        }`} />
+                        <div className="min-w-0">
+                          <span className="text-xs font-mono block truncate">{app.name}</span>
+                          <span className="text-[9px] text-muted-foreground">:{app.port} · {app.role}</span>
+                        </div>
                       </div>
-                      <p className="text-[10px] text-muted-foreground font-mono">:{app.port}</p>
+                      <button
+                        onClick={() => { setInfraLogService(app.name); setInfraLogs([]); }}
+                        data-testid={`button-app-logs-${app.name}`}
+                        className="text-[10px] px-2 py-1 rounded border border-border/50 text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-primary/10 transition-colors flex items-center gap-1 shrink-0"
+                      >
+                        <Terminal className="w-3 h-3" /> Ver logs
+                      </button>
                     </div>
                   ))}
                 </div>

@@ -5,6 +5,57 @@ import { mockDemands } from '../mocks/demands';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Per-app log templates for realistic app streaming
+const APP_SERVICE_LOGS: Record<string, string[]> = {
+  frontend: [
+    '[vite] page reload triggered',
+    '[HMR] App.tsx updated in 14ms',
+    'GET / 200 — 2ms',
+    'GET /assets/index-Bk2Axe.js 304 — 0ms',
+    'WebSocket connection established',
+    '[react-query] invalidating cache: ["invoices","list"]',
+    'Hydration mismatch detected — suppressed in prod mode',
+    '[router] navigated to /dashboard/subscriptions',
+  ],
+  backend: [
+    'GET /api/v1/customers 200 — 11ms',
+    'POST /api/v1/auth/login 200 — 38ms',
+    'GET /api/v1/invoices?page=2 200 — 9ms',
+    'PUT /api/v1/subscriptions/sub-8811 200 — 22ms',
+    '[WARN] Rate limit 90% for 192.168.1.22',
+    '[INFO] Background job: sync-subscriptions started',
+    '[INFO] Cache invalidated: portal:catalog:*',
+    '[ERROR] Upstream timeout "notifications-svc" — retry 1/3',
+    '[INFO] Upstream retry succeeded — 204ms',
+    'DELETE /api/v1/sessions/abc123 204 — 4ms',
+  ],
+  api: [
+    'POST /api/v2/payments 201 — 54ms',
+    'GET /api/v2/transactions?status=pending 200 — 18ms',
+    'PUT /api/v2/payments/pmt-9901/capture 200 — 112ms',
+    '[INFO] PSP webhook received: payment.captured',
+    '[INFO] Event published: payment.created → rabbitmq',
+    '[WARN] Idempotency key reuse detected — returning cached response',
+    'GET /api/v2/reconciliation/summary 200 — 44ms',
+    '[ERROR] PSP gateway timeout — pmt-7721 queued for retry',
+  ],
+  worker: [
+    '[worker] polling queue: cobrancas.pendentes — depth: 3',
+    '[worker] processing job cobranca#4421',
+    '[worker] PSP call succeeded — pmt-4421 marked paid',
+    '[worker] job cobranca#4421 completed in 1.2s',
+    '[worker] polling queue: cobrancas.pendentes — depth: 0',
+    '[worker] heartbeat OK — idle',
+    '[WARN] job cobranca#4408 failed — scheduled retry in 60s',
+    '[worker] retry job cobranca#4408 — attempt 2/3',
+  ],
+  'app-generic': [
+    '[INFO] Application started on port 3000',
+    '[INFO] Health check OK',
+    'GET / 200',
+  ],
+};
+
 // Per-service log templates for realistic infra streaming
 const INFRA_LOGS: Record<string, string[]> = {
   mysql: [
@@ -178,13 +229,17 @@ class MockDopApi implements DopApi {
     }
   }
 
-  // Stream logs for a specific infra service (used by the infra log overlay)
+  // Stream logs for a specific service or app (used by the infra log overlay)
   async *streamServiceLogs(service: string): AsyncIterable<LogLine> {
-    const pool = INFRA_LOGS[service] ?? INFRA_LOGS['db-container'];
+    const isApp  = service in APP_SERVICE_LOGS || !INFRA_LOGS[service];
+    const pool   = APP_SERVICE_LOGS[service]
+      ?? INFRA_LOGS[service]
+      ?? APP_SERVICE_LOGS['app-generic'];
+    const source = isApp ? ('app' as const) : ('infra' as const);
     while (true) {
-      await delay(700 + Math.random() * 600);
+      await delay(600 + Math.random() * 700);
       yield {
-        source: 'infra' as const,
+        source,
         service,
         line: pool[Math.floor(Math.random() * pool.length)],
         at: new Date().toISOString()
