@@ -116,3 +116,30 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+/* Markdown doc viewer prose styles */
+.prose-doc {
+  color: #c8d3f5;
+  font-size: 13px;
+  line-height: 1.7;
+  min-height: 200px;
+}
+.prose-doc h1 { font-size: 1.25rem; font-weight: 700; color: #e2e8f0; margin: 0 0 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.prose-doc h2 { font-size: 1rem; font-weight: 600; color: #e2e8f0; margin: 1.25rem 0 0.5rem; }
+.prose-doc h3 { font-size: 0.875rem; font-weight: 600; color: #cbd5e1; margin: 1rem 0 0.4rem; }
+.prose-doc p  { margin: 0.5rem 0; }
+.prose-doc ul { list-style: disc; padding-left: 1.4rem; margin: 0.5rem 0; }
+.prose-doc ol { list-style: decimal; padding-left: 1.4rem; margin: 0.5rem 0; }
+.prose-doc li { margin: 0.2rem 0; }
+.prose-doc li input[type="checkbox"] { margin-right: 0.4rem; accent-color: #6d83f2; }
+.prose-doc a  { color: #7aa2f7; text-decoration: underline; }
+.prose-doc strong { color: #e2e8f0; font-weight: 600; }
+.prose-doc em { color: #a9b1d6; font-style: italic; }
+.prose-doc code { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.8rem; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; padding: 0.1em 0.35em; color: #9ece6a; }
+.prose-doc pre  { background: #0a0a0c; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 0.85rem 1rem; overflow-x: auto; margin: 0.75rem 0; }
+.prose-doc pre code { background: transparent; border: none; padding: 0; color: #c8d3f5; font-size: 0.78rem; line-height: 1.6; }
+.prose-doc blockquote { border-left: 3px solid #3d59a1; padding-left: 0.85rem; color: #8390a8; margin: 0.75rem 0; font-style: italic; }
+.prose-doc hr { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 1rem 0; }
+.prose-doc table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 12px; }
+.prose-doc th { text-align: left; padding: 0.4rem 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #a9b1d6; font-weight: 600; }
+.prose-doc td { padding: 0.35rem 0.75rem; border: 1px solid rgba(255,255,255,0.08); }

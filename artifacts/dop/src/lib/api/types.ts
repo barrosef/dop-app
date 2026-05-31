@@ -25,7 +25,7 @@ export interface Workspace {
   rules: string[];
   context: string;
 }
-export interface Stage { key: string; title: string; status: StageStatus; summary?: string; startedAt?: string; finishedAt?: string; }
+export interface Stage { key: string; title: string; status: StageStatus; summary?: string; document?: string; startedAt?: string; finishedAt?: string; }
 export interface PullRequest { id: string; repo: string; sourceBranch: string; targetBranch: string; url: string; merged: boolean; approver?: string; hasConflict: boolean; }
 export interface FileTouched { path: string; kind: 'plan' | 'context' | 'adr' | 'source' | 'test'; change: 'created' | 'modified'; }
 export interface TestResult { name: string; type: 'unit' | 'e2e'; status: TestStatus; }

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { LogLine, Stage } from '../lib/api/types';
 import { api } from '../lib/api/mockClient';
+import { DocViewer } from '../components/doc-viewer';
 
 type SectionKey = 'chat' | 'repos' | 'branches' | 'dossier' | 'infra';
 
@@ -106,6 +107,8 @@ export default function DemandExecution() {
   const [infraLogs, setInfraLogs]                 = useState<LogLine[]>([]);
   const [message, setMessage]                     = useState('');
   const [showSlash, setShowSlash]                 = useState(false);
+  // In-session edits to stage documents (init/context/plan)
+  const [editedDocs, setEditedDocs]               = useState<Record<string, string>>({});
 
   const chatScrollRef  = useRef<HTMLDivElement>(null);
   const stageLogsEnd   = useRef<HTMLDivElement>(null);
@@ -174,6 +177,24 @@ export default function DemandExecution() {
     sendChat.mutate({ demandId, text: message });
     setMessage('');
     setShowSlash(false);
+  };
+
+  const DOC_STAGE_KEYS = ['init', 'context', 'plan'] as const;
+
+  const handleDocSave = (stageKey: string, newContent: string) => {
+    setEditedDocs(prev => ({ ...prev, [stageKey]: newContent }));
+  };
+
+  const handleDocChatRequest = (stageKey: string) => {
+    const labels: Record<string, string> = {
+      init: 'PRD/RFC',
+      context: 'documento de contexto',
+      plan: 'plano de desenvolvimento',
+    };
+    const label = labels[stageKey] ?? 'documento';
+    setMessage(`/edit Ajuste o ${label}: `);
+    setActiveSection('chat');
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const handleInputChange = (v: string) => {
@@ -632,9 +653,25 @@ export default function DemandExecution() {
               </div>
 
               {currentStageData?.summary && (
-                <div className="bg-muted/30 border border-border/50 rounded-lg p-4 text-sm leading-relaxed text-foreground/80">
+                <div className="bg-muted/30 border border-border/50 rounded-lg p-3 text-xs leading-relaxed text-foreground/70 italic">
                   {currentStageData.summary}
                 </div>
+              )}
+
+              {/* ── Document viewer for init / context / plan ── */}
+              {currentStageData && DOC_STAGE_KEYS.includes(currentStageKey as typeof DOC_STAGE_KEYS[number]) && (
+                currentStageData.document ? (
+                  <DocViewer
+                    content={editedDocs[currentStageKey] ?? currentStageData.document}
+                    onSave={newContent => handleDocSave(currentStageKey, newContent)}
+                    onChatRequest={() => handleDocChatRequest(currentStageKey)}
+                  />
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground italic py-4">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    Claude está gerando o documento...
+                  </div>
+                )
               )}
 
               {!currentStageData && (
