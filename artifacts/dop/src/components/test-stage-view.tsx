@@ -48,11 +48,21 @@ function TestRow({ test }: { test: TestResult }) {
   );
 }
 
+function RepoStatusIcon({ failCount, runCount, finished }: { failCount: number; runCount: number; finished: boolean }) {
+  if (runCount > 0) return <Loader2 className="w-3 h-3 text-primary animate-spin shrink-0" />;
+  if (finished)     return failCount > 0
+    ? <XCircle      className="w-3 h-3 text-red-500 shrink-0" />
+    : <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />;
+  return null;
+}
+
 function RepoGroup({ repo, tests }: { repo: string; tests: TestResult[] }) {
   const doneCount = tests.filter(isDone).length;
   const failCount = tests.filter(t => t.status === 'fail').length;
+  const skipCount = tests.filter(t => t.status === 'skipped').length;
   const runCount  = tests.filter(t => t.status === 'running').length;
   const pct = tests.length > 0 ? (doneCount / tests.length) * 100 : 0;
+  const repoFinished = runCount === 0 && doneCount === tests.length;
 
   return (
     <div className="border-t border-border/20 first:border-0">
@@ -60,19 +70,20 @@ function RepoGroup({ repo, tests }: { repo: string; tests: TestResult[] }) {
         <div className="flex items-center gap-2 mb-1 flex-wrap">
           <GitBranch className="w-3 h-3 text-primary shrink-0" />
           <span className="text-[11px] font-mono font-bold">{repo}</span>
+          <RepoStatusIcon failCount={failCount} runCount={runCount} finished={repoFinished} />
           {failCount > 0 && (
             <span className="text-[9px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">
               {failCount} falhou
             </span>
           )}
-          {runCount > 0 && (
-            <span className="flex items-center gap-0.5 text-[9px] text-primary">
-              <Loader2 className="w-2.5 h-2.5 animate-spin" /> rodando
+          {skipCount > 0 && (
+            <span className="text-[9px] text-muted-foreground/60 bg-muted/30 px-1.5 py-0.5 rounded border border-border/30">
+              {skipCount} pulado
             </span>
           )}
           <span className="ml-auto text-[10px] text-muted-foreground font-mono">{doneCount}/{tests.length}</span>
         </div>
-        <Progress value={pct} className="h-0.5" />
+        {!repoFinished && <Progress value={pct} className="h-0.5" />}
       </div>
       <div className="divide-y divide-border/10">
         {tests.map((t, i) => <TestRow key={i} test={t} />)}
@@ -102,6 +113,7 @@ function TestTypeSection({ title, icon, tests }: {
   const skipCount = tests.filter(t => t.status === 'skipped').length;
   const runCount  = tests.filter(t => t.status === 'running').length;
   const pct = tests.length > 0 ? (doneCount / tests.length) * 100 : 0;
+  const sectionFinished = runCount === 0 && doneCount === tests.length;
 
   return (
     <div className="rounded-lg border border-border/40 overflow-hidden">
@@ -109,20 +121,25 @@ function TestTypeSection({ title, icon, tests }: {
       <div className="px-3 py-2.5 bg-muted/25 border-b border-border/30 flex items-center gap-2 flex-wrap">
         {icon}
         <span className="text-xs font-bold">Testes {title}</span>
+        {sectionFinished && (failCount > 0
+          ? <XCircle      className="w-3.5 h-3.5 text-red-500 shrink-0" />
+          : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />)}
         <span className="text-[10px] text-muted-foreground font-mono">{passCount}/{tests.length}</span>
         {failCount > 0 && <span className="text-[10px] text-red-400 font-semibold ml-1">{failCount} falhou</span>}
         {runCount  > 0 && <span className="text-[10px] text-primary ml-1">{runCount} rodando</span>}
         {skipCount > 0 && <span className="text-[10px] text-muted-foreground/60 ml-1">{skipCount} pulado</span>}
       </div>
-      {/* Section progress bar */}
-      <div className="px-3 pt-2 pb-1.5 bg-muted/10">
-        <Progress value={pct} className="h-1.5" />
-        <div className="flex items-center gap-3 text-[10px] mt-1.5">
-          <span className="text-emerald-400">✓ {passCount} passou</span>
-          <span className="text-red-400">✗ {failCount} falhou</span>
-          <span className="text-muted-foreground/60">⊘ {skipCount} pulado</span>
+      {/* Section progress bar — only while running */}
+      {!sectionFinished && (
+        <div className="px-3 pt-2 pb-1.5 bg-muted/10">
+          <Progress value={pct} className="h-1.5" />
+          <div className="flex items-center gap-3 text-[10px] mt-1.5">
+            <span className="text-emerald-400">✓ {passCount} passou</span>
+            <span className="text-red-400">✗ {failCount} falhou</span>
+            <span className="text-muted-foreground/60">⊘ {skipCount} pulado</span>
+          </div>
         </div>
-      </div>
+      )}
       {/* Repo groups */}
       <div className="divide-y divide-border/20">
         {byRepo.map(([repo, repoTests]) => (
