@@ -14,6 +14,7 @@ import {
 import { LogLine, Stage } from '../lib/api/types';
 import { api } from '../lib/api/mockClient';
 import { DocViewer } from '../components/doc-viewer';
+import { ExecStageView } from '../components/exec-stage-view';
 
 type SectionKey = 'chat' | 'repos' | 'branches' | 'dossier' | 'infra';
 
@@ -656,6 +657,18 @@ export default function DemandExecution() {
                 <div className="bg-muted/30 border border-border/50 rounded-lg p-3 text-xs leading-relaxed text-foreground/70 italic">
                   {currentStageData.summary}
                 </div>
+              )}
+
+              {/* ── Exec stage view ── */}
+              {currentStageKey === 'exec' && currentStageData && (
+                currentStageData.execData ? (
+                  <ExecStageView execData={currentStageData.execData} stageStatus={currentStageData.status} />
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground italic py-4">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    Claude preparando execução do plano...
+                  </div>
+                )
               )}
 
               {/* ── Document viewer for init / context / plan ── */}

@@ -1,4 +1,4 @@
-import { Demand } from '../api/types';
+import { Demand, ExecData } from '../api/types';
 
 // Branches convention: "repoName|branchName" — enables repo-grouped display in the UI
 
@@ -267,6 +267,68 @@ const PORTAL_104_PLAN_DOC = `# Plano de execução — PORTAL-104
 Se falha crítica em produção: reverter via feature flag \`LEGACY_JWT=true\` que mantém \`jsonwebtoken@8.5.1\` em modo de compatibilidade (já configurado no Vault).
 `;
 
+// ── Exec data for PORTAL-104 (CVE fix — two repos in parallel) ──────────────
+const PORTAL_104_EXEC_DATA: ExecData = {
+  tasks: [
+    { id: 't1', label: 'T1 — Upgrade portal-frontend', parallelGroup: 0, filePaths: ['portal-frontend::package.json', 'portal-frontend::src/lib/auth/session.ts'], status: 'done' },
+    { id: 't2', label: 'T2 — Upgrade portal-backend',  parallelGroup: 0, filePaths: ['portal-backend::package.json', 'portal-backend::src/auth/tokenService.ts'], status: 'done' },
+    { id: 't3', label: 'T3 — Ajustar testes',          parallelGroup: 1, filePaths: ['portal-backend::tests/unit/tokenService.test.ts'], status: 'done' },
+  ],
+  files: [
+    {
+      path: 'package.json', repo: 'portal-frontend', branch: 'feature/PORTAL-104-sec-deps',
+      linesAdded: 1, linesRemoved: 1,
+      diff: `--- a/package.json\n+++ b/package.json\n@@ -12,7 +12,7 @@\n   "name": "portal-frontend",\n   "dependencies": {\n-    "jsonwebtoken": "^8.5.1",\n+    "jsonwebtoken": "^9.0.2",\n     "react": "^18.2.0",\n     "react-dom": "^18.2.0"\n   }`,
+    },
+    {
+      path: 'src/lib/auth/session.ts', repo: 'portal-frontend', branch: 'feature/PORTAL-104-sec-deps',
+      linesAdded: 2, linesRemoved: 2,
+      diff: `--- a/src/lib/auth/session.ts\n+++ b/src/lib/auth/session.ts\n@@ -8,8 +8,8 @@ import { config } from '../config';\n \n-export function signRefreshToken(userId: string): string {\n-  return jwt.sign(\n+export async function signRefreshToken(userId: string): Promise<string> {\n+  return await jwt.sign(\n     { sub: userId },\n     config.refreshSecret,\n     { expiresIn: '7d' }\n   );\n }`,
+    },
+    {
+      path: 'package.json', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
+      linesAdded: 1, linesRemoved: 1,
+      diff: `--- a/package.json\n+++ b/package.json\n@@ -8,7 +8,7 @@\n   "name": "portal-backend",\n   "dependencies": {\n-    "jsonwebtoken": "^8.5.1",\n+    "jsonwebtoken": "^9.0.2",\n     "express": "^5.0.0",\n     "drizzle-orm": "^0.30.0"\n   }`,
+    },
+    {
+      path: 'src/auth/tokenService.ts', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
+      linesAdded: 6, linesRemoved: 6,
+      diff: `--- a/src/auth/tokenService.ts\n+++ b/src/auth/tokenService.ts\n@@ -18,19 +18,19 @@ import { config } from '../config';\n \n-export function generateAccessToken(user: User): string {\n-  return jwt.sign(\n+export async function generateAccessToken(user: User): Promise<string> {\n+  return await jwt.sign(\n     { sub: user.id, role: user.role },\n     config.privateKey,\n     { algorithm: 'RS256', expiresIn: '15m' }\n   );\n }\n \n-export function generateRefreshToken(userId: string): string {\n-  return jwt.sign(\n+export async function generateRefreshToken(userId: string): Promise<string> {\n+  return await jwt.sign(\n     { sub: userId }, config.refreshSecret, { expiresIn: '7d' }\n   );\n }\n \n-export function rotateToken(decoded: JwtPayload): string {\n-  return jwt.sign(\n+export async function rotateToken(decoded: JwtPayload): Promise<string> {\n+  return await jwt.sign(\n     { ...decoded, iat: Date.now() }, config.privateKey, { algorithm: 'RS256' }\n   );\n }`,
+    },
+    {
+      path: 'tests/unit/tokenService.test.ts', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
+      linesAdded: 4, linesRemoved: 4,
+      diff: `--- a/tests/unit/tokenService.test.ts\n+++ b/tests/unit/tokenService.test.ts\n@@ -8,14 +8,14 @@ describe('tokenService', () => {\n   it('should generate access token', async () => {\n-    jest.spyOn(jwt, 'sign').mockReturnValue('mock-access' as any);\n-    const token = tokenService.generateAccessToken(mockUser);\n+    jest.spyOn(jwt, 'sign').mockResolvedValue('mock-access' as any);\n+    const token = await tokenService.generateAccessToken(mockUser);\n     expect(token).toBe('mock-access');\n   });\n \n   it('should generate refresh token', async () => {\n-    jest.spyOn(jwt, 'sign').mockReturnValue('mock-refresh' as any);\n-    const token = tokenService.generateRefreshToken(mockUser.id);\n+    jest.spyOn(jwt, 'sign').mockResolvedValue('mock-refresh' as any);\n+    const token = await tokenService.generateRefreshToken(mockUser.id);\n     expect(token).toBe('mock-refresh');\n   });\n });`,
+    },
+  ],
+};
+
+// ── Exec data for PAY-203 (audit logs — three repos sequential) ──────────────
+const PAY_203_EXEC_DATA: ExecData = {
+  tasks: [
+    { id: 't1', label: 'T1 — Criar AuditEvent schema', parallelGroup: 0, filePaths: ['shared-contracts::src/events/AuditEvent.ts'], status: 'done' },
+    { id: 't2', label: 'T2 — Implementar auditService', parallelGroup: 1, filePaths: ['api-pagamentos::src/audit/auditService.ts'], status: 'done' },
+    { id: 't3', label: 'T3 — Escrever testes e2e',      parallelGroup: 2, filePaths: ['api-pagamentos::tests/e2e/audit.e2e.test.ts'], status: 'done' },
+  ],
+  files: [
+    {
+      path: 'src/events/AuditEvent.ts', repo: 'shared-contracts', branch: 'feature/PAY-203-audit-events',
+      linesAdded: 16, linesRemoved: 0,
+      diff: `--- /dev/null\n+++ b/src/events/AuditEvent.ts\n@@ -0,0 +1,16 @@\n+export type AuditEventType =\n+  | 'payment.created'\n+  | 'payment.captured'\n+  | 'payment.failed'\n+  | 'chargeback.initiated';\n+\n+export interface AuditEvent {\n+  id: string;\n+  type: AuditEventType;\n+  transactionId: string;\n+  amount: number;\n+  currency: 'BRL';\n+  occurredAt: string; // ISO 8601\n+  metadata?: Record<string, unknown>;\n+}`,
+    },
+    {
+      path: 'src/audit/auditService.ts', repo: 'api-pagamentos', branch: 'feature/PAY-203-audit-log',
+      linesAdded: 22, linesRemoved: 0,
+      diff: `--- /dev/null\n+++ b/src/audit/auditService.ts\n@@ -0,0 +1,22 @@\n+import { AuditEvent } from 'shared-contracts/src/events/AuditEvent';\n+import { rabbitMQ } from '../infra/rabbitmq';\n+import { logger } from '../infra/logger';\n+\n+const EXCHANGE = 'audit.events';\n+\n+export async function publishAuditEvent(event: AuditEvent): Promise<void> {\n+  try {\n+    await rabbitMQ.publish(EXCHANGE, event.type, event);\n+    logger.info({ event }, 'Audit event published');\n+  } catch (err) {\n+    logger.error({ err, event }, 'Failed to publish audit event');\n+    throw err;\n+  }\n+}\n+\n+export async function buildAuditEvent(\n+  type: AuditEvent['type'],\n+  transactionId: string,\n+  amount: number,\n+): Promise<AuditEvent> {\n+  return { id: crypto.randomUUID(), type, transactionId, amount, currency: 'BRL', occurredAt: new Date().toISOString() };\n+}`,
+    },
+    {
+      path: 'tests/e2e/audit.e2e.test.ts', repo: 'api-pagamentos', branch: 'feature/PAY-203-audit-log',
+      linesAdded: 28, linesRemoved: 0,
+      diff: `--- /dev/null\n+++ b/tests/e2e/audit.e2e.test.ts\n@@ -0,0 +1,28 @@\n+import { publishAuditEvent, buildAuditEvent } from '../../src/audit/auditService';\n+import { rabbitMQ } from '../../src/infra/rabbitmq';\n+\n+describe('Audit log e2e', () => {\n+  let events: unknown[] = [];\n+\n+  beforeAll(async () => {\n+    await rabbitMQ.connect();\n+    rabbitMQ.subscribe('audit.events', e => events.push(e));\n+  });\n+\n+  afterAll(async () => { await rabbitMQ.disconnect(); });\n+\n+  it('should publish payment.created event', async () => {\n+    const ev = await buildAuditEvent('payment.created', 'pmt-9901', 199.90);\n+    await publishAuditEvent(ev);\n+    await new Promise(r => setTimeout(r, 200));\n+    expect(events).toHaveLength(1);\n+    expect(events[0]).toMatchObject({ type: 'payment.created' });\n+  });\n+\n+  it('should publish chargeback event', async () => {\n+    // Requires RabbitMQ consumer with 15s timeout\n+    const ev = await buildAuditEvent('chargeback.initiated', 'pmt-8821', 89.90);\n+    await publishAuditEvent(ev);\n+    await new Promise(r => setTimeout(r, 10000));\n+    expect(events).toHaveLength(2);\n+  });\n+});`,
+    },
+  ],
+};
+
 export const mockDemands: Demand[] = [
   {
     id: 'd-1',
@@ -337,7 +399,7 @@ export const mockDemands: Demand[] = [
       { key: 'init',    title: 'Iniciar a demanda',    status: 'done',    summary: 'Card lido. CVE-2026-1234 afeta `jsonwebtoken` < 9.0.2. PRD de segurança gerada.',           document: PORTAL_104_INIT_DOC,    startedAt: new Date(Date.now() - 7200000).toISOString(), finishedAt: new Date(Date.now() - 7100000).toISOString() },
       { key: 'context', title: 'Contextualização',     status: 'done',    summary: 'Ambos os repos usam jsonwebtoken@8.5.1. 4 chamadas sign() identificadas, 1 no frontend.', document: PORTAL_104_CONTEXT_DOC, startedAt: new Date(Date.now() - 7100000).toISOString(), finishedAt: new Date(Date.now() - 6800000).toISOString() },
       { key: 'plan',    title: 'Plano',                status: 'done',    summary: 'Plano: (1) upgrade frontend (2) upgrade backend (3) ajustar API que mudou na v9.',         document: PORTAL_104_PLAN_DOC,    startedAt: new Date(Date.now() - 6800000).toISOString(), finishedAt: new Date(Date.now() - 6600000).toISOString() },
-      { key: 'exec',    title: 'Execução do plano',    status: 'done',    summary: '`jsonwebtoken` atualizado para 9.0.2 nos dois repos. 3 chamadas de API ajustadas no backend.', startedAt: new Date(Date.now() - 6600000).toISOString(), finishedAt: new Date(Date.now() - 5400000).toISOString() },
+      { key: 'exec',    title: 'Execução do plano',    status: 'done',    summary: '`jsonwebtoken` atualizado para 9.0.2 nos dois repos. 3 chamadas de API ajustadas no backend.', execData: PORTAL_104_EXEC_DATA, startedAt: new Date(Date.now() - 6600000).toISOString(), finishedAt: new Date(Date.now() - 5400000).toISOString() },
       { key: 'test',    title: 'Execução dos testes',  status: 'running', startedAt: new Date(Date.now() - 5400000).toISOString() }
     ],
     dossier: {
@@ -460,7 +522,7 @@ export const mockDemands: Demand[] = [
       { key: 'init',    title: 'Iniciar a demanda',   status: 'done' },
       { key: 'context', title: 'Contextualização',    status: 'done' },
       { key: 'plan',    title: 'Plano',               status: 'done' },
-      { key: 'exec',    title: 'Execução do plano',   status: 'done' },
+      { key: 'exec',    title: 'Execução do plano',   status: 'done', execData: PAY_203_EXEC_DATA },
       { key: 'test',    title: 'Execução dos testes', status: 'blocked', summary: 'Teste e2e "auditoria de chargeback" falha por timeout no RabbitMQ. Aguardando decisão do Dev sobre retry policy.' }
     ],
     dossier: {
