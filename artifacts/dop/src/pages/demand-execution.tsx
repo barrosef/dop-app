@@ -15,6 +15,7 @@ import { api } from '../lib/api/mockClient';
 import { DocViewer } from '../components/doc-viewer';
 import { ExecStageView } from '../components/exec-stage-view';
 import { TestStageView } from '../components/test-stage-view';
+import { PlanStageView, TestPlan } from '../components/plan-stage-view';
 
 type SectionKey = 'chat' | 'repos' | 'branches' | 'dossier' | 'infra';
 
@@ -108,6 +109,8 @@ export default function DemandExecution() {
   const [showSlash, setShowSlash]                 = useState(false);
   // In-session edits to stage documents (init/context/plan)
   const [editedDocs, setEditedDocs]               = useState<Record<string, string>>({});
+  // In-session edits to plan test-plan (unit/e2e)
+  const [editedTestPlan, setEditedTestPlan]        = useState<Record<string, Partial<TestPlan>>>({});
 
   const chatScrollRef  = useRef<HTMLDivElement>(null);
 
@@ -162,7 +165,7 @@ export default function DemandExecution() {
     setShowSlash(false);
   };
 
-  const DOC_STAGE_KEYS = ['init', 'context', 'plan'] as const;
+  const DOC_STAGE_KEYS = ['init', 'context'] as const;
 
   const handleDocSave = (stageKey: string, newContent: string) => {
     setEditedDocs(prev => ({ ...prev, [stageKey]: newContent }));
@@ -175,6 +178,20 @@ export default function DemandExecution() {
       plan: 'plano de desenvolvimento',
     };
     const label = labels[stageKey] ?? 'documento';
+    setMessage(`/edit Ajuste o ${label}: `);
+    setActiveSection('chat');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleTestPlanSave = (stageKey: string, type: 'unit' | 'e2e', content: string) => {
+    setEditedTestPlan(prev => ({
+      ...prev,
+      [stageKey]: { ...prev[stageKey], [type]: content },
+    }));
+  };
+
+  const handleTestPlanChatRequest = (type: 'unit' | 'e2e') => {
+    const label = type === 'unit' ? 'plano de testes unitários' : 'plano de testes e2e';
     setMessage(`/edit Ajuste o ${label}: `);
     setActiveSection('chat');
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -646,7 +663,22 @@ export default function DemandExecution() {
                 )
               )}
 
-              {/* ── Document viewer for init / context / plan ── */}
+              {/* ── Plan stage view (implementation plan + test plan) ── */}
+              {currentStageKey === 'plan' && currentStageData && (
+                <PlanStageView
+                  document={editedDocs[currentStageKey] ?? currentStageData.document}
+                  testPlan={{
+                    unit: editedTestPlan[currentStageKey]?.unit ?? currentStageData.testPlan?.unit ?? '',
+                    e2e:  editedTestPlan[currentStageKey]?.e2e  ?? currentStageData.testPlan?.e2e  ?? '',
+                  }}
+                  onDocSave={content => handleDocSave(currentStageKey, content)}
+                  onDocChatRequest={() => handleDocChatRequest(currentStageKey)}
+                  onTestPlanSave={(type, content) => handleTestPlanSave(currentStageKey, type, content)}
+                  onTestPlanChatRequest={handleTestPlanChatRequest}
+                />
+              )}
+
+              {/* ── Document viewer for init / context ── */}
               {currentStageData && DOC_STAGE_KEYS.includes(currentStageKey as typeof DOC_STAGE_KEYS[number]) && (
                 currentStageData.document ? (
                   <DocViewer

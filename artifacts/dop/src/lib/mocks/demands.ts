@@ -137,6 +137,105 @@ T1 → T2 → T3 → T4 (backend, sequencial)
 | **Total** | **~7h30** |
 `;
 
+const PORTAL_103_TEST_PLAN = {
+  unit: `## Testes Unitários — PORTAL-103
+
+### \`PagSeguroAdapter.charge\` — cartão aprovado
+- **Arrange**: HTTP client mockado, resposta \`{ status: "PAID" }\`; credenciais via \`ConfigService\` mock
+- **Act**: \`adapter.charge({ method: "card", amount: 100 })\`
+- **Assert**: Retorna \`{ success: true, pending: false }\`; HTTP client chamado com endpoint correto
+
+### \`PagSeguroAdapter.charge\` — Pix assíncrono
+- **Arrange**: HTTP client mockado, resposta \`{ status: "WAITING" }\`
+- **Act**: \`adapter.charge({ method: "pix", amount: 50 })\`
+- **Assert**: Retorna \`{ success: true, pending: true }\`
+
+### \`PagSeguroAdapter.charge\` — falha de rede
+- **Arrange**: HTTP client lança \`NetworkError\`
+- **Act**: \`adapter.charge({ method: "card", amount: 100 })\`
+- **Assert**: Retorna \`{ success: false, error: "network_error" }\`; sem exceção não tratada
+
+### \`PaymentService\` com feature flag \`USE_PAGSEGURO=true\`
+- **Arrange**: \`ConfigService\` retorna \`USE_PAGSEGURO=true\`; \`PagSeguroAdapter\` mockado
+- **Act**: \`paymentService.charge(payload)\`
+- **Assert**: Adapter PagSeguro utilizado; \`ChargeResult.pending\` presente no retorno
+
+### \`PaymentService\` com feature flag \`USE_PAGSEGURO=false\`
+- **Arrange**: \`ConfigService\` retorna \`USE_PAGSEGURO=false\`; adapter legado mockado
+- **Act**: \`paymentService.charge(payload)\`
+- **Assert**: Adapter legado utilizado; campo \`pending\` ausente no retorno
+`,
+  e2e: `## Testes E2E — PORTAL-103
+
+### Pagamento via cartão aprovado
+- **Dado que** o usuário está no checkout com item no carrinho
+- **Quando** seleciona "Cartão de crédito", preenche os dados e confirma
+- **Então** vê tela de confirmação "Pagamento aprovado" em menos de 3s
+
+### Pagamento via Pix — aguardando confirmação
+- **Dado que** o usuário seleciona "Pix" no checkout
+- **Quando** o QR code é exibido e o pagamento fica pendente no gateway
+- **Então** o painel exibe badge "aguardando confirmação Pix" e faz poll a cada 5s
+
+### Pagamento via Pix — confirmação recebida
+- **Dado que** o painel exibe "aguardando confirmação Pix"
+- **Quando** o webhook do PagSeguro notifica pagamento aprovado
+- **Então** o badge muda para "Pago" sem necessidade de refresh manual
+`,
+};
+
+const PORTAL_104_TEST_PLAN = {
+  unit: `## Testes Unitários — PORTAL-104
+
+### \`tokenService.generateAccessToken\`
+- **Arrange**: \`TokenService\` instanciado com mock de \`jsonwebtoken@9.0.2\`; payload \`{ id: 1, role: 'admin' }\`
+- **Act**: \`await generateAccessToken(payload)\`
+- **Assert**: Retorna string JWT válida com expiração 15 min; \`jwt.sign\` chamado com \`await\`
+
+### \`tokenService.generateRefreshToken\`
+- **Arrange**: Idem; mock usa \`mockResolvedValue\` (não \`mockReturnValue\`)
+- **Act**: \`await generateRefreshToken({ id: 1 })\`
+- **Assert**: JWT com expiração de 7 dias; chamada assíncrona respeitada
+
+### \`tokenService.rotateToken\`
+- **Arrange**: Refresh token válido no mock; \`jsonwebtoken@9.0.2\` resolvendo assincronamente
+- **Act**: \`await rotateToken(refreshToken)\`
+- **Assert**: Retorna novo par \`{ accessToken, refreshToken }\`; tokens distintos
+
+### \`authMiddleware\` — bearer válido
+- **Arrange**: Header \`Authorization: Bearer <valid_token>\`; middleware instanciado
+- **Act**: Request atravessa \`authMiddleware\`
+- **Assert**: \`req.user\` preenchido; \`next()\` chamado sem erro
+
+### \`authMiddleware\` — token ausente → 401
+- **Arrange**: Request sem header \`Authorization\`
+- **Act**: Request atravessa \`authMiddleware\`
+- **Assert**: Resposta \`401 Unauthorized\`; \`next()\` NÃO chamado
+
+### \`session.signRefreshToken\` (frontend)
+- **Arrange**: \`signRefreshToken\` convertida para \`async\`; payload de usuário mock
+- **Act**: \`await signRefreshToken(payload)\`
+- **Assert**: Retorna JWT; sem \`SyntaxError\` de chamada síncrona legada
+`,
+  e2e: `## Testes E2E — PORTAL-104
+
+### Login com credenciais válidas
+- **Dado que** o usuário acessa \`/login\`
+- **Quando** preenche email e senha corretos e clica em "Entrar"
+- **Então** é redirecionado para \`/dashboard\`; token JWT armazenado no cookie \`session\`
+
+### Refresh automático de token expirado
+- **Dado que** o \`accessToken\` expirou (simulado via \`Date.now\` mock)
+- **Quando** o frontend realiza qualquer chamada autenticada
+- **Então** o \`refreshToken\` é usado automaticamente; novo par emitido sem erro 401 visível
+
+### Rejeição de token forjado (CVE-2026-1234)
+- **Dado que** um atacante envia um JWT com chave malformada para \`RS256\`
+- **Quando** o token chega ao \`authMiddleware\`
+- **Então** retorna \`401 Unauthorized\`; nenhum dado sensível exposto no body
+`,
+};
+
 const PORTAL_104_INIT_DOC = `# PRD de Segurança — CVE-2026-1234 (PORTAL-104)
 
 ## Vulnerabilidade
@@ -365,7 +464,7 @@ export const mockDemands: Demand[] = [
     stages: [
       { key: 'init',    title: 'Iniciar a demanda',    status: 'done',    summary: 'Card PORTAL-103 lido via MCP Jira. RFC gerada e aprovada.',                                              document: PORTAL_103_INIT_DOC,    startedAt: new Date(Date.now() - 3700000).toISOString(), finishedAt: new Date(Date.now() - 3500000).toISOString() },
       { key: 'context', title: 'Contextualização',     status: 'done',    summary: 'Análise forense concluída. Identificados 3 pontos de integração no portal-backend.',                    document: PORTAL_103_CONTEXT_DOC, startedAt: new Date(Date.now() - 3500000).toISOString(), finishedAt: new Date(Date.now() - 3200000).toISOString() },
-      { key: 'plan',    title: 'Plano',                status: 'running', summary: 'Elaborando plano de desenvolvimento: 4 tarefas no backend, 2 no frontend.',                            document: PORTAL_103_PLAN_DOC,    startedAt: new Date(Date.now() - 3200000).toISOString() }
+      { key: 'plan',    title: 'Plano',                status: 'running', summary: 'Elaborando plano de desenvolvimento: 4 tarefas no backend, 2 no frontend.',                            document: PORTAL_103_PLAN_DOC,    testPlan: PORTAL_103_TEST_PLAN, startedAt: new Date(Date.now() - 3200000).toISOString() }
     ],
     dossier: {
       repos: ['portal-backend'],
@@ -398,7 +497,7 @@ export const mockDemands: Demand[] = [
     stages: [
       { key: 'init',    title: 'Iniciar a demanda',    status: 'done',    summary: 'Card lido. CVE-2026-1234 afeta `jsonwebtoken` < 9.0.2. PRD de segurança gerada.',           document: PORTAL_104_INIT_DOC,    startedAt: new Date(Date.now() - 7200000).toISOString(), finishedAt: new Date(Date.now() - 7100000).toISOString() },
       { key: 'context', title: 'Contextualização',     status: 'done',    summary: 'Ambos os repos usam jsonwebtoken@8.5.1. 4 chamadas sign() identificadas, 1 no frontend.', document: PORTAL_104_CONTEXT_DOC, startedAt: new Date(Date.now() - 7100000).toISOString(), finishedAt: new Date(Date.now() - 6800000).toISOString() },
-      { key: 'plan',    title: 'Plano',                status: 'done',    summary: 'Plano: (1) upgrade frontend (2) upgrade backend (3) ajustar API que mudou na v9.',         document: PORTAL_104_PLAN_DOC,    startedAt: new Date(Date.now() - 6800000).toISOString(), finishedAt: new Date(Date.now() - 6600000).toISOString() },
+      { key: 'plan',    title: 'Plano',                status: 'done',    summary: 'Plano: (1) upgrade frontend (2) upgrade backend (3) ajustar API que mudou na v9.',         document: PORTAL_104_PLAN_DOC,    testPlan: PORTAL_104_TEST_PLAN, startedAt: new Date(Date.now() - 6800000).toISOString(), finishedAt: new Date(Date.now() - 6600000).toISOString() },
       { key: 'exec',    title: 'Execução do plano',    status: 'done',    summary: '`jsonwebtoken` atualizado para 9.0.2 nos dois repos. 3 chamadas de API ajustadas no backend.', execData: PORTAL_104_EXEC_DATA, startedAt: new Date(Date.now() - 6600000).toISOString(), finishedAt: new Date(Date.now() - 5400000).toISOString() },
       { key: 'test',    title: 'Execução dos testes',  status: 'running', startedAt: new Date(Date.now() - 5400000).toISOString() }
     ],

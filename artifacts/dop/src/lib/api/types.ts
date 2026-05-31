@@ -42,7 +42,8 @@ export interface ExecTask {
   status: 'pending' | 'running' | 'done';
 }
 export interface ExecData { tasks: ExecTask[]; files: ExecFile[]; }
-export interface Stage { key: string; title: string; status: StageStatus; summary?: string; document?: string; execData?: ExecData; startedAt?: string; finishedAt?: string; }
+export interface TestPlan { unit: string; e2e: string; }
+export interface Stage { key: string; title: string; status: StageStatus; summary?: string; document?: string; execData?: ExecData; testPlan?: TestPlan; startedAt?: string; finishedAt?: string; }
 export interface PullRequest { id: string; repo: string; sourceBranch: string; targetBranch: string; url: string; merged: boolean; approver?: string; hasConflict: boolean; }
 export interface FileTouched { path: string; kind: 'plan' | 'context' | 'adr' | 'source' | 'test'; change: 'created' | 'modified'; }
 export interface TestResult {
