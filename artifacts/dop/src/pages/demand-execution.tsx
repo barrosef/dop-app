@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDemand, useSendChatMessage, useWorkspace } from '../hooks/use-api';
 import { Badge } from '../components/ui/badge';
@@ -8,9 +8,11 @@ import {
   GitBranch, GitMerge, ScrollText, Server, MessageSquare,
   Send, ArrowLeft, FileCode, FileText, FlaskConical,
   Clock, Terminal, AlertTriangle, Package, Layers, X,
-  ChevronRight
+  ChevronRight, ChevronDown, ExternalLink, GitPullRequest,
+  CreditCard, XCircle, SkipForward,
 } from 'lucide-react';
-import { LogLine, Stage } from '../lib/api/types';
+import { marked } from 'marked';
+import { LogLine, Stage, FileTouched, PullRequest, TestResult, Demand } from '../lib/api/types';
 import { api } from '../lib/api/mockClient';
 import { DocViewer } from '../components/doc-viewer';
 import { ExecStageView } from '../components/exec-stage-view';
@@ -18,6 +20,12 @@ import { TestStageView } from '../components/test-stage-view';
 import { PlanStageView, TestPlan } from '../components/plan-stage-view';
 
 type SectionKey = 'chat' | 'repos' | 'branches' | 'dossier' | 'infra';
+
+type CentralOverlay =
+  | { kind: 'file-diff'; file: FileTouched }
+  | { kind: 'jira-card' }
+  | { kind: 'time-detail' }
+  | { kind: 'allure' };
 
 const STAGE_DEFS = [
   { key: 'init',    short: 'Iniciar',   title: 'Iniciar a demanda',   hasLogs: false },
@@ -75,14 +83,12 @@ function FileKindIcon({ kind }: { kind: string }) {
   }
 }
 
-/** Parse "repoName|branchName" convention → { repo, branch } */
 function parseBranch(raw: string): { repo: string; branch: string } {
   const sep = raw.indexOf('|');
   if (sep === -1) return { repo: '', branch: raw };
   return { repo: raw.slice(0, sep), branch: raw.slice(sep + 1) };
 }
 
-/** Group branch strings by repo */
 function groupBranchesByRepo(branches: string[]): Record<string, string[]> {
   const groups: Record<string, string[]> = {};
   for (const raw of branches) {
@@ -94,6 +100,365 @@ function groupBranchesByRepo(branches: string[]): Record<string, string[]> {
   return groups;
 }
 
+function DiffLine({ line }: { line: string }) {
+  const isAdd  = line.startsWith('+') && !line.startsWith('+++');
+  const isDel  = line.startsWith('-') && !line.startsWith('---');
+  const isHunk = line.startsWith('@@');
+  const cls = isAdd  ? 'bg-emerald-500/10 text-emerald-300'
+             : isDel  ? 'bg-red-500/10 text-red-300'
+             : isHunk ? 'text-purple-400/80'
+             : 'text-[#c8d3f5]/60';
+  return (
+    <div className={`${cls} px-3 min-h-[1.4rem] font-mono text-[11px] leading-snug select-text whitespace-pre`}>
+      {line || '\u00A0'}
+    </div>
+  );
+}
+
+function FilesByRepoBranch({ files, onDiff }: {
+  files: FileTouched[];
+  onDiff: (file: FileTouched) => void;
+}) {
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const isOpen = (k: string) => openGroups[k] !== false;
+
+  const groups = useMemo(() => {
+    const map: Record<string, FileTouched[]> = {};
+    for (const f of files) {
+      const key = f.repo
+        ? `${f.repo}|${f.branch ?? ''}`
+        : f.path.split('/')[0];
+      if (!map[key]) map[key] = [];
+      map[key].push(f);
+    }
+    return Object.entries(map);
+  }, [files]);
+
+  return (
+    <div className="space-y-1.5">
+      {groups.map(([groupKey, groupFiles]) => {
+        const [repo, branch] = groupKey.split('|');
+        const open = isOpen(groupKey);
+        return (
+          <div key={groupKey} className="rounded-md border border-border/30 overflow-hidden">
+            <button
+              onClick={() => setOpenGroups(prev => ({ ...prev, [groupKey]: !open }))}
+              className="w-full flex items-center gap-1.5 px-2 py-1.5 bg-muted/20 hover:bg-muted/30 transition-colors text-left"
+            >
+              {open
+                ? <ChevronDown  className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+                : <ChevronRight className="w-3 h-3 text-muted-foreground/40 shrink-0" />}
+              <GitBranch className="w-3 h-3 text-primary shrink-0" />
+              <span className="text-[10px] font-mono font-bold">{repo}</span>
+              {branch && (
+                <span className="text-[9px] text-muted-foreground font-mono truncate flex-1">⎇ {branch}</span>
+              )}
+              <span className="ml-auto text-[9px] text-muted-foreground shrink-0">{groupFiles.length}</span>
+            </button>
+            {open && (
+              <div className="divide-y divide-border/20">
+                {groupFiles.map((f, i) => {
+                  const parts    = f.path.split('/');
+                  const filename = parts.pop() ?? f.path;
+                  const dirPath  = parts.join('/');
+                  return (
+                    <div key={i} className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-muted/10 group">
+                      <FileKindIcon kind={f.kind} />
+                      <div className="flex-1 min-w-0">
+                        {dirPath && <span className="text-[9px] text-muted-foreground/40 font-mono">{dirPath}/</span>}
+                        <span className="text-[10px] font-mono font-semibold block truncate">{filename}</span>
+                      </div>
+                      <span className={`text-[8px] px-1 py-0.5 rounded border shrink-0 ${
+                        f.change === 'created'
+                          ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
+                          : 'text-amber-400 border-amber-500/20 bg-amber-500/5'
+                      }`}>
+                        {f.change === 'created' ? '+novo' : '~mod'}
+                      </span>
+                      {f.diff && (
+                        <button
+                          onClick={() => onDiff(f)}
+                          className="text-[9px] px-1.5 py-0.5 rounded border border-border/50 text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                        >
+                          diff
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PrCard({ pr }: { pr: PullRequest }) {
+  return (
+    <div className="p-2.5 rounded-md bg-muted/30 border border-border/40 space-y-2">
+      <div className="flex items-center gap-2">
+        <GitPullRequest className="w-3.5 h-3.5 text-primary shrink-0" />
+        <span className="text-[10px] font-mono truncate flex-1 font-semibold">{pr.sourceBranch}</span>
+        <span className={`text-[9px] px-1.5 py-0.5 rounded-full border shrink-0 font-semibold ${
+          pr.merged       ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+          pr.hasConflict  ? 'bg-red-500/15 text-red-400 border-red-500/25' :
+                            'bg-primary/15 text-primary border-primary/25'
+        }`}>
+          {pr.merged ? 'Merged' : pr.hasConflict ? 'Conflito' : 'Aberto'}
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5 ml-5">
+        <ChevronRight className="w-3 h-3 text-border shrink-0" />
+        <span className="text-[9px] text-muted-foreground font-mono">{pr.targetBranch}</span>
+      </div>
+      {pr.hasConflict && (
+        <div className="flex items-center gap-1 text-[9px] text-red-400 ml-5">
+          <AlertTriangle className="w-3 h-3" /> Conflito detectado
+        </div>
+      )}
+      {pr.reviewers && pr.reviewers.length > 0 && (
+        <div className="flex items-center gap-2 ml-5 flex-wrap">
+          <div className="flex items-center gap-0.5">
+            {pr.reviewers.map((r, i) => (
+              <div
+                key={i}
+                className="relative"
+                title={`${r.name} — ${
+                  r.status === 'approved' ? 'aprovado' :
+                  r.status === 'rejected' ? 'rejeitou' : 'pendente'
+                }`}
+              >
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold border-2 ${
+                  r.status === 'approved' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' :
+                  r.status === 'rejected' ? 'bg-red-500/20 border-red-500 text-red-300' :
+                  'bg-muted/50 border-border/60 text-muted-foreground'
+                }`}>
+                  {r.initials}
+                </div>
+                <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full flex items-center justify-center border border-background ${
+                  r.status === 'approved' ? 'bg-emerald-500' :
+                  r.status === 'rejected' ? 'bg-red-500' :
+                  'bg-muted-foreground/30'
+                }`}>
+                  {r.status === 'approved' && <CheckCircle2 className="w-1.5 h-1.5 text-white" />}
+                  {r.status === 'rejected' && <X className="w-1.5 h-1.5 text-white" />}
+                </div>
+              </div>
+            ))}
+          </div>
+          <span className="text-[9px] text-muted-foreground">
+            {pr.reviewers.filter(r => r.status === 'approved').length}/{pr.reviewers.length} aprovaram
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function JiraCardOverlay({ demand }: { demand: Demand }) {
+  const [tab, setTab] = useState<'card' | 'rfc'>('card');
+  const initStage = demand.stages.find(s => s.key === 'init');
+  const isSecurity = demand.title.toLowerCase().includes('cve') || demand.title.toLowerCase().includes('segurança');
+
+  return (
+    <div className="p-5 space-y-4 max-w-3xl">
+      <div className="flex gap-1 border-b border-border/40 mb-4">
+        {(['card', 'rfc'] as const).map(k => (
+          <button
+            key={k}
+            onClick={() => setTab(k)}
+            className={`px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors ${
+              tab === k
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {k === 'card' ? '📋 Card Jira' : '📄 RFC / PRD'}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'card' && (
+        <div className="rounded-lg border border-border/40 overflow-hidden">
+          <div className="px-4 py-3 bg-muted/30 border-b border-border/40">
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="text-xs font-mono font-bold text-primary">{demand.jiraKey}</span>
+              {isSecurity
+                ? <>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30">🐛 Bug</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-500/25">🔴 Crítica</span>
+                  </>
+                : <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">✨ Melhoria</span>
+              }
+              <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/25">{demand.jiraStatus}</span>
+            </div>
+            <h3 className="text-sm font-semibold">{demand.title}</h3>
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[11px]">
+              {[
+                ['Responsável', demand.assignee],
+                ['Sprint',      'Sprint 42'],
+                ['Reporter',    'Dev Team'],
+                ['Tipo',        isSecurity ? 'Security Bug' : 'Story'],
+              ].map(([label, val]) => (
+                <div key={label} className="flex gap-2">
+                  <span className="text-muted-foreground w-24 shrink-0">{label}</span>
+                  <span className="font-medium">{val}</span>
+                </div>
+              ))}
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Descrição</p>
+              <p className="text-xs text-foreground/80 leading-relaxed bg-muted/20 border border-border/30 rounded p-3">
+                {isSecurity
+                  ? 'CVE-2026-1234 foi identificada no pacote jsonwebtoken utilizado nos repos portal-frontend e portal-backend. Versões < 9.0.2 são vulneráveis a ataques de falsificação de tokens JWT. Atualização urgente necessária antes do próximo deploy.'
+                  : demand.title + '. Consulte a RFC/PRD gerada na aba ao lado para detalhes técnicos completos.'}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Labels</p>
+              <div className="flex flex-wrap gap-1.5">
+                {(isSecurity ? ['security', 'CVE', 'dependencies', 'urgent'] : ['feature', 'backend', 'sprint-42']).map(l => (
+                  <span key={l} className="text-[9px] px-2 py-0.5 rounded-full bg-muted/50 border border-border/50 text-muted-foreground">{l}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'rfc' && (
+        initStage?.document
+          ? <div
+              className="prose prose-invert prose-sm max-w-none text-sm leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: marked.parse(initStage.document) as string }}
+            />
+          : <p className="text-sm text-muted-foreground italic py-8 text-center">Nenhum documento RFC/PRD disponível para esta demanda.</p>
+      )}
+    </div>
+  );
+}
+
+function TimeDetailOverlay({ demand }: { demand: Demand }) {
+  function stageDuration(stage: Stage): string | null {
+    if (!stage.startedAt) return null;
+    const end  = stage.finishedAt ? new Date(stage.finishedAt) : new Date();
+    const secs = Math.max(0, Math.floor((end.getTime() - new Date(stage.startedAt).getTime()) / 1000));
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  }
+
+  const elapsed = demand.dossier.elapsedSeconds;
+  const elapsedStr = elapsed
+    ? `${Math.floor(elapsed / 3600)}h ${Math.floor((elapsed % 3600) / 60)}m ${elapsed % 60}s`
+    : null;
+
+  return (
+    <div className="p-5 max-w-2xl space-y-4">
+      <div className="rounded-lg border border-border/40 overflow-hidden">
+        <div className="px-4 py-2 bg-muted/30 border-b border-border/40">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo por etapa</p>
+        </div>
+        {STAGE_DEFS.map(def => {
+          const stage  = demand.stages.find(s => s.key === def.key);
+          const status = stage?.status ?? 'pending';
+          const dur    = stage ? stageDuration(stage) : null;
+          return (
+            <div key={def.key} className="flex items-center gap-3 px-4 py-3 border-b border-border/20 last:border-0 hover:bg-muted/10">
+              <StatusIcon status={status} size="sm" />
+              <span className="text-xs flex-1">{def.title}</span>
+              {status === 'pending'
+                ? <span className="text-[10px] text-muted-foreground/30">—</span>
+                : <span className="text-xs font-mono text-muted-foreground flex items-center gap-1.5">
+                    {dur ?? <Loader2 className="w-3 h-3 animate-spin inline" />}
+                    {status === 'running' && <span className="text-[9px] text-primary">em curso</span>}
+                  </span>
+              }
+            </div>
+          );
+        })}
+      </div>
+      {elapsedStr && (
+        <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-muted/30 border border-border/40">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">Total acumulado</span>
+          </div>
+          <span className="text-sm font-mono font-bold">{elapsedStr}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AllureOverlay({ tests }: { tests: TestResult[] }) {
+  const total = tests.length;
+  const pass  = tests.filter(t => t.status === 'success').length;
+  const fail  = tests.filter(t => t.status === 'fail').length;
+  const skip  = tests.filter(t => t.status === 'skipped').length;
+  const run   = tests.filter(t => t.status === 'running').length;
+  const pct   = total > 0 ? Math.round((pass / total) * 100) : 0;
+
+  return (
+    <div className="p-5 max-w-3xl space-y-4">
+      <div className="grid grid-cols-5 gap-3">
+        {[
+          { label: 'Passou',    val: pass, cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
+          { label: 'Falhou',    val: fail, cls: 'text-red-400 bg-red-500/10 border-red-500/20' },
+          { label: 'Pulado',    val: skip, cls: 'text-muted-foreground bg-muted/30 border-border/40' },
+          { label: 'Rodando',   val: run,  cls: 'text-primary bg-primary/10 border-primary/20' },
+          { label: '% Sucesso', val: pct,  cls: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20', suffix: '%' },
+        ].map(({ label, val, cls, suffix }) => (
+          <div key={label} className={`text-center p-3 rounded-lg border ${cls}`}>
+            <div className="text-2xl font-bold">{val}{suffix}</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {(['unit', 'e2e'] as const).map(type => {
+        const typeTests = tests.filter(t => t.type === type);
+        if (typeTests.length === 0) return null;
+        return (
+          <div key={type} className="rounded-lg border border-border/40 overflow-hidden">
+            <div className="px-3 py-2 bg-muted/25 border-b border-border/40 text-xs font-bold">
+              {type === 'unit' ? '⚗ Testes Unitários' : '🌐 Testes E2E'}
+            </div>
+            <div className="divide-y divide-border/20">
+              {typeTests.map((t, i) => (
+                <div key={i} className={`flex items-center gap-2.5 px-3 py-2 ${t.status === 'fail' ? 'bg-red-500/5' : ''}`}>
+                  {t.status === 'success' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                  {t.status === 'fail'    && <XCircle      className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+                  {t.status === 'skipped' && <SkipForward  className="w-3.5 h-3.5 text-muted-foreground/35 shrink-0" />}
+                  {t.status === 'running' && <Loader2      className="w-3.5 h-3.5 text-primary animate-spin shrink-0" />}
+                  <span className="text-[11px] flex-1 truncate">{t.name}</span>
+                  {t.repo && <span className="text-[9px] text-muted-foreground font-mono shrink-0">{t.repo}</span>}
+                  {t.durationMs != null && <span className="text-[10px] text-muted-foreground/40 font-mono shrink-0">{t.durationMs}ms</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      <button
+        disabled
+        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-border/40 text-sm text-muted-foreground cursor-not-allowed opacity-60"
+      >
+        <ExternalLink className="w-3.5 h-3.5" /> Ver relatório completo no CI / CD (Allure)
+        <span className="text-[9px] bg-muted/50 px-1.5 py-0.5 rounded ml-1">em breve</span>
+      </button>
+    </div>
+  );
+}
+
 export default function DemandExecution() {
   const { id, demandId } = useParams();
   const navigate = useNavigate();
@@ -101,21 +466,19 @@ export default function DemandExecution() {
   const { data: workspace } = useWorkspace(id);
   const sendChat = useSendChatMessage();
 
-  const [activeSection, setActiveSection]         = useState<SectionKey>('chat');
-  const [selectedStage, setSelectedStage]         = useState<string | null>(null);
-  const [infraLogService, setInfraLogService]     = useState<string | null>(null);
-  const [infraLogs, setInfraLogs]                 = useState<LogLine[]>([]);
-  const [message, setMessage]                     = useState('');
-  const [showSlash, setShowSlash]                 = useState(false);
-  // In-session edits to stage documents (init/context/plan)
-  const [editedDocs, setEditedDocs]               = useState<Record<string, string>>({});
-  // In-session edits to plan test-plan (unit/e2e)
-  const [editedTestPlan, setEditedTestPlan]        = useState<Record<string, Partial<TestPlan>>>({});
+  const [activeSection, setActiveSection]     = useState<SectionKey>('chat');
+  const [selectedStage, setSelectedStage]     = useState<string | null>(null);
+  const [infraLogService, setInfraLogService] = useState<string | null>(null);
+  const [infraLogs, setInfraLogs]             = useState<LogLine[]>([]);
+  const [message, setMessage]                 = useState('');
+  const [showSlash, setShowSlash]             = useState(false);
+  const [editedDocs, setEditedDocs]           = useState<Record<string, string>>({});
+  const [editedTestPlan, setEditedTestPlan]   = useState<Record<string, Partial<TestPlan>>>({});
+  const [centralOverlay, setCentralOverlay]   = useState<CentralOverlay | null>(null);
 
-  const chatScrollRef  = useRef<HTMLDivElement>(null);
-
-  const infraLogsEnd   = useRef<HTMLDivElement>(null);
-  const inputRef       = useRef<HTMLInputElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const infraLogsEnd  = useRef<HTMLDivElement>(null);
+  const inputRef      = useRef<HTMLInputElement>(null);
 
   const COMMANDS = [
     { name: '/plan',   description: 'Solicitar plano de execução' },
@@ -127,13 +490,11 @@ export default function DemandExecution() {
     })),
   ];
 
-  // Auto-scroll chat
   useEffect(() => {
     if (chatScrollRef.current)
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
   }, [demand?.chat, sendChat.isPending]);
 
-  // Infra overlay log streaming
   useEffect(() => {
     if (!infraLogService) return;
     setInfraLogs([]);
@@ -173,21 +534,15 @@ export default function DemandExecution() {
 
   const handleDocChatRequest = (stageKey: string) => {
     const labels: Record<string, string> = {
-      init: 'PRD/RFC',
-      context: 'documento de contexto',
-      plan: 'plano de desenvolvimento',
+      init: 'PRD/RFC', context: 'documento de contexto', plan: 'plano de desenvolvimento',
     };
-    const label = labels[stageKey] ?? 'documento';
-    setMessage(`/edit Ajuste o ${label}: `);
+    setMessage(`/edit Ajuste o ${labels[stageKey] ?? 'documento'}: `);
     setActiveSection('chat');
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const handleTestPlanSave = (stageKey: string, type: 'unit' | 'e2e', content: string) => {
-    setEditedTestPlan(prev => ({
-      ...prev,
-      [stageKey]: { ...prev[stageKey], [type]: content },
-    }));
+    setEditedTestPlan(prev => ({ ...prev, [stageKey]: { ...prev[stageKey], [type]: content } }));
   };
 
   const handleTestPlanChatRequest = (type: 'unit' | 'e2e') => {
@@ -226,11 +581,11 @@ export default function DemandExecution() {
   const infraApps      = workspace?.runtime?.apps  ?? [];
 
   const NAV_ITEMS: { key: SectionKey; icon: React.ReactNode; label: string }[] = [
-    { key: 'chat',     icon: <MessageSquare className="w-5 h-5" />, label: 'Chat'         },
-    { key: 'repos',    icon: <GitBranch     className="w-5 h-5" />, label: 'Repositórios' },
+    { key: 'chat',     icon: <MessageSquare className="w-5 h-5" />, label: 'Chat'          },
+    { key: 'repos',    icon: <GitBranch     className="w-5 h-5" />, label: 'Repositórios'  },
     { key: 'branches', icon: <GitMerge      className="w-5 h-5" />, label: 'Branches & PRs'},
-    { key: 'dossier',  icon: <ScrollText    className="w-5 h-5" />, label: 'Dossiê'       },
-    { key: 'infra',    icon: <Server        className="w-5 h-5" />, label: 'Infra'        },
+    { key: 'dossier',  icon: <ScrollText    className="w-5 h-5" />, label: 'Dossiê'        },
+    { key: 'infra',    icon: <Server        className="w-5 h-5" />, label: 'Infra'         },
   ];
 
   return (
@@ -383,7 +738,7 @@ export default function DemandExecution() {
           </ScrollArea>
         )}
 
-        {/* BRANCHES — grouped by repo */}
+        {/* BRANCHES */}
         {activeSection === 'branches' && (
           <ScrollArea className="flex-1 p-3">
             <div className="space-y-4">
@@ -392,12 +747,10 @@ export default function DemandExecution() {
               ) : (
                 Object.entries(branchesByRepo).map(([repo, repoBranches]) => (
                   <div key={repo}>
-                    {/* Repo header */}
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <GitBranch className="w-3.5 h-3.5 text-primary shrink-0" />
                       <span className="text-[11px] font-semibold text-foreground font-mono">{repo}</span>
                     </div>
-                    {/* Branches indented under repo */}
                     <div className="ml-4 border-l border-border/40 pl-3 space-y-1.5">
                       {repoBranches.map(b => (
                         <div key={b} className="flex items-center gap-2 py-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors">
@@ -410,7 +763,6 @@ export default function DemandExecution() {
                 ))
               )}
 
-              {/* PRs */}
               {demand.dossier.prs.length > 0 && (
                 <div className="pt-3 border-t border-border/40">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Pull Requests</p>
@@ -429,9 +781,6 @@ export default function DemandExecution() {
                           <AlertTriangle className="w-3 h-3" /> Conflito detectado
                         </div>
                       )}
-                      {pr.approver && (
-                        <p className="text-[10px] text-muted-foreground">Aprovado: <span className="text-foreground">{pr.approver}</span></p>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -444,35 +793,76 @@ export default function DemandExecution() {
         {activeSection === 'dossier' && (
           <ScrollArea className="flex-1 p-3">
             <div className="space-y-4">
+
+              {/* 1 — Card Jira / RFC */}
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Arquivos tocados</p>
+                <button
+                  onClick={() => setCentralOverlay({ kind: 'jira-card' })}
+                  className="w-full p-2.5 rounded-md bg-muted/30 border border-border/40 hover:bg-muted/50 hover:border-primary/30 transition-colors text-left group"
+                >
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    <span className="text-xs font-semibold text-foreground">{demand.jiraKey}</span>
+                    <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors ml-auto shrink-0" />
+                  </div>
+                  <p className="text-[9px] text-muted-foreground mt-1 ml-5 truncate">{demand.title}</p>
+                  <p className="text-[8px] text-muted-foreground/50 mt-0.5 ml-5">Card Jira · RFC / PRD</p>
+                </button>
+              </div>
+
+              {/* 2 — Arquivos tocados */}
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">
+                  Arquivos tocados ({demand.dossier.files.length})
+                </p>
                 {demand.dossier.files.length === 0
                   ? <p className="text-xs text-muted-foreground italic">Nenhum arquivo ainda.</p>
-                  : demand.dossier.files.map((f, i) => (
-                    <div key={i} className="flex items-start gap-2 py-1.5 border-b border-border/30 last:border-0">
-                      <FileKindIcon kind={f.kind} />
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-mono break-all leading-tight">{f.path}</p>
-                        <p className="text-[9px] text-muted-foreground">{f.change === 'created' ? 'criado' : 'modificado'} · {f.kind}</p>
-                      </div>
-                    </div>
-                  ))
+                  : <FilesByRepoBranch
+                      files={demand.dossier.files}
+                      onDiff={file => setCentralOverlay({ kind: 'file-diff', file })}
+                    />
                 }
               </div>
-              {elapsedStr && (
-                <div className="pt-2 border-t border-border/40">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Tempo gasto</p>
-                  <div className="flex items-center gap-1.5 text-sm font-mono">
-                    <Clock className="w-3.5 h-3.5 text-muted-foreground" />{elapsedStr}
+
+              {/* 3 — PRs criados */}
+              {demand.dossier.prs.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">
+                    PRs criados ({demand.dossier.prs.length})
+                  </p>
+                  <div className="space-y-2">
+                    {demand.dossier.prs.map(pr => <PrCard key={pr.id} pr={pr} />)}
                   </div>
                 </div>
               )}
-              <div className="pt-2 border-t border-border/40">
-                <button disabled className="w-full text-xs py-2 px-3 rounded-md border border-border/40 text-muted-foreground cursor-not-allowed opacity-50 flex items-center gap-2 justify-center">
-                  <FlaskConical className="w-3.5 h-3.5" /> Ver relatório Allure
-                  <span className="text-[9px] bg-muted/50 px-1.5 py-0.5 rounded">em breve</span>
+
+              {/* 4 — Testes / Allure */}
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Testes</p>
+                <button
+                  onClick={() => setCentralOverlay({ kind: 'allure' })}
+                  className="w-full flex items-center gap-2 py-2 px-3 rounded-md border border-border/40 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 hover:border-primary/30 transition-colors"
+                >
+                  <FlaskConical className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                  Ver relatório Allure
+                  <ExternalLink className="w-3 h-3 ml-auto shrink-0" />
                 </button>
               </div>
+
+              {/* 5 — Tempo gasto */}
+              {elapsedStr && (
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Tempo gasto</p>
+                  <button
+                    onClick={() => setCentralOverlay({ kind: 'time-detail' })}
+                    className="flex items-center gap-1.5 text-sm font-mono hover:text-primary transition-colors group"
+                  >
+                    <Clock className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary shrink-0" />
+                    {elapsedStr}
+                    <ChevronRight className="w-3 h-3 text-muted-foreground/50 group-hover:text-primary ml-1" />
+                  </button>
+                </div>
+              )}
             </div>
           </ScrollArea>
         )}
@@ -550,7 +940,6 @@ export default function DemandExecution() {
         {/* ── Infra logs overlay ── */}
         {infraLogService ? (
           <div className="flex-1 flex flex-col min-h-0">
-            {/* Overlay header */}
             <div className="h-10 border-b border-border flex items-center gap-3 px-4 shrink-0 bg-muted/20">
               <Package className={`w-4 h-4 shrink-0 ${SERVICE_COLORS[infraLogService] ?? 'text-muted-foreground'}`} />
               <span className="text-sm font-semibold font-mono">{infraLogService}</span>
@@ -568,7 +957,6 @@ export default function DemandExecution() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            {/* Log terminal */}
             <div className="flex-1 bg-[#0a0a0c] overflow-y-auto p-4 font-mono text-[11px] leading-relaxed min-h-0">
               {infraLogs.length === 0 && (
                 <div className="flex items-center gap-2 text-[#555]">
@@ -586,10 +974,73 @@ export default function DemandExecution() {
               <div ref={infraLogsEnd} />
             </div>
           </div>
+
+        ) : centralOverlay ? (
+          /* ── Dossier overlay ── */
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Overlay header */}
+            <div className="h-10 border-b border-border flex items-center gap-3 px-4 shrink-0 bg-muted/20">
+              {centralOverlay.kind === 'file-diff' && (
+                <>
+                  <FileCode className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="text-sm font-semibold font-mono flex-1 truncate">
+                    {centralOverlay.file.repo ? `${centralOverlay.file.repo} / ` : ''}{centralOverlay.file.path}
+                  </span>
+                  {centralOverlay.file.linesAdded   != null && <span className="text-[11px] font-mono text-emerald-400 shrink-0">+{centralOverlay.file.linesAdded}</span>}
+                  {centralOverlay.file.linesRemoved != null && <span className="text-[11px] font-mono text-red-400 shrink-0 ml-0.5">-{centralOverlay.file.linesRemoved}</span>}
+                </>
+              )}
+              {centralOverlay.kind === 'jira-card' && (
+                <>
+                  <CreditCard className="w-4 h-4 text-blue-400 shrink-0" />
+                  <span className="text-sm font-semibold flex-1">{demand.jiraKey} — Card & RFC</span>
+                </>
+              )}
+              {centralOverlay.kind === 'time-detail' && (
+                <>
+                  <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm font-semibold flex-1">Tempo gasto — detalhe por etapa</span>
+                </>
+              )}
+              {centralOverlay.kind === 'allure' && (
+                <>
+                  <FlaskConical className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span className="text-sm font-semibold flex-1">Relatório de Testes — Allure</span>
+                </>
+              )}
+              <button
+                onClick={() => setCentralOverlay(null)}
+                className="ml-auto w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                title="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Overlay body */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {centralOverlay.kind === 'file-diff' && centralOverlay.file.diff && (
+                <div className="bg-[#080b10] min-h-full py-2">
+                  {centralOverlay.file.diff.split('\n').map((line, i) => (
+                    <DiffLine key={i} line={line} />
+                  ))}
+                </div>
+              )}
+              {centralOverlay.kind === 'jira-card' && (
+                <JiraCardOverlay demand={demand} />
+              )}
+              {centralOverlay.kind === 'time-detail' && (
+                <TimeDetailOverlay demand={demand} />
+              )}
+              {centralOverlay.kind === 'allure' && (
+                <AllureOverlay tests={demand.dossier.tests} />
+              )}
+            </div>
+          </div>
+
         ) : (
           /* ── Normal stage execution view ── */
           <>
-            {/* Horizontal stages bar */}
             <div className="border-b border-border bg-card/60 shrink-0">
               <div className="flex items-stretch h-14 px-2 gap-1 overflow-x-auto">
                 {STAGE_DEFS.map((def, i) => {
@@ -621,7 +1072,6 @@ export default function DemandExecution() {
               </div>
             </div>
 
-            {/* Stage detail */}
             <div className="flex-1 overflow-y-auto min-h-0 p-5 space-y-5">
               <div className="flex items-center gap-3">
                 <StatusIcon status={currentStageData?.status ?? 'pending'} />
@@ -651,7 +1101,6 @@ export default function DemandExecution() {
                 </div>
               )}
 
-              {/* ── Exec stage view ── */}
               {currentStageKey === 'exec' && currentStageData && (
                 currentStageData.execData ? (
                   <ExecStageView execData={currentStageData.execData} stageStatus={currentStageData.status} />
@@ -663,7 +1112,6 @@ export default function DemandExecution() {
                 )
               )}
 
-              {/* ── Plan stage view (implementation plan + test plan) ── */}
               {currentStageKey === 'plan' && currentStageData && (
                 <PlanStageView
                   document={editedDocs[currentStageKey] ?? currentStageData.document}
@@ -678,7 +1126,6 @@ export default function DemandExecution() {
                 />
               )}
 
-              {/* ── Document viewer for init / context ── */}
               {currentStageData && DOC_STAGE_KEYS.includes(currentStageKey as typeof DOC_STAGE_KEYS[number]) && (
                 currentStageData.document ? (
                   <DocViewer
@@ -710,7 +1157,6 @@ export default function DemandExecution() {
                 </div>
               )}
 
-              {/* ── Test stage ── */}
               {currentStageKey === 'test' && currentStageData && demandId && (
                 <TestStageView
                   tests={demand.dossier.tests}

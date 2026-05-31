@@ -508,13 +508,52 @@ export const mockDemands: Demand[] = [
         'portal-backend|feature/PORTAL-104-sec-deps'
       ],
       commits: 7,
-      prs: [],
+      prs: [
+        {
+          id: 'pr-10', repo: 'portal-frontend',
+          sourceBranch: 'feature/PORTAL-104-sec-deps', targetBranch: 'develop',
+          url: '#', merged: false, hasConflict: false,
+          reviewers: [
+            { name: 'Maria Oliveira', initials: 'MO', status: 'approved' },
+            { name: 'João Silva',     initials: 'JS', status: 'pending'  },
+          ],
+        },
+        {
+          id: 'pr-11', repo: 'portal-backend',
+          sourceBranch: 'feature/PORTAL-104-sec-deps', targetBranch: 'develop',
+          url: '#', merged: false, hasConflict: false,
+          reviewers: [
+            { name: 'Carlos Mendes', initials: 'CM', status: 'rejected' },
+            { name: 'Pedro Gomes',   initials: 'PG', status: 'pending'  },
+          ],
+        },
+      ],
       files: [
-        { path: 'portal-frontend/package.json',                      kind: 'source', change: 'modified' },
-        { path: 'portal-backend/package.json',                       kind: 'source', change: 'modified' },
-        { path: 'portal-backend/src/auth/tokenService.ts',           kind: 'source', change: 'modified' },
-        { path: 'portal-backend/src/middleware/authMiddleware.ts',    kind: 'source', change: 'modified' },
-        { path: 'portal-backend/tests/unit/tokenService.test.ts',    kind: 'test',   change: 'modified' }
+        {
+          path: 'package.json', repo: 'portal-frontend', branch: 'feature/PORTAL-104-sec-deps',
+          kind: 'source', change: 'modified', linesAdded: 1, linesRemoved: 1,
+          diff: `--- a/package.json\n+++ b/package.json\n@@ -4,7 +4,7 @@ {\n   "dependencies": {\n-    "jsonwebtoken": "^8.5.1",\n+    "jsonwebtoken": "^9.0.2",\n     "react": "^18.2.0",\n     "react-dom": "^18.2.0"\n   }\n }`,
+        },
+        {
+          path: 'package.json', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
+          kind: 'source', change: 'modified', linesAdded: 1, linesRemoved: 1,
+          diff: `--- a/package.json\n+++ b/package.json\n@@ -4,7 +4,7 @@ {\n   "dependencies": {\n-    "jsonwebtoken": "^8.5.1",\n+    "jsonwebtoken": "^9.0.2",\n     "express": "^5.0.0",\n     "drizzle-orm": "^0.30.0"\n   }\n }`,
+        },
+        {
+          path: 'src/auth/tokenService.ts', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
+          kind: 'source', change: 'modified', linesAdded: 4, linesRemoved: 4,
+          diff: `--- a/src/auth/tokenService.ts\n+++ b/src/auth/tokenService.ts\n@@ -8,12 +8,12 @@ import * as jwt from 'jsonwebtoken';\n \n-export function generateAccessToken(user: User): string {\n-  return jwt.sign(\n-    { sub: user.id, role: user.role },\n-    process.env.JWT_SECRET!, { expiresIn: '15m' }\n-  );\n+export async function generateAccessToken(user: User): Promise<string> {\n+  return jwt.sign(\n+    { sub: user.id, role: user.role },\n+    process.env.JWT_SECRET!, { expiresIn: '15m' }\n+  ) as Promise<string>;\n }`,
+        },
+        {
+          path: 'src/middleware/authMiddleware.ts', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
+          kind: 'source', change: 'modified', linesAdded: 1, linesRemoved: 1,
+          diff: `--- a/src/middleware/authMiddleware.ts\n+++ b/src/middleware/authMiddleware.ts\n@@ -14,7 +14,7 @@ export async function verifyToken(req: Request): Promise<JwtPayload> {\n   const token = extractBearer(req);\n   if (!token) throw new AuthError(401, 'Missing token');\n-  const payload = jwt.verify(token, process.env.JWT_SECRET!);\n+  const payload = await jwt.verify(token, process.env.JWT_SECRET!);\n   return payload as JwtPayload;\n }`,
+        },
+        {
+          path: 'tests/unit/tokenService.test.ts', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
+          kind: 'test', change: 'modified', linesAdded: 3, linesRemoved: 3,
+          diff: `--- a/tests/unit/tokenService.test.ts\n+++ b/tests/unit/tokenService.test.ts\n@@ -8,9 +8,9 @@ describe('tokenService', () => {\n   it('generateAccessToken', async () => {\n-    jest.spyOn(jwt, 'sign').mockReturnValue('tok' as any);\n-    const token = tokenService.generateAccessToken(mockUser);\n-    expect(token).toBe('tok');\n+    jest.spyOn(jwt, 'sign').mockResolvedValue('tok' as any);\n+    const token = await tokenService.generateAccessToken(mockUser);\n+    expect(token).resolves.toBe('tok');\n   });\n });`,
+        },
       ],
       tests: [
         { name: 'tokenService > generateAccessToken',         type: 'unit', status: 'success', repo: 'portal-backend',  durationMs: 89  },
@@ -561,8 +600,16 @@ export const mockDemands: Demand[] = [
       ],
       commits: 14,
       prs: [
-        { id: 'pr-1', repo: 'api-pagamentos',   sourceBranch: 'feature/PAY-201-reconcile-refactor', targetBranch: 'develop', url: '#', merged: false, approver: 'Carlos Mendes', hasConflict: false },
-        { id: 'pr-2', repo: 'worker-cobrancas', sourceBranch: 'feature/PAY-201-reconcile-worker',   targetBranch: 'develop', url: '#', merged: false, hasConflict: false }
+        { id: 'pr-1', repo: 'api-pagamentos',   sourceBranch: 'feature/PAY-201-reconcile-refactor', targetBranch: 'develop', url: '#', merged: false, hasConflict: false,
+          reviewers: [
+            { name: 'Carlos Mendes',  initials: 'CM', status: 'approved' },
+            { name: 'Maria Oliveira', initials: 'MO', status: 'approved' },
+            { name: 'Pedro Gomes',    initials: 'PG', status: 'pending'  },
+          ] },
+        { id: 'pr-2', repo: 'worker-cobrancas', sourceBranch: 'feature/PAY-201-reconcile-worker',   targetBranch: 'develop', url: '#', merged: false, hasConflict: false,
+          reviewers: [
+            { name: 'Ana Costa', initials: 'AC', status: 'approved' },
+          ] },
       ],
       files: [],
       tests: [
@@ -598,7 +645,11 @@ export const mockDemands: Demand[] = [
       repos: ['api-pagamentos'],
       branches: ['api-pagamentos|feature/PAY-202-query-opt'],
       commits: 8,
-      prs: [{ id: 'pr-3', repo: 'api-pagamentos', sourceBranch: 'feature/PAY-202-query-opt', targetBranch: 'develop', url: '#', merged: true, approver: 'Maria Oliveira', hasConflict: false }],
+      prs: [{ id: 'pr-3', repo: 'api-pagamentos', sourceBranch: 'feature/PAY-202-query-opt', targetBranch: 'develop', url: '#', merged: true, hasConflict: false,
+        reviewers: [
+          { name: 'Maria Oliveira', initials: 'MO', status: 'approved' },
+          { name: 'João Silva',     initials: 'JS', status: 'approved' },
+        ] }],
       files: [],
       tests: [
         { name: 'query performance < 50ms', type: 'unit', status: 'success' },
