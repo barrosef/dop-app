@@ -26,7 +26,8 @@ type CentralOverlay =
   | { kind: 'jira-card' }
   | { kind: 'time-detail' }
   | { kind: 'allure' }
-  | { kind: 'manage-repos' };
+  | { kind: 'manage-repos' }
+  | { kind: 'pr-diff'; pr: PullRequest };
 
 const MOCK_AZURE_EXTRA_REPOS: Record<string, { name: string; url: string }[]> = {
   'ws-1': [
@@ -646,6 +647,72 @@ function RepoManagerOverlay({
   );
 }
 
+function GitStatusBadge({ status }: { status?: FileTouched['gitStatus'] }) {
+  if (!status) return null;
+  const map: Record<string, { label: string; cls: string }> = {
+    staged:    { label: 'A', cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
+    modified:  { label: 'M', cls: 'text-yellow-400  bg-yellow-500/10  border-yellow-500/30'  },
+    deleted:   { label: 'D', cls: 'text-red-400     bg-red-500/10     border-red-500/30'     },
+    untracked: { label: '?', cls: 'text-muted-foreground/60 bg-muted/20 border-border/30'   },
+  };
+  const { label, cls } = map[status] ?? map.modified;
+  return (
+    <span className={`w-4 h-4 shrink-0 flex items-center justify-center rounded text-[9px] font-mono font-bold border ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
+function PrDiffOverlay({ pr, files }: { pr: PullRequest; files: FileTouched[] }) {
+  const totalAdded   = files.reduce((s, f) => s + (f.linesAdded   ?? 0), 0);
+  const totalRemoved = files.reduce((s, f) => s + (f.linesRemoved  ?? 0), 0);
+  return (
+    <div>
+      {/* PR info header */}
+      <div className="px-5 py-3 border-b border-border/40 bg-muted/10">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-mono text-xs font-semibold text-foreground">{pr.sourceBranch}</span>
+          <span className="text-muted-foreground">→</span>
+          <span className="font-mono text-xs text-muted-foreground">{pr.targetBranch}</span>
+          {pr.merged
+            ? <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 font-semibold">MERGED</span>
+            : <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 font-semibold">OPEN</span>
+          }
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
+          <span className="font-mono">{pr.repo}</span>
+          <span>{files.length} arquivo{files.length !== 1 ? 's' : ''}</span>
+          {totalAdded   > 0 && <span className="text-emerald-400">+{totalAdded}</span>}
+          {totalRemoved > 0 && <span className="text-red-400">-{totalRemoved}</span>}
+        </div>
+      </div>
+
+      {/* File diffs */}
+      {files.length === 0 && (
+        <div className="px-5 py-6 text-xs text-muted-foreground italic">Nenhum arquivo associado a este PR.</div>
+      )}
+      {files.map((file, i) => (
+        <div key={i}>
+          <div className="px-4 py-2 bg-muted/15 border-b border-t border-border/25 flex items-center gap-2.5 sticky top-0 z-10">
+            <FileCode className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <span className="font-mono text-xs font-semibold flex-1 truncate">{file.path}</span>
+            {file.linesAdded   != null && <span className="text-[10px] text-emerald-400 shrink-0">+{file.linesAdded}</span>}
+            {file.linesRemoved != null && <span className="text-[10px] text-red-400    shrink-0">-{file.linesRemoved}</span>}
+            <GitStatusBadge status={file.gitStatus} />
+          </div>
+          {file.diff ? (
+            <div className="bg-[#080b10] py-2">
+              {file.diff.split('\n').map((line, j) => <DiffLine key={j} line={line} />)}
+            </div>
+          ) : (
+            <div className="px-5 py-3 text-xs text-muted-foreground/60 italic bg-[#080b10]">Diff não disponível</div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function DemandExecution() {
   const { id, demandId } = useParams();
   const navigate = useNavigate();
@@ -663,6 +730,8 @@ export default function DemandExecution() {
   const [editedTestPlan, setEditedTestPlan]   = useState<Record<string, Partial<TestPlan>>>({});
   const [centralOverlay, setCentralOverlay]   = useState<CentralOverlay | null>(null);
   const [editedRepos, setEditedRepos]         = useState<string[] | null>(null);
+  const [branchTab, setBranchTab]             = useState<'branches' | 'prs'>('branches');
+  const [expandedPrId, setExpandedPrId]       = useState<string | null>(null);
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const infraLogsEnd  = useRef<HTMLDivElement>(null);
@@ -773,10 +842,24 @@ export default function DemandExecution() {
   const infraServices  = workspace?.runtime?.infra ?? [];
   const infraApps      = workspace?.runtime?.apps  ?? [];
 
+  const trackedFiles = demand.dossier.files.filter(f => f.gitStatus !== 'untracked' && f.repo && f.branch);
+  const untrackedFiles = demand.dossier.files.filter(f => f.gitStatus === 'untracked');
+  const filesByRepoBranch = trackedFiles.reduce<Record<string, Record<string, FileTouched[]>>>((acc, f) => {
+    if (!acc[f.repo!]) acc[f.repo!] = {};
+    if (!acc[f.repo!][f.branch!]) acc[f.repo!][f.branch!] = [];
+    acc[f.repo!][f.branch!].push(f);
+    return acc;
+  }, {});
+  const prsByRepo = demand.dossier.prs.reduce<Record<string, PullRequest[]>>((acc, pr) => {
+    if (!acc[pr.repo]) acc[pr.repo] = [];
+    acc[pr.repo].push(pr);
+    return acc;
+  }, {});
+
   const NAV_ITEMS: { key: SectionKey; icon: React.ReactNode; label: string }[] = [
     { key: 'chat',     icon: <MessageSquare className="w-5 h-5" />, label: 'Chat'          },
     { key: 'repos',    icon: <GitBranch     className="w-5 h-5" />, label: 'Repositórios'  },
-    { key: 'branches', icon: <GitMerge      className="w-5 h-5" />, label: 'Branches & PRs'},
+    { key: 'branches', icon: <GitMerge      className="w-5 h-5" />, label: 'Branches'     },
     { key: 'dossier',  icon: <ScrollText    className="w-5 h-5" />, label: 'Dossiê'        },
     { key: 'infra',    icon: <Server        className="w-5 h-5" />, label: 'Infra'         },
   ];
@@ -818,9 +901,24 @@ export default function DemandExecution() {
       {/* ── Side panel ── */}
       <div className="w-72 xl:w-80 shrink-0 border-r border-border flex flex-col bg-card min-h-0">
         <div className="h-10 border-b border-border flex items-center px-3 gap-2 shrink-0">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            {NAV_ITEMS.find(i => i.key === activeSection)?.label}
-          </span>
+          {activeSection === 'branches' ? (
+            <div className="flex items-center gap-0.5">
+              {(['branches', 'prs'] as const).map((tab, i) => (
+                <button
+                  key={tab}
+                  onClick={() => setBranchTab(tab)}
+                  className={`text-xs font-semibold px-2 py-1 rounded transition-colors ${branchTab === tab ? 'text-foreground bg-muted/60' : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'}`}
+                >
+                  {tab === 'branches' ? 'Branches' : 'PRs'}
+                  {i === 0 && <span className="inline-block mx-1.5 text-border select-none">|</span>}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {NAV_ITEMS.find(i => i.key === activeSection)?.label}
+            </span>
+          )}
           {activeSection === 'chat' && sendChat.isPending && (
             <span className="flex items-center gap-1 text-[10px] text-primary ml-auto">
               <Loader2 className="w-3 h-3 animate-spin" /> Claude...
@@ -954,51 +1052,159 @@ export default function DemandExecution() {
 
         {/* BRANCHES */}
         {activeSection === 'branches' && (
-          <ScrollArea className="flex-1 p-3">
-            <div className="space-y-4">
-              {demand.dossier.branches.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">Nenhuma branch criada ainda.</p>
-              ) : (
-                Object.entries(branchesByRepo).map(([repo, repoBranches]) => (
-                  <div key={repo}>
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <GitBranch className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <span className="text-[11px] font-semibold text-foreground font-mono">{repo}</span>
-                    </div>
-                    <div className="ml-4 border-l border-border/40 pl-3 space-y-1.5">
-                      {repoBranches.map(b => (
-                        <div key={b} className="flex items-center gap-2 py-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors">
-                          <ChevronRight className="w-3 h-3 shrink-0 text-border" />
-                          <span className="break-all leading-tight">{b}</span>
+          <ScrollArea className="flex-1">
+            <div className="p-3 space-y-4">
+
+              {/* ── Branches tab ── */}
+              {branchTab === 'branches' && (
+                trackedFiles.length === 0 && untrackedFiles.length === 0
+                  ? (
+                    demand.dossier.branches.length === 0
+                      ? <p className="text-xs text-muted-foreground italic">Nenhuma branch criada ainda.</p>
+                      : Object.entries(branchesByRepo).map(([repo, repoBranches]) => (
+                          <div key={repo}>
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <GitBranch className="w-3.5 h-3.5 text-primary shrink-0" />
+                              <span className="text-[11px] font-semibold font-mono">{repo}</span>
+                            </div>
+                            <div className="ml-4 border-l border-border/40 pl-3 space-y-1">
+                              {repoBranches.map(b => (
+                                <div key={b} className="flex items-center gap-2 py-1 text-[10px] font-mono text-muted-foreground">
+                                  <ChevronRight className="w-3 h-3 shrink-0 text-border" />
+                                  <span className="break-all">{b}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                  ) : (
+                    <>
+                      {Object.entries(filesByRepoBranch).map(([repo, branches]) => (
+                        <div key={repo}>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <GitBranch className="w-3.5 h-3.5 text-primary shrink-0" />
+                            <span className="text-[11px] font-semibold font-mono">{repo}</span>
+                          </div>
+                          <div className="ml-4 border-l border-border/40 pl-3 space-y-3">
+                            {Object.entries(branches).map(([branch, bFiles]) => (
+                              <div key={branch}>
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <ChevronRight className="w-3 h-3 shrink-0 text-border" />
+                                  <span className="text-[10px] font-mono text-muted-foreground truncate">{branch}</span>
+                                </div>
+                                <div className="ml-4 space-y-0.5">
+                                  {bFiles.map((f, i) => (
+                                    <div key={i} className="flex items-center gap-1.5 py-0.5 text-[10px] font-mono text-foreground/80 hover:text-foreground transition-colors">
+                                      <GitStatusBadge status={f.gitStatus} />
+                                      <span className="truncate">{f.path}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                ))
+
+                      {untrackedFiles.length > 0 && (
+                        <>
+                          <div className="flex items-center gap-2 text-[9px] text-muted-foreground/50">
+                            <div className="flex-1 h-px border-t border-dashed border-border/40" />
+                            <span className="uppercase tracking-wider shrink-0">não rastreados</span>
+                            <div className="flex-1 h-px border-t border-dashed border-border/40" />
+                          </div>
+                          <div className="space-y-0.5">
+                            {untrackedFiles.map((f, i) => (
+                              <div key={i} className="flex items-center gap-1.5 py-0.5 text-[10px] font-mono text-muted-foreground/70">
+                                <GitStatusBadge status="untracked" />
+                                <span className="truncate flex-1">{f.path}</span>
+                                {f.repo && <span className="text-muted-foreground/40 shrink-0 text-[9px]">{f.repo}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )
               )}
 
-              {demand.dossier.prs.length > 0 && (
-                <div className="pt-3 border-t border-border/40">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Pull Requests</p>
-                  {demand.dossier.prs.map(pr => (
-                    <div key={pr.id} className="mb-2 p-2.5 rounded-md bg-muted/30 border border-border/40 space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-mono text-foreground truncate">{pr.sourceBranch}</span>
-                        {pr.merged
-                          ? <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 shrink-0">Merged</span>
-                          : <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 shrink-0">Open</span>
-                        }
-                      </div>
-                      <p className="text-[10px] text-muted-foreground font-mono">→ {pr.targetBranch}</p>
-                      {pr.hasConflict && (
-                        <div className="flex items-center gap-1 text-[10px] text-red-400">
-                          <AlertTriangle className="w-3 h-3" /> Conflito detectado
+              {/* ── PRs tab ── */}
+              {branchTab === 'prs' && (
+                demand.dossier.prs.length === 0
+                  ? <p className="text-xs text-muted-foreground italic">Nenhum PR criado ainda.</p>
+                  : Object.entries(prsByRepo).map(([repo, prs]) => (
+                      <div key={repo}>
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <GitPullRequest className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <span className="text-[11px] font-semibold font-mono">{repo}</span>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                        <div className="ml-4 border-l border-border/40 pl-3 space-y-2">
+                          {prs.map(pr => {
+                            const isExpanded = expandedPrId === pr.id;
+                            const prFiles = demand.dossier.files.filter(
+                              f => f.repo === pr.repo && f.branch === pr.sourceBranch && f.gitStatus !== 'untracked',
+                            );
+                            return (
+                              <div key={pr.id}>
+                                <button
+                                  onClick={() => {
+                                    const next = isExpanded ? null : pr.id;
+                                    setExpandedPrId(next);
+                                    if (next) setCentralOverlay({ kind: 'pr-diff', pr });
+                                    else if (centralOverlay?.kind === 'pr-diff') setCentralOverlay(null);
+                                  }}
+                                  className="w-full text-left p-2 rounded-md bg-muted/30 border border-border/40 hover:bg-muted/40 hover:border-primary/25 transition-colors"
+                                >
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    {pr.merged
+                                      ? <span className="text-[8px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30 shrink-0 font-semibold">MERGED</span>
+                                      : pr.hasConflict
+                                        ? <span className="text-[8px] px-1 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 shrink-0 font-semibold">CONFLITO</span>
+                                        : <span className="text-[8px] px-1 py-0.5 rounded bg-primary/20 text-primary border border-primary/30 shrink-0 font-semibold">OPEN</span>
+                                    }
+                                    <span className="text-[10px] font-mono text-muted-foreground truncate flex-1">{pr.sourceBranch}</span>
+                                    <ChevronDown className={`w-3 h-3 text-muted-foreground shrink-0 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+                                  </div>
+                                  <div className="flex items-center gap-1 text-[9px] text-muted-foreground/70">
+                                    <span>→ {pr.targetBranch}</span>
+                                    {prFiles.length > 0 && (
+                                      <span className="ml-1 text-muted-foreground/50">· {prFiles.length} arq.</span>
+                                    )}
+                                  </div>
+                                  {pr.reviewers && pr.reviewers.length > 0 && (
+                                    <div className="flex items-center gap-1 mt-1.5">
+                                      {pr.reviewers.map(rev => (
+                                        <span key={rev.initials} title={`${rev.name} — ${rev.status}`}
+                                          className={`w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold shrink-0 border ${
+                                            rev.status === 'approved' ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400' :
+                                            rev.status === 'rejected' ? 'bg-red-500/15 border-red-500/40 text-red-400' :
+                                            'bg-muted/40 border-border/50 text-muted-foreground'
+                                          }`}>{rev.initials}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </button>
+
+                                {isExpanded && prFiles.length > 0 && (
+                                  <div className="ml-2 mt-1 space-y-0.5 border-l border-primary/20 pl-2.5">
+                                    {prFiles.map((f, i) => (
+                                      <div key={i} className="flex items-center gap-1.5 py-0.5 text-[10px] font-mono text-foreground/70">
+                                        <GitStatusBadge status={f.gitStatus} />
+                                        <span className="truncate flex-1">{f.path}</span>
+                                        {f.linesAdded   != null && <span className="text-emerald-400/70 shrink-0">+{f.linesAdded}</span>}
+                                        {f.linesRemoved != null && <span className="text-red-400/70    shrink-0">-{f.linesRemoved}</span>}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
               )}
+
             </div>
           </ScrollArea>
         )}
@@ -1231,6 +1437,15 @@ export default function DemandExecution() {
                   </span>
                 </>
               )}
+              {centralOverlay.kind === 'pr-diff' && (
+                <>
+                  <GitPullRequest className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-sm font-semibold flex-1 truncate">
+                    {centralOverlay.pr.sourceBranch}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground shrink-0">{centralOverlay.pr.repo}</span>
+                </>
+              )}
               <button
                 onClick={() => setCentralOverlay(null)}
                 className="ml-auto w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
@@ -1271,6 +1486,16 @@ export default function DemandExecution() {
                 <div className="p-6 flex items-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" /> Carregando workspace...
                 </div>
+              )}
+              {centralOverlay.kind === 'pr-diff' && (
+                <PrDiffOverlay
+                  pr={centralOverlay.pr}
+                  files={demand.dossier.files.filter(
+                    f => f.repo === centralOverlay.pr.repo &&
+                         f.branch === centralOverlay.pr.sourceBranch &&
+                         f.gitStatus !== 'untracked',
+                  )}
+                />
               )}
             </div>
           </div>

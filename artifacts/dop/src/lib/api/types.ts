@@ -46,7 +46,7 @@ export interface TestPlan { unit: string; e2e: string; }
 export interface Stage { key: string; title: string; status: StageStatus; summary?: string; document?: string; execData?: ExecData; testPlan?: TestPlan; startedAt?: string; finishedAt?: string; }
 export interface Reviewer { name: string; initials: string; status: 'approved' | 'rejected' | 'pending'; }
 export interface PullRequest { id: string; repo: string; sourceBranch: string; targetBranch: string; url: string; merged: boolean; approver?: string; hasConflict: boolean; reviewers?: Reviewer[]; }
-export interface FileTouched { path: string; kind: 'plan' | 'context' | 'adr' | 'source' | 'test'; change: 'created' | 'modified'; repo?: string; branch?: string; diff?: string; linesAdded?: number; linesRemoved?: number; }
+export interface FileTouched { path: string; kind: 'plan' | 'context' | 'adr' | 'source' | 'test'; change: 'created' | 'modified'; gitStatus?: 'staged' | 'modified' | 'untracked' | 'deleted'; repo?: string; branch?: string; diff?: string; linesAdded?: number; linesRemoved?: number; }
 export interface TestResult {
   name: string;
   repo?: string;       // for hierarchical grouping by repository

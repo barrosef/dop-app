@@ -531,28 +531,41 @@ export const mockDemands: Demand[] = [
       files: [
         {
           path: 'package.json', repo: 'portal-frontend', branch: 'feature/PORTAL-104-sec-deps',
-          kind: 'source', change: 'modified', linesAdded: 1, linesRemoved: 1,
+          kind: 'source', change: 'modified', gitStatus: 'staged', linesAdded: 1, linesRemoved: 1,
           diff: `--- a/package.json\n+++ b/package.json\n@@ -4,7 +4,7 @@ {\n   "dependencies": {\n-    "jsonwebtoken": "^8.5.1",\n+    "jsonwebtoken": "^9.0.2",\n     "react": "^18.2.0",\n     "react-dom": "^18.2.0"\n   }\n }`,
         },
         {
           path: 'package.json', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
-          kind: 'source', change: 'modified', linesAdded: 1, linesRemoved: 1,
+          kind: 'source', change: 'modified', gitStatus: 'staged', linesAdded: 1, linesRemoved: 1,
           diff: `--- a/package.json\n+++ b/package.json\n@@ -4,7 +4,7 @@ {\n   "dependencies": {\n-    "jsonwebtoken": "^8.5.1",\n+    "jsonwebtoken": "^9.0.2",\n     "express": "^5.0.0",\n     "drizzle-orm": "^0.30.0"\n   }\n }`,
         },
         {
           path: 'src/auth/tokenService.ts', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
-          kind: 'source', change: 'modified', linesAdded: 4, linesRemoved: 4,
+          kind: 'source', change: 'modified', gitStatus: 'staged', linesAdded: 4, linesRemoved: 4,
           diff: `--- a/src/auth/tokenService.ts\n+++ b/src/auth/tokenService.ts\n@@ -8,12 +8,12 @@ import * as jwt from 'jsonwebtoken';\n \n-export function generateAccessToken(user: User): string {\n-  return jwt.sign(\n-    { sub: user.id, role: user.role },\n-    process.env.JWT_SECRET!, { expiresIn: '15m' }\n-  );\n+export async function generateAccessToken(user: User): Promise<string> {\n+  return jwt.sign(\n+    { sub: user.id, role: user.role },\n+    process.env.JWT_SECRET!, { expiresIn: '15m' }\n+  ) as Promise<string>;\n }`,
         },
         {
           path: 'src/middleware/authMiddleware.ts', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
-          kind: 'source', change: 'modified', linesAdded: 1, linesRemoved: 1,
+          kind: 'source', change: 'modified', gitStatus: 'staged', linesAdded: 1, linesRemoved: 1,
           diff: `--- a/src/middleware/authMiddleware.ts\n+++ b/src/middleware/authMiddleware.ts\n@@ -14,7 +14,7 @@ export async function verifyToken(req: Request): Promise<JwtPayload> {\n   const token = extractBearer(req);\n   if (!token) throw new AuthError(401, 'Missing token');\n-  const payload = jwt.verify(token, process.env.JWT_SECRET!);\n+  const payload = await jwt.verify(token, process.env.JWT_SECRET!);\n   return payload as JwtPayload;\n }`,
         },
         {
           path: 'tests/unit/tokenService.test.ts', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
-          kind: 'test', change: 'modified', linesAdded: 3, linesRemoved: 3,
+          kind: 'test', change: 'modified', gitStatus: 'staged', linesAdded: 3, linesRemoved: 3,
           diff: `--- a/tests/unit/tokenService.test.ts\n+++ b/tests/unit/tokenService.test.ts\n@@ -8,9 +8,9 @@ describe('tokenService', () => {\n   it('generateAccessToken', async () => {\n-    jest.spyOn(jwt, 'sign').mockReturnValue('tok' as any);\n-    const token = tokenService.generateAccessToken(mockUser);\n-    expect(token).toBe('tok');\n+    jest.spyOn(jwt, 'sign').mockResolvedValue('tok' as any);\n+    const token = await tokenService.generateAccessToken(mockUser);\n+    expect(token).resolves.toBe('tok');\n   });\n });`,
+        },
+        {
+          path: 'src/auth/session.ts', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
+          kind: 'source', change: 'modified', gitStatus: 'modified', linesAdded: 2, linesRemoved: 0,
+          diff: `--- a/src/auth/session.ts\n+++ b/src/auth/session.ts\n@@ -22,6 +22,8 @@ export async function refreshSession(token: string) {\n   const payload = await verifyToken(token);\n+  // TODO: invalidar token antigo no Redis\n+  // await redis.del(\`session:\${payload.sub}\`);\n   return generateAccessToken({ id: payload.sub, role: payload.role });\n }`,
+        },
+        {
+          path: '.env.local', repo: 'portal-frontend', branch: 'feature/PORTAL-104-sec-deps',
+          kind: 'source', change: 'created', gitStatus: 'untracked',
+        },
+        {
+          path: 'notes-debug.txt', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
+          kind: 'context', change: 'created', gitStatus: 'untracked',
         },
       ],
       tests: [
