@@ -663,9 +663,18 @@ function GitStatusBadge({ status }: { status?: FileTouched['gitStatus'] }) {
   );
 }
 
-function PrDiffOverlay({ pr, files }: { pr: PullRequest; files: FileTouched[] }) {
+const prFileId = (path: string) => `pr-file-${path.replace(/[^a-zA-Z0-9]/g, '-')}`;
+
+function PrDiffOverlay({ pr, files, scrollToFile }: { pr: PullRequest; files: FileTouched[]; scrollToFile?: string | null }) {
   const totalAdded   = files.reduce((s, f) => s + (f.linesAdded   ?? 0), 0);
   const totalRemoved = files.reduce((s, f) => s + (f.linesRemoved  ?? 0), 0);
+
+  useEffect(() => {
+    if (!scrollToFile) return;
+    const el = document.getElementById(prFileId(scrollToFile));
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [scrollToFile]);
+
   return (
     <div>
       {/* PR info header */}
@@ -692,8 +701,8 @@ function PrDiffOverlay({ pr, files }: { pr: PullRequest; files: FileTouched[] })
         <div className="px-5 py-6 text-xs text-muted-foreground italic">Nenhum arquivo associado a este PR.</div>
       )}
       {files.map((file, i) => (
-        <div key={i}>
-          <div className="px-4 py-2 bg-muted/15 border-b border-t border-border/25 flex items-center gap-2.5 sticky top-0 z-10">
+        <div key={i} id={prFileId(file.path)}>
+          <div className={`px-4 py-2 bg-muted/15 border-b border-t border-border/25 flex items-center gap-2.5 sticky top-0 z-10 transition-colors ${scrollToFile === file.path ? 'border-l-2 border-l-primary bg-primary/5' : ''}`}>
             <FileCode className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             <span className="font-mono text-xs font-semibold flex-1 truncate">{file.path}</span>
             {file.linesAdded   != null && <span className="text-[10px] text-emerald-400 shrink-0">+{file.linesAdded}</span>}
@@ -732,6 +741,7 @@ export default function DemandExecution() {
   const [editedRepos, setEditedRepos]         = useState<string[] | null>(null);
   const [branchTab, setBranchTab]             = useState<'branches' | 'prs'>('branches');
   const [expandedPrId, setExpandedPrId]       = useState<string | null>(null);
+  const [selectedPrFilePath, setSelectedPrFilePath] = useState<string | null>(null);
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const infraLogsEnd  = useRef<HTMLDivElement>(null);
@@ -1188,12 +1198,25 @@ export default function DemandExecution() {
                                 {isExpanded && prFiles.length > 0 && (
                                   <div className="ml-2 mt-1 space-y-0.5 border-l border-primary/20 pl-2.5">
                                     {prFiles.map((f, i) => (
-                                      <div key={i} className="flex items-center gap-1.5 py-0.5 text-[10px] font-mono text-foreground/70">
+                                      <button
+                                        key={i}
+                                        onClick={() => {
+                                          setSelectedPrFilePath(f.path);
+                                          if (centralOverlay?.kind !== 'pr-diff' || centralOverlay.pr.id !== pr.id) {
+                                            setCentralOverlay({ kind: 'pr-diff', pr });
+                                          }
+                                        }}
+                                        className={`w-full flex items-center gap-1.5 py-0.5 text-[10px] font-mono text-left rounded transition-colors cursor-pointer
+                                          ${selectedPrFilePath === f.path
+                                            ? 'text-primary'
+                                            : 'text-foreground/70 hover:text-primary'
+                                          }`}
+                                      >
                                         <GitStatusBadge status={f.gitStatus} />
                                         <span className="truncate flex-1">{f.path}</span>
                                         {f.linesAdded   != null && <span className="text-emerald-400/70 shrink-0">+{f.linesAdded}</span>}
                                         {f.linesRemoved != null && <span className="text-red-400/70    shrink-0">-{f.linesRemoved}</span>}
-                                      </div>
+                                      </button>
                                     ))}
                                   </div>
                                 )}
@@ -1490,6 +1513,7 @@ export default function DemandExecution() {
               {centralOverlay.kind === 'pr-diff' && (
                 <PrDiffOverlay
                   pr={centralOverlay.pr}
+                  scrollToFile={selectedPrFilePath}
                   files={demand.dossier.files.filter(
                     f => f.repo === centralOverlay.pr.repo &&
                          f.branch === centralOverlay.pr.sourceBranch &&
