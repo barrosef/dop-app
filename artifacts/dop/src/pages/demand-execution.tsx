@@ -551,7 +551,7 @@ function RepoManagerOverlay({
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                Nesta demanda ({inDemand.length})
+                Conectados ({inDemand.length})
               </p>
               <div className="space-y-1.5">
                 {inDemand.map(r => {
@@ -583,7 +583,7 @@ function RepoManagerOverlay({
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <Package className="w-3 h-3" />
-                Workspace — disponíveis para adicionar
+                Disponíveis
               </p>
               <div className="space-y-1.5">
                 {addableFromWs.map(r => (
@@ -613,7 +613,7 @@ function RepoManagerOverlay({
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <Cloud className="w-3 h-3" />
-                Azure DevOps — outros repositórios
+                Outros
                 <span className="text-[8px] px-1.5 py-0.5 rounded bg-muted/50 border border-border/40 normal-case font-normal tracking-normal">
                   não configurados no workspace
                 </span>
