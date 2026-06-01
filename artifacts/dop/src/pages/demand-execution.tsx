@@ -54,6 +54,9 @@ const STAGE_DEFS = [
 
 type E2eTestStatus = 'pending' | 'passed' | 'failed';
 interface ParsedE2eTest { id: string; title: string; body: string; }
+type FinStepStatus = 'idle' | 'running' | 'done' | 'warn' | 'error';
+interface FinItem { label: string; status: FinStepStatus; detail?: string; }
+interface FinStep { id: string; label: string; status: FinStepStatus; items: FinItem[]; visible: boolean; }
 function parseE2eTests(md: string): ParsedE2eTest[] {
   return md.split(/^### /m).slice(1).map((s, i) => {
     const nl = s.indexOf('\n');
@@ -919,6 +922,262 @@ function PrDiffOverlay({ pr, files, scrollToFile }: { pr: PullRequest; files: Fi
   );
 }
 
+function FinalizationStageView({
+  demand,
+  autoStart,
+  onStart,
+}: {
+  demand: Demand;
+  autoStart: boolean;
+  onStart: () => void;
+}) {
+  const [started, setStarted] = useState(false);
+  const [steps,   setSteps]   = useState<FinStep[]>([]);
+  const [phase,   setPhase]   = useState<'idle' | 'running' | 'done'>('idle');
+  const cancelRef              = useRef(false);
+
+  useEffect(() => { return () => { cancelRef.current = true; }; }, []);
+
+  const upd = (id: string, patch: Partial<FinStep>) =>
+    setSteps(p => p.map(s => s.id === id ? { ...s, ...patch } : s));
+  const updItem = (stepId: string, idx: number, patch: Partial<FinItem>) =>
+    setSteps(p => p.map(s => s.id === stepId
+      ? { ...s, items: s.items.map((it, j) => j === idx ? { ...it, ...patch } : it) }
+      : s));
+  const d = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+  const run = async () => {
+    cancelRef.current = false;
+    setStarted(true);
+    setPhase('running');
+
+    const repos = demand.dossier.repos;
+    const prs   = demand.dossier.prs;
+    const commitCounts: Record<string, number> = {};
+    repos.forEach(r => {
+      commitCounts[r] = Math.max(1, demand.dossier.files.filter(f => f.repo === r && f.gitStatus !== 'untracked').length);
+    });
+    const conflictIdx = prs.length > 0 ? prs.length - 1 : -1; // last PR gets conflict for demo
+    const dossierLabels = ['PRs e branches', 'Commits e pushes', 'Arquivos modificados', 'Testes implementados', 'Resultados E2E', 'Finalizando dossiê'];
+
+    const init: FinStep[] = [
+      { id: 'repos',     label: 'Verificação dos repositórios', status: 'idle', visible: true,
+        items: repos.map(r => ({ label: r, status: 'idle' as FinStepStatus })) },
+      { id: 'prs',       label: 'Criação dos Pull Requests',    status: 'idle', visible: true,
+        items: prs.map(p => ({ label: `${p.repo} — ${p.sourceBranch} → ${p.targetBranch}`, status: 'idle' as FinStepStatus })) },
+      { id: 'conflicts', label: 'Verificação de conflitos',     status: 'idle', visible: true,
+        items: prs.map(p => ({ label: p.repo, status: 'idle' as FinStepStatus })) },
+      { id: 'resolve',   label: 'Resolução de conflitos',       status: 'idle', visible: false,
+        items: conflictIdx >= 0 ? [{ label: prs[conflictIdx].repo, status: 'idle' as FinStepStatus }] : [] },
+      { id: 'dossier',   label: 'Gerando dossiê final',         status: 'idle', visible: true,
+        items: dossierLabels.map(l => ({ label: l, status: 'idle' as FinStepStatus })) },
+    ];
+    setSteps(init);
+    await d(350);
+
+    /* ── repos ── */
+    upd('repos', { status: 'running' });
+    for (let i = 0; i < repos.length; i++) {
+      if (cancelRef.current) return;
+      updItem('repos', i, { status: 'running', detail: 'verificando...' });
+      await d(550);
+      const c = commitCounts[repos[i]];
+      updItem('repos', i, { detail: `${c} commit${c !== 1 ? 's' : ''}, pushing...` });
+      await d(500);
+      updItem('repos', i, { status: 'done', detail: `${c} commit${c !== 1 ? 's' : ''} · pushed ✓` });
+      await d(200);
+    }
+    upd('repos', { status: 'done' });
+    await d(350);
+
+    /* ── PRs ── */
+    if (prs.length === 0) {
+      upd('prs', { status: 'done' });
+    } else {
+      upd('prs', { status: 'running' });
+      for (let i = 0; i < prs.length; i++) {
+        if (cancelRef.current) return;
+        updItem('prs', i, { status: 'running', detail: 'criando PR...' });
+        await d(700);
+        updItem('prs', i, { status: 'done', detail: 'criado ✓' });
+        await d(200);
+      }
+      upd('prs', { status: 'done' });
+    }
+    await d(350);
+
+    /* ── conflicts ── */
+    if (prs.length === 0) {
+      upd('conflicts', { status: 'done' });
+    } else {
+      upd('conflicts', { status: 'running' });
+      let hasConflict = false;
+      for (let i = 0; i < prs.length; i++) {
+        if (cancelRef.current) return;
+        updItem('conflicts', i, { status: 'running', detail: 'verificando...' });
+        await d(600);
+        const isConflict = i === conflictIdx;
+        if (isConflict) hasConflict = true;
+        updItem('conflicts', i, {
+          status: isConflict ? 'warn' : 'done',
+          detail: isConflict ? '⚠ conflito detectado' : 'sem conflitos ✓',
+        });
+        await d(200);
+      }
+      upd('conflicts', { status: hasConflict ? 'warn' : 'done' });
+
+      /* ── resolve ── */
+      if (hasConflict && conflictIdx >= 0) {
+        await d(300);
+        upd('resolve', { status: 'running', visible: true });
+        updItem('resolve', 0, { status: 'running', detail: 'analisando diff...' });
+        await d(800);
+        updItem('resolve', 0, { detail: 'resolvendo conflito...' });
+        await d(900);
+        updItem('resolve', 0, { status: 'done', detail: 'conflito resolvido ✓' });
+        await d(300);
+        upd('resolve', { status: 'done' });
+      }
+    }
+    await d(400);
+
+    /* ── dossier ── */
+    upd('dossier', { status: 'running' });
+    for (let i = 0; i < dossierLabels.length; i++) {
+      if (cancelRef.current) return;
+      updItem('dossier', i, { status: 'running', detail: 'gerando...' });
+      await d(380 + Math.random() * 300);
+      updItem('dossier', i, { status: 'done', detail: 'gerado ✓' });
+      await d(120);
+    }
+    upd('dossier', { status: 'done' });
+    await d(500);
+    setPhase('done');
+  };
+
+  useEffect(() => {
+    if (autoStart && !started) run();
+  }, [autoStart]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── Idle state: trigger button ── */
+  if (!started) {
+    return (
+      <div className="space-y-4">
+        <div className="border border-border/40 rounded-lg p-4 flex items-start gap-3 bg-muted/10">
+          <GitMerge className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium">Pronto para finalizar</p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Irá verificar os repos, criar PRs, resolver conflitos e gerar o dossiê final.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => { onStart(); run(); }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
+          >
+            <GitMerge className="w-4 h-4" /> Finalizar demanda
+          </button>
+          <p className="text-[10px] text-muted-foreground/50 italic">ou chat: "finalizar demanda"</p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Running / done state ── */
+  return (
+    <div className="space-y-2.5">
+      {steps.filter(s => s.visible).map(step => {
+        const doneCount   = step.items.filter(it => ['done','warn','error'].includes(it.status)).length;
+        const progressPct = step.items.length > 0
+          ? Math.round((doneCount / step.items.length) * 100)
+          : step.status !== 'idle' ? 100 : 0;
+
+        return (
+          <div
+            key={step.id}
+            className={`rounded-lg border transition-all overflow-hidden ${
+              step.status === 'idle'    ? 'border-border/25 bg-muted/5 opacity-40'
+              : step.status === 'running' ? 'border-primary/30 bg-primary/5'
+              : step.status === 'done'    ? 'border-emerald-500/20 bg-emerald-500/5'
+              : step.status === 'warn'    ? 'border-amber-500/25 bg-amber-500/5'
+              : 'border-red-500/20 bg-red-500/5'
+            }`}
+          >
+            {/* Header */}
+            <div className="flex items-center gap-3 px-4 py-2.5">
+              {step.status === 'idle'    ? <Circle        className="w-4 h-4 text-muted-foreground/25 shrink-0" />
+               : step.status === 'running' ? <Loader2      className="w-4 h-4 text-primary animate-spin shrink-0" />
+               : step.status === 'done'    ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+               : step.status === 'warn'    ? <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+               : <XCircle className="w-4 h-4 text-red-400 shrink-0" />}
+              <span className={`text-sm font-medium flex-1 ${step.status === 'idle' ? 'text-muted-foreground/50' : ''}`}>
+                {step.label}
+              </span>
+              {step.status !== 'idle' && (
+                <span className="text-[10px] font-mono text-muted-foreground shrink-0">{progressPct}%</span>
+              )}
+            </div>
+
+            {/* Progress bar */}
+            {step.status !== 'idle' && (
+              <div className="h-0.5 bg-border/30 mx-4 rounded-full overflow-hidden mb-0.5">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ease-out ${
+                    step.status === 'done' ? 'bg-emerald-500'
+                    : step.status === 'warn' ? 'bg-amber-500'
+                    : step.status === 'error' ? 'bg-red-500'
+                    : 'bg-primary'
+                  }`}
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            )}
+
+            {/* Sub-items */}
+            {step.status !== 'idle' && step.items.length > 0 && (
+              <div className="px-4 pt-1.5 pb-3 space-y-1">
+                {step.items.map((item, i) => (
+                  <div key={i} className="flex items-center gap-2 text-[11px]">
+                    <span className="w-3.5 shrink-0 flex justify-center">
+                      {item.status === 'done'    && <CheckCircle2   className="w-3 h-3 text-emerald-400" />}
+                      {item.status === 'warn'    && <AlertTriangle  className="w-3 h-3 text-amber-400" />}
+                      {item.status === 'running' && <Loader2        className="w-3 h-3 text-primary animate-spin" />}
+                      {item.status === 'error'   && <XCircle        className="w-3 h-3 text-red-400" />}
+                      {item.status === 'idle'    && <span className="w-3 h-3 rounded-full border border-muted-foreground/20 inline-block" />}
+                    </span>
+                    <span className={`font-mono truncate ${
+                      item.status === 'idle'    ? 'text-muted-foreground/40'
+                      : item.status === 'running' ? 'text-foreground'
+                      : item.status === 'warn'    ? 'text-amber-300'
+                      : item.status === 'done'    ? 'text-foreground/70'
+                      : 'text-red-300'
+                    }`}>{item.label}</span>
+                    {item.detail && (
+                      <span className="text-muted-foreground/60 shrink-0 ml-0.5">{item.detail}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {phase === 'done' && (
+        <div className="flex items-center gap-3 mt-1 py-3 px-4 rounded-lg bg-emerald-500/10 border border-emerald-500/25">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-emerald-300">Demanda finalizada com sucesso</p>
+            <p className="text-xs text-muted-foreground mt-0.5">PRs criados · Conflitos resolvidos · Dossiê atualizado</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DemandExecution() {
   const { id, demandId } = useParams();
   const navigate = useNavigate();
@@ -940,6 +1199,7 @@ export default function DemandExecution() {
   const [expandedPrId, setExpandedPrId]       = useState<string | null>(null);
   const [selectedPrFilePath, setSelectedPrFilePath] = useState<string | null>(null);
   const [valTestStatuses, setValTestStatuses]       = useState<Record<string, E2eTestStatus>>({});
+  const [finTriggered,    setFinTriggered]           = useState(false);
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const infraLogsEnd  = useRef<HTMLDivElement>(null);
@@ -1001,6 +1261,8 @@ export default function DemandExecution() {
         }
       }
     }
+
+    if (/finaliz/i.test(message)) setFinTriggered(true);
 
     sendChat.mutate({ demandId, text: message });
     setMessage('');
@@ -1888,6 +2150,14 @@ export default function DemandExecution() {
                 <TestStageView
                   tests={demand.dossier.tests}
                   demandId={demandId}
+                />
+              )}
+
+              {currentStageDef?.key === 'fin' && (
+                <FinalizationStageView
+                  demand={demand}
+                  autoStart={finTriggered}
+                  onStart={() => setFinTriggered(true)}
                 />
               )}
             </div>

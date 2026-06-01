@@ -500,7 +500,8 @@ export const mockDemands: Demand[] = [
       { key: 'plan',    title: 'Plano',                status: 'done',    summary: 'Plano: (1) upgrade frontend (2) upgrade backend (3) ajustar API que mudou na v9.',         document: PORTAL_104_PLAN_DOC,    testPlan: PORTAL_104_TEST_PLAN, startedAt: new Date(Date.now() - 6800000).toISOString(), finishedAt: new Date(Date.now() - 6600000).toISOString() },
       { key: 'exec',    title: 'Execução do plano',    status: 'done',    summary: '`jsonwebtoken` atualizado para 9.0.2 nos dois repos. 3 chamadas de API ajustadas no backend.', execData: PORTAL_104_EXEC_DATA, startedAt: new Date(Date.now() - 6600000).toISOString(), finishedAt: new Date(Date.now() - 5400000).toISOString() },
       { key: 'test',    title: 'Execução dos testes',  status: 'done',    startedAt: new Date(Date.now() - 5400000).toISOString(), finishedAt: new Date(Date.now() - 3600000).toISOString() },
-      { key: 'val',     title: 'Validação humana',     status: 'running', startedAt: new Date(Date.now() - 3600000).toISOString() },
+      { key: 'val',     title: 'Validação humana',     status: 'done',    startedAt: new Date(Date.now() - 3600000).toISOString(), finishedAt: new Date(Date.now() - 1800000).toISOString() },
+      { key: 'fin',     title: 'Finalização',          status: 'running', startedAt: new Date(Date.now() -  900000).toISOString() },
     ],
     dossier: {
       repos: ['portal-frontend', 'portal-backend'],
