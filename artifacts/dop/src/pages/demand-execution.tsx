@@ -9,7 +9,7 @@ import {
   Send, ArrowLeft, FileCode, FileText, FlaskConical,
   Clock, Terminal, AlertTriangle, Package, Layers, X,
   ChevronRight, ChevronDown, ExternalLink, GitPullRequest,
-  CreditCard, XCircle, SkipForward, Search, Minus, Plus, Cloud,
+  CreditCard, XCircle, SkipForward, Search, Minus, Plus, Cloud, Settings,
 } from 'lucide-react';
 import { marked } from 'marked';
 import { LogLine, Stage, FileTouched, PullRequest, TestResult, Demand, Workspace } from '../lib/api/types';
@@ -934,6 +934,15 @@ export default function DemandExecution() {
               <Loader2 className="w-3 h-3 animate-spin" /> Claude...
             </span>
           )}
+          {activeSection === 'repos' && isDemandEditable && (
+            <button
+              onClick={() => setCentralOverlay({ kind: 'manage-repos' })}
+              title="Gerenciar repositórios"
+              className="ml-auto w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* CHAT */}
@@ -1023,38 +1032,44 @@ export default function DemandExecution() {
               {currentRepos.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic">Nenhum repositório impactado ainda.</p>
               ) : (
-                currentRepos.map(r => (
-                  <div key={r} className="flex items-center gap-2 p-2.5 rounded-md bg-muted/30 border border-border/40 group">
-                    <GitBranch className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span className="text-xs font-mono truncate flex-1">{r}</span>
-                    {isDemandEditable && (
-                      <button
-                        onClick={() => removeRepo(r)}
-                        title="Remover repositório"
-                        className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                ))
+                currentRepos.map(r => {
+                  const branch = demand.dossier.branches
+                    .find(b => b.startsWith(r + '|'))?.split('|')[1];
+                  const fileCount = demand.dossier.files
+                    .filter(f => f.repo === r && f.gitStatus !== 'untracked').length;
+                  return (
+                    <div key={r} className="flex items-start gap-2 p-2.5 rounded-md bg-muted/30 border border-border/40 group">
+                      <GitBranch className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-mono truncate block">{r}</span>
+                        <div className="flex items-center justify-between gap-1 mt-0.5">
+                          <span className="text-[9px] font-mono text-muted-foreground/60 truncate">
+                            {branch ?? '—'}
+                          </span>
+                          {fileCount > 0 && (
+                            <span className="text-[9px] text-muted-foreground/60 shrink-0">
+                              {fileCount} arq.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {isDemandEditable && (
+                        <button
+                          onClick={() => removeRepo(r)}
+                          title="Remover repositório"
+                          className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 shrink-0 mt-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
               )}
 
-              <div className="pt-3 mt-1 border-t border-border/40 space-y-2.5">
-                <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Commits totais</p>
-                  <span className="text-2xl font-bold">{demand.dossier.commits}</span>
-                </div>
-
-                {isDemandEditable && (
-                  <button
-                    onClick={() => setCentralOverlay({ kind: 'manage-repos' })}
-                    className="w-full flex items-center gap-2 py-2 px-3 rounded-md border border-dashed border-border/50 text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/20 transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5 shrink-0" />
-                    Gerenciar repositórios
-                  </button>
-                )}
+              <div className="pt-3 mt-1 border-t border-border/40">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Commits totais</p>
+                <span className="text-2xl font-bold">{demand.dossier.commits}</span>
               </div>
             </div>
           </ScrollArea>
