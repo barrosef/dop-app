@@ -52,6 +52,19 @@ const STAGE_DEFS = [
   { key: 'fin',     short: 'Finalizar', title: 'Finalização',         hasLogs: false },
 ];
 
+type E2eTestStatus = 'pending' | 'passed' | 'failed';
+interface ParsedE2eTest { id: string; title: string; body: string; }
+function parseE2eTests(md: string): ParsedE2eTest[] {
+  return md.split(/^### /m).slice(1).map((s, i) => {
+    const nl = s.indexOf('\n');
+    return {
+      id:    `e2e-${i + 1}`,
+      title: nl >= 0 ? s.slice(0, nl).trim() : s.trim(),
+      body:  nl >= 0 ? s.slice(nl + 1).trim() : '',
+    };
+  });
+}
+
 const SERVICE_COLORS: Record<string, string> = {
   mysql:    'text-orange-400',
   mongodb:  'text-green-400',
@@ -665,6 +678,190 @@ function GitStatusBadge({ status }: { status?: FileTouched['gitStatus'] }) {
 
 const prFileId = (path: string) => `pr-file-${path.replace(/[^a-zA-Z0-9]/g, '-')}`;
 
+function ValidationStageView({
+  testPlan,
+  statuses,
+  onStatusChange,
+  onMarkAll,
+  onChatRequest,
+}: {
+  testPlan: { unit: string; e2e: string } | undefined;
+  statuses: Record<string, E2eTestStatus>;
+  onStatusChange: (id: string, status: E2eTestStatus) => void;
+  onMarkAll: (status: E2eTestStatus) => void;
+  onChatRequest: (testTitle: string) => void;
+}) {
+  const [expandedId, setExpandedId] = React.useState<string | null>(null);
+  const tests = React.useMemo(() => parseE2eTests(testPlan?.e2e ?? ''), [testPlan?.e2e]);
+
+  const passed  = tests.filter(t => statuses[t.id] === 'passed').length;
+  const failed  = tests.filter(t => statuses[t.id] === 'failed').length;
+  const pending = tests.length - passed - failed;
+
+  if (tests.length === 0) {
+    return (
+      <div className="border border-amber-500/30 bg-amber-500/5 rounded-lg p-4 flex items-start gap-3">
+        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-amber-300">Sua atenção é necessária</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Nenhum teste E2E definido no plano. Valide a feature manualmente e confirme no chat.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-semibold">Testes E2E</span>
+        <div className="flex items-center gap-1.5">
+          {passed  > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 font-medium">{passed} ok</span>}
+          {failed  > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/25 font-medium">{failed} falhou</span>}
+          {pending > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted/50 text-muted-foreground border border-border/50 font-medium">{pending} pendente</span>}
+        </div>
+        <div className="flex items-center gap-1.5 ml-auto">
+          <button
+            onClick={() => onMarkAll('passed')}
+            className="text-[10px] px-2 py-1 rounded border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-colors flex items-center gap-1"
+          >
+            <CheckCircle2 className="w-3 h-3" /> Marcar todos OK
+          </button>
+          <button
+            onClick={() => onMarkAll('pending')}
+            className="text-[10px] px-2 py-1 rounded border border-border/50 text-muted-foreground hover:bg-muted/30 transition-colors"
+            title="Redefinir todos"
+          >
+            ↺
+          </button>
+        </div>
+      </div>
+
+      {/* Test list */}
+      <div className="space-y-2">
+        {tests.map(test => {
+          const status = statuses[test.id] ?? 'pending';
+          const isExpanded = expandedId === test.id;
+          return (
+            <div
+              key={test.id}
+              className={`rounded-lg border transition-colors ${
+                status === 'passed' ? 'border-emerald-500/25 bg-emerald-500/5'
+                : status === 'failed' ? 'border-red-500/25 bg-red-500/5'
+                : 'border-border/40 bg-muted/10'
+              }`}
+            >
+              <div className="flex items-center gap-3 p-3">
+                {/* Status toggle */}
+                <button
+                  onClick={() => {
+                    const next: E2eTestStatus = status === 'pending' ? 'passed'
+                      : status === 'passed' ? 'failed' : 'pending';
+                    onStatusChange(test.id, next);
+                  }}
+                  className="shrink-0"
+                  title="Clique para alternar status"
+                >
+                  {status === 'passed'
+                    ? <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                    : status === 'failed'
+                    ? <XCircle className="w-5 h-5 text-red-400" />
+                    : <Circle className="w-5 h-5 text-muted-foreground/30" />
+                  }
+                </button>
+
+                {/* Title */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-mono text-muted-foreground/50 uppercase shrink-0">{test.id}</span>
+                    <span className={`text-xs font-medium truncate ${
+                      status === 'failed' ? 'text-red-300'
+                      : status === 'passed' ? 'text-emerald-300'
+                      : 'text-foreground'
+                    }`}>
+                      {test.title}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {status === 'pending' && (
+                    <>
+                      <button
+                        onClick={() => onStatusChange(test.id, 'passed')}
+                        className="text-[10px] px-2 py-0.5 rounded border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                      >✓ Passou</button>
+                      <button
+                        onClick={() => onStatusChange(test.id, 'failed')}
+                        className="text-[10px] px-2 py-0.5 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
+                      >✗ Falhou</button>
+                    </>
+                  )}
+                  {status !== 'pending' && (
+                    <button
+                      onClick={() => onStatusChange(test.id, 'pending')}
+                      title="Desfazer"
+                      className="text-[10px] px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground hover:bg-muted/30 transition-colors"
+                    >↺</button>
+                  )}
+                  {status === 'failed' && (
+                    <button
+                      onClick={() => onChatRequest(test.title)}
+                      className="text-[10px] px-2 py-0.5 rounded border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center gap-1"
+                    >
+                      <MessageSquare className="w-2.5 h-2.5" /> Ajuda
+                    </button>
+                  )}
+                  {test.body && (
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : test.id)}
+                      className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                    >
+                      {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Expanded body */}
+              {isExpanded && test.body && (
+                <div className="px-11 pb-3 pt-1 border-t border-border/20 space-y-0.5">
+                  {test.body.split('\n').filter(Boolean).map((line, i) => (
+                    <p key={i} className="text-[11px] text-muted-foreground/70 leading-relaxed">
+                      {line.replace(/\*\*(.+?)\*\*/g, '$1')}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-start justify-between gap-3 pt-1">
+        <p className="text-[10px] text-muted-foreground/50 italic leading-relaxed">
+          💬 Chat: <span className="font-mono">"teste e2e-1 realizado com sucesso"</span> · <span className="font-mono">"teste e2e-2 falhou"</span>
+          <br />O Claude pode continuar codando via chat mesmo durante a validação.
+        </p>
+        {failed === 0 && pending === 0 && (
+          <span className="text-[10px] text-emerald-400 flex items-center gap-1 shrink-0">
+            <CheckCircle2 className="w-3 h-3" /> Todos validados
+          </span>
+        )}
+        {failed > 0 && (
+          <span className="text-[10px] text-red-400 shrink-0 italic">
+            {failed} com falha — peça ajuda ao Claude
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function PrDiffOverlay({ pr, files, scrollToFile }: { pr: PullRequest; files: FileTouched[]; scrollToFile?: string | null }) {
   const totalAdded   = files.reduce((s, f) => s + (f.linesAdded   ?? 0), 0);
   const totalRemoved = files.reduce((s, f) => s + (f.linesRemoved  ?? 0), 0);
@@ -742,6 +939,7 @@ export default function DemandExecution() {
   const [branchTab, setBranchTab]             = useState<'branches' | 'prs'>('branches');
   const [expandedPrId, setExpandedPrId]       = useState<string | null>(null);
   const [selectedPrFilePath, setSelectedPrFilePath] = useState<string | null>(null);
+  const [valTestStatuses, setValTestStatuses]       = useState<Record<string, E2eTestStatus>>({});
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const infraLogsEnd  = useRef<HTMLDivElement>(null);
@@ -788,6 +986,22 @@ export default function DemandExecution() {
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !demandId) return;
+
+    if (currentStageKey === 'val') {
+      const valE2eMd = getStage('plan')?.testPlan?.e2e ?? '';
+      const valTests = parseE2eTests(valE2eMd);
+      const msgLower = message.toLowerCase();
+      for (const t of valTests) {
+        if (msgLower.includes(t.id)) {
+          if (/realiz|sucesso|passou|\bok\b/.test(msgLower)) {
+            setValTestStatuses(prev => ({ ...prev, [t.id]: 'passed' }));
+          } else if (/falh|failed|erro/.test(msgLower)) {
+            setValTestStatuses(prev => ({ ...prev, [t.id]: 'failed' }));
+          }
+        }
+      }
+    }
+
     sendChat.mutate({ demandId, text: message });
     setMessage('');
     setShowSlash(false);
@@ -815,6 +1029,20 @@ export default function DemandExecution() {
   const handleTestPlanChatRequest = (type: 'unit' | 'e2e') => {
     const label = type === 'unit' ? 'plano de testes unitários' : 'plano de testes e2e';
     setMessage(`/edit Ajuste o ${label}: `);
+    setActiveSection('chat');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleValMarkAll = (status: E2eTestStatus) => {
+    const valTests = parseE2eTests(getStage('plan')?.testPlan?.e2e ?? '');
+    if (status === 'pending') { setValTestStatuses({}); return; }
+    const next: Record<string, E2eTestStatus> = {};
+    for (const t of valTests) next[t.id] = status;
+    setValTestStatuses(next);
+  };
+
+  const handleValTestChatRequest = (testTitle: string) => {
+    setMessage(`O teste "${testTitle}" falhou. Preciso de ajuda para investigar e corrigir. `);
     setActiveSection('chat');
     setTimeout(() => inputRef.current?.focus(), 50);
   };
@@ -1646,16 +1874,14 @@ export default function DemandExecution() {
                 <p className="text-sm text-muted-foreground italic">Esta etapa ainda não foi iniciada.</p>
               )}
 
-              {currentStageDef?.key === 'val' && currentStageData?.status === 'running' && (
-                <div className="border border-amber-500/30 bg-amber-500/5 rounded-lg p-4 flex items-start gap-3">
-                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-amber-300">Sua atenção é necessária</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      O Claude aguarda sua validação funcional. Teste a feature e responda no chat.
-                    </p>
-                  </div>
-                </div>
+              {currentStageDef?.key === 'val' && currentStageData && (
+                <ValidationStageView
+                  testPlan={getStage('plan')?.testPlan}
+                  statuses={valTestStatuses}
+                  onStatusChange={(id, status) => setValTestStatuses(prev => ({ ...prev, [id]: status }))}
+                  onMarkAll={handleValMarkAll}
+                  onChatRequest={handleValTestChatRequest}
+                />
               )}
 
               {currentStageKey === 'test' && currentStageData && demandId && (
