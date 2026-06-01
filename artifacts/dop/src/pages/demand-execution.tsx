@@ -9,10 +9,10 @@ import {
   Send, ArrowLeft, FileCode, FileText, FlaskConical,
   Clock, Terminal, AlertTriangle, Package, Layers, X,
   ChevronRight, ChevronDown, ExternalLink, GitPullRequest,
-  CreditCard, XCircle, SkipForward,
+  CreditCard, XCircle, SkipForward, Search, Minus, Plus, Cloud,
 } from 'lucide-react';
 import { marked } from 'marked';
-import { LogLine, Stage, FileTouched, PullRequest, TestResult, Demand } from '../lib/api/types';
+import { LogLine, Stage, FileTouched, PullRequest, TestResult, Demand, Workspace } from '../lib/api/types';
 import { api } from '../lib/api/mockClient';
 import { DocViewer } from '../components/doc-viewer';
 import { ExecStageView } from '../components/exec-stage-view';
@@ -25,7 +25,21 @@ type CentralOverlay =
   | { kind: 'file-diff'; file: FileTouched }
   | { kind: 'jira-card' }
   | { kind: 'time-detail' }
-  | { kind: 'allure' };
+  | { kind: 'allure' }
+  | { kind: 'manage-repos' };
+
+const MOCK_AZURE_EXTRA_REPOS: Record<string, { name: string; url: string }[]> = {
+  'ws-1': [
+    { name: 'portal-admin', url: 'https://org@dev.azure.com/org/portal-cliente/_git/portal-admin' },
+    { name: 'shared-ui',    url: 'https://org@dev.azure.com/org/portal-cliente/_git/shared-ui' },
+    { name: 'portal-docs',  url: 'https://org@dev.azure.com/org/portal-cliente/_git/portal-docs' },
+  ],
+  'ws-2': [
+    { name: 'api-relatorios',      url: 'https://org@dev.azure.com/org/api-pagamentos/_git/api-relatorios' },
+    { name: 'worker-notificacoes', url: 'https://org@dev.azure.com/org/api-pagamentos/_git/worker-notificacoes' },
+    { name: 'billing-service',     url: 'https://org@dev.azure.com/org/api-pagamentos/_git/billing-service' },
+  ],
+};
 
 const STAGE_DEFS = [
   { key: 'init',    short: 'Iniciar',   title: 'Iniciar a demanda',   hasLogs: false },
@@ -459,6 +473,179 @@ function AllureOverlay({ tests }: { tests: TestResult[] }) {
   );
 }
 
+function RepoManagerOverlay({
+  workspace,
+  workspaceId,
+  currentRepos,
+  onAdd,
+  onRemove,
+}: {
+  workspace: Workspace;
+  workspaceId: string;
+  currentRepos: string[];
+  onAdd: (name: string) => void;
+  onRemove: (name: string) => void;
+}) {
+  const [search, setSearch]     = useState('');
+  const [loading, setLoading]   = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
+
+  const q = search.toLowerCase();
+  const inDemandSet     = new Set(currentRepos);
+  const wsRepoNameSet   = new Set(workspace.repos.map(r => r.name));
+
+  const inDemand        = currentRepos.filter(r => r.toLowerCase().includes(q));
+  const addableFromWs   = workspace.repos.filter(r => !inDemandSet.has(r.name) && r.name.toLowerCase().includes(q));
+  const extraInAzure    = (MOCK_AZURE_EXTRA_REPOS[workspaceId] ?? []).filter(
+    r => !wsRepoNameSet.has(r.name) && !inDemandSet.has(r.name) && r.name.toLowerCase().includes(q),
+  );
+
+  return (
+    <div className="p-5 max-w-3xl space-y-5">
+      {/* ── Azure DevOps connection banner ── */}
+      <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/5 border border-blue-500/15">
+        <div className="w-9 h-9 rounded-md bg-blue-500/15 border border-blue-500/25 flex items-center justify-center shrink-0">
+          <Cloud className="w-4 h-4 text-blue-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold">Azure DevOps</p>
+          <p className="text-[10px] text-muted-foreground font-mono truncate">
+            {workspace.taskManager.baseUrl.replace('https://', '')} · {workspace.name}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[10px] text-emerald-400">Conectado</span>
+        </div>
+      </div>
+
+      {/* ── Search ── */}
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Filtrar repositórios..."
+          className="w-full bg-muted/40 border border-border/60 rounded-lg pl-8 pr-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/50"
+        />
+      </div>
+
+      {loading ? (
+        /* ── Loading skeleton ── */
+        <div className="space-y-2">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-11 rounded-md bg-muted/20 border border-border/20 animate-pulse" />
+          ))}
+          <p className="text-[10px] text-muted-foreground text-center pt-1">
+            Buscando repositórios no Azure DevOps...
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* ── Section 1: Nesta demanda ── */}
+          {inDemand.length > 0 && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                Nesta demanda ({inDemand.length})
+              </p>
+              <div className="space-y-1.5">
+                {inDemand.map(r => {
+                  const wsRepo = workspace.repos.find(wr => wr.name === r);
+                  return (
+                    <div key={r} className="flex items-center gap-3 p-2.5 rounded-md bg-emerald-500/5 border border-emerald-500/15 group">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-mono font-semibold">{r}</span>
+                        {wsRepo && (
+                          <p className="text-[9px] text-muted-foreground font-mono truncate">{wsRepo.remoteUrl}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => onRemove(r)}
+                        className="flex items-center gap-1 text-[9px] px-2 py-1 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                      >
+                        <Minus className="w-3 h-3" /> Remover
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── Section 2: Disponíveis no workspace ── */}
+          {addableFromWs.length > 0 && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Package className="w-3 h-3" />
+                Workspace — disponíveis para adicionar
+              </p>
+              <div className="space-y-1.5">
+                {addableFromWs.map(r => (
+                  <div key={r.id} className="flex items-center gap-3 p-2.5 rounded-md bg-muted/30 border border-border/40 hover:bg-muted/40 transition-colors group">
+                    <GitBranch className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-mono font-semibold">{r.name}</span>
+                      <p className="text-[9px] text-muted-foreground font-mono truncate">{r.remoteUrl}</p>
+                    </div>
+                    <div className="text-[9px] text-muted-foreground shrink-0">
+                      ⎇ {r.baseBranch}
+                    </div>
+                    <button
+                      onClick={() => onAdd(r.name)}
+                      className="flex items-center gap-1 text-[9px] px-2 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-colors shrink-0"
+                    >
+                      <Plus className="w-3 h-3" /> Adicionar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Section 3: Outros no Azure DevOps ── */}
+          {extraInAzure.length > 0 && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Cloud className="w-3 h-3" />
+                Azure DevOps — outros repositórios
+                <span className="text-[8px] px-1.5 py-0.5 rounded bg-muted/50 border border-border/40 normal-case font-normal tracking-normal">
+                  não configurados no workspace
+                </span>
+              </p>
+              <div className="space-y-1.5">
+                {extraInAzure.map(r => (
+                  <div key={r.name} className="flex items-center gap-3 p-2.5 rounded-md bg-muted/15 border border-border/25 opacity-60">
+                    <Circle className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-mono">{r.name}</span>
+                      <p className="text-[9px] text-muted-foreground/60 font-mono truncate">{r.url}</p>
+                    </div>
+                    <span className="text-[9px] px-2 py-1 rounded border border-border/30 text-muted-foreground/60 shrink-0 cursor-default">
+                      Adicionar ao workspace primeiro
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {inDemand.length === 0 && addableFromWs.length === 0 && extraInAzure.length === 0 && (
+            <p className="text-xs text-muted-foreground italic text-center py-6">
+              Nenhum repositório encontrado para "{search}"
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function DemandExecution() {
   const { id, demandId } = useParams();
   const navigate = useNavigate();
@@ -475,6 +662,7 @@ export default function DemandExecution() {
   const [editedDocs, setEditedDocs]           = useState<Record<string, string>>({});
   const [editedTestPlan, setEditedTestPlan]   = useState<Record<string, Partial<TestPlan>>>({});
   const [centralOverlay, setCentralOverlay]   = useState<CentralOverlay | null>(null);
+  const [editedRepos, setEditedRepos]         = useState<string[] | null>(null);
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const infraLogsEnd  = useRef<HTMLDivElement>(null);
@@ -551,6 +739,11 @@ export default function DemandExecution() {
     setActiveSection('chat');
     setTimeout(() => inputRef.current?.focus(), 50);
   };
+
+  const isDemandEditable = !['done', 'delivered'].includes(demand.dopStatus);
+  const currentRepos     = editedRepos ?? demand.dossier.repos;
+  const addRepo    = (name: string) => setEditedRepos(prev => [...(prev ?? demand.dossier.repos), name]);
+  const removeRepo = (name: string) => setEditedRepos(prev => (prev ?? demand.dossier.repos).filter(r => r !== name));
 
   const handleInputChange = (v: string) => {
     setMessage(v);
@@ -719,20 +912,41 @@ export default function DemandExecution() {
         {activeSection === 'repos' && (
           <ScrollArea className="flex-1 p-3">
             <div className="space-y-2">
-              {demand.dossier.repos.length === 0
-                ? <p className="text-xs text-muted-foreground italic">Nenhum repositório impactado ainda.</p>
-                : demand.dossier.repos.map(r => (
-                  <div key={r} className="flex items-center gap-2 p-2.5 rounded-md bg-muted/30 border border-border/40">
+              {currentRepos.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">Nenhum repositório impactado ainda.</p>
+              ) : (
+                currentRepos.map(r => (
+                  <div key={r} className="flex items-center gap-2 p-2.5 rounded-md bg-muted/30 border border-border/40 group">
                     <GitBranch className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span className="text-xs font-mono truncate">{r}</span>
+                    <span className="text-xs font-mono truncate flex-1">{r}</span>
+                    {isDemandEditable && (
+                      <button
+                        onClick={() => removeRepo(r)}
+                        title="Remover repositório"
+                        className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                 ))
-              }
-              <div className="pt-3 mt-1 border-t border-border/40">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Commits totais</p>
-                <div className="flex items-center gap-2">
+              )}
+
+              <div className="pt-3 mt-1 border-t border-border/40 space-y-2.5">
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Commits totais</p>
                   <span className="text-2xl font-bold">{demand.dossier.commits}</span>
                 </div>
+
+                {isDemandEditable && (
+                  <button
+                    onClick={() => setCentralOverlay({ kind: 'manage-repos' })}
+                    className="w-full flex items-center gap-2 py-2 px-3 rounded-md border border-dashed border-border/50 text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/20 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
+                    Gerenciar repositórios
+                  </button>
+                )}
               </div>
             </div>
           </ScrollArea>
@@ -1008,6 +1222,15 @@ export default function DemandExecution() {
                   <span className="text-sm font-semibold flex-1">Relatório de Testes — Allure</span>
                 </>
               )}
+              {centralOverlay.kind === 'manage-repos' && (
+                <>
+                  <GitBranch className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-sm font-semibold flex-1">Gerenciar Repositórios</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {currentRepos.length} adicionado{currentRepos.length !== 1 ? 's' : ''}
+                  </span>
+                </>
+              )}
               <button
                 onClick={() => setCentralOverlay(null)}
                 className="ml-auto w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
@@ -1034,6 +1257,20 @@ export default function DemandExecution() {
               )}
               {centralOverlay.kind === 'allure' && (
                 <AllureOverlay tests={demand.dossier.tests} />
+              )}
+              {centralOverlay.kind === 'manage-repos' && workspace && (
+                <RepoManagerOverlay
+                  workspace={workspace}
+                  workspaceId={id ?? ''}
+                  currentRepos={currentRepos}
+                  onAdd={addRepo}
+                  onRemove={removeRepo}
+                />
+              )}
+              {centralOverlay.kind === 'manage-repos' && !workspace && (
+                <div className="p-6 flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Carregando workspace...
+                </div>
               )}
             </div>
           </div>
