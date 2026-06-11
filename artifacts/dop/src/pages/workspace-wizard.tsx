@@ -23,13 +23,11 @@ export default function WorkspaceWizard() {
   const steps = ["Básico", "Repositórios Git", "Fluxo de Branches", "Task Manager", "Runtime", "Extensões do Claude", "Chat de Configuração"];
 
   const [name, setName] = useState('');
-  const [root, setRoot] = useState('');
   const [repos, setRepos] = useState<RepoConfig[]>([]);
 
   React.useEffect(() => {
     if (workspace) {
       setName(workspace.name);
-      setRoot(workspace.root);
       setRepos(workspace.repos ?? []);
     }
   }, [workspace]);
@@ -38,7 +36,7 @@ export default function WorkspaceWizard() {
 
   const handleSaveStep = () => {
     if (step === 1) {
-      saveWs.mutate({ id: workspace?.id, name, root, status: workspace?.status || 'draft' }, {
+      saveWs.mutate({ id: workspace?.id, name, root: '', status: workspace?.status || 'draft' }, {
         onSuccess: (saved) => {
           toast({ title: "Etapa salva", description: "Configurações básicas atualizadas." });
           if (!id) navigate(`/workspaces/${saved.id}/edit`, { replace: true });
@@ -60,10 +58,6 @@ export default function WorkspaceWizard() {
           <div className="space-y-2">
             <Label htmlFor="ws-name">Nome do Workspace</Label>
             <Input id="ws-name" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Portal do Cliente" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ws-root">Diretório Raiz (Caminho absoluto)</Label>
-            <Input id="ws-root" value={root} onChange={e => setRoot(e.target.value)} placeholder="/Users/dev/projects/portal" className="font-mono text-sm" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="ws-desc">Descrição / Contexto (Opcional)</Label>
