@@ -1237,7 +1237,7 @@ export default function DemandExecution() {
 
   if (isLoading || !demand) {
     return (
-      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
+      <div className="flex flex-1 items-center justify-center">
         <Loader2 className="w-7 h-7 animate-spin text-primary" />
       </div>
     );

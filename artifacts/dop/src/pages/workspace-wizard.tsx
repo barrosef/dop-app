@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Card, CardContent } from '../components/ui/card';
 import { useToast } from '../hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { RepoManager } from '../components/repo-manager';
+import { RepoConfig } from '../lib/api/types';
 
 export default function WorkspaceWizard() {
   const { id } = useParams();
@@ -20,15 +22,15 @@ export default function WorkspaceWizard() {
   const [step, setStep] = useState(1);
   const steps = ["Básico", "Repositórios Git", "Fluxo de Branches", "Task Manager", "Runtime", "Extensões do Claude", "Chat de Configuração"];
 
-  // Local state for Step 1
   const [name, setName] = useState('');
   const [root, setRoot] = useState('');
+  const [repos, setRepos] = useState<RepoConfig[]>([]);
 
-  // Sync on load
   React.useEffect(() => {
     if (workspace) {
       setName(workspace.name);
       setRoot(workspace.root);
+      setRepos(workspace.repos ?? []);
     }
   }, [workspace]);
 
@@ -70,50 +72,11 @@ export default function WorkspaceWizard() {
         </div>
       );
       case 2: return (
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <Label>Provedor Git</Label>
-            <Select defaultValue="azure_devops">
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="azure_devops">Azure DevOps</SelectItem>
-                <SelectItem value="github" disabled>GitHub (Em breve)</SelectItem>
-                <SelectItem value="gitlab" disabled>GitLab (Em breve)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="border border-border rounded-lg p-4 bg-muted/20">
-            <h4 className="font-medium mb-4">Repositório 1</h4>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nome (alias local)</Label>
-                  <Input defaultValue="frontend" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Protocolo</Label>
-                  <Select defaultValue="ssh">
-                    <SelectTrigger><SelectValue/></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ssh">SSH</SelectItem>
-                      <SelectItem value="https">HTTPS</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>URL Remota</Label>
-                <Input defaultValue="git@ssh.dev.azure.com:v3/org/proj/frontend" className="font-mono text-sm" />
-              </div>
-              <Button variant="secondary" size="sm" type="button" onClick={() => toast({ title: "Sucesso", description: "Conexão Git estabelecida."})}>
-                Testar Conexão
-              </Button>
-            </div>
-          </div>
-          <Button variant="outline" className="w-full border-dashed">+ Adicionar outro repositório</Button>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Adicione os repositórios Git desta workspace. Cada repositório pode usar um provedor diferente (GitHub, GitLab, Azure DevOps, Bitbucket).
+          </p>
+          <RepoManager repos={repos} onChange={setRepos} />
         </div>
       );
       case 4: return (
@@ -173,7 +136,7 @@ export default function WorkspaceWizard() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-6xl flex h-[calc(100vh-4rem)]">
+    <div className="container mx-auto py-8 px-4 max-w-6xl flex flex-1 overflow-hidden">
       <div className="w-64 shrink-0 pr-8 border-r border-border h-full overflow-y-auto">
         <div className="mb-6">
           <button onClick={() => navigate('/')} className="text-muted-foreground hover:text-foreground mb-4 text-sm flex items-center gap-1">

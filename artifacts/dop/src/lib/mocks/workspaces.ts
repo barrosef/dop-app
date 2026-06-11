@@ -1,4 +1,8 @@
-import { Workspace } from '../api/types';
+import { Workspace, GitProvider } from '../api/types';
+
+const AZ: GitProvider = 'azure_devops';
+const GH: GitProvider = 'github';
+const GL: GitProvider = 'gitlab';
 
 export const mockWorkspaces: Workspace[] = [
   {
@@ -8,8 +12,8 @@ export const mockWorkspaces: Workspace[] = [
     status: 'active',
     gitProvider: 'azure_devops',
     repos: [
-      { id: 'r1', name: 'portal-frontend', remoteUrl: 'git@ssh.dev.azure.com:v3/org/portal-frontend', protocol: 'ssh', baseBranch: 'main', prTargets: ['develop'] },
-      { id: 'r2', name: 'portal-backend',  remoteUrl: 'git@ssh.dev.azure.com:v3/org/portal-backend',  protocol: 'ssh', baseBranch: 'main', prTargets: ['develop'] }
+      { id: 'r1', name: 'portal-frontend', provider: AZ, remoteUrl: 'git@ssh.dev.azure.com:v3/org/portal-frontend', protocol: 'ssh', baseBranch: 'main', prTargets: ['develop'], description: 'Frontend React do portal de clientes' },
+      { id: 'r2', name: 'portal-backend',  provider: GH, remoteUrl: 'git@github.com:org/portal-backend.git',         protocol: 'ssh', baseBranch: 'main', prTargets: ['develop'], description: 'API Node.js do portal' },
     ],
     taskManager: { provider: 'jira', baseUrl: 'https://org.atlassian.net', project: 'PORTAL' },
     runtime: {
@@ -37,9 +41,9 @@ export const mockWorkspaces: Workspace[] = [
     status: 'active',
     gitProvider: 'azure_devops',
     repos: [
-      { id: 'r3', name: 'api-pagamentos',    remoteUrl: 'https://org@dev.azure.com/org/api-pagamentos/_git/api-pagamentos', protocol: 'https', baseBranch: 'main', prTargets: ['develop', 'release'] },
-      { id: 'r4', name: 'worker-cobrancas',  remoteUrl: 'https://org@dev.azure.com/org/api-pagamentos/_git/worker-cobrancas', protocol: 'https', baseBranch: 'main', prTargets: ['develop'] },
-      { id: 'r5', name: 'shared-contracts', remoteUrl: 'https://org@dev.azure.com/org/api-pagamentos/_git/shared-contracts', protocol: 'https', baseBranch: 'main', prTargets: ['develop'] }
+      { id: 'r3', name: 'api-pagamentos',   provider: AZ, remoteUrl: 'https://org@dev.azure.com/org/api-pagamentos/_git/api-pagamentos',   protocol: 'https', baseBranch: 'main', prTargets: ['develop', 'release'] },
+      { id: 'r4', name: 'worker-cobrancas', provider: GL, remoteUrl: 'https://gitlab.com/org/worker-cobrancas.git',                         protocol: 'https', baseBranch: 'main', prTargets: ['develop'] },
+      { id: 'r5', name: 'shared-contracts', provider: AZ, remoteUrl: 'https://org@dev.azure.com/org/api-pagamentos/_git/shared-contracts',   protocol: 'https', baseBranch: 'main', prTargets: ['develop'] },
     ],
     taskManager: { provider: 'jira', baseUrl: 'https://org.atlassian.net', project: 'PAY' },
     runtime: {

@@ -1,12 +1,16 @@
 export type WorkspaceStatus = 'draft' | 'active' | 'inactive' | 'deleted';
 export type GitProtocol = 'http' | 'https' | 'ssh';
+export type GitProvider = 'azure_devops' | 'github' | 'gitlab' | 'bitbucket';
 export type DopStatus = 'new' | 'doing' | 'done' | 'delivered';
 export type StageStatus = 'pending' | 'running' | 'done' | 'blocked';
 export type TestStatus = 'running' | 'success' | 'fail' | 'skipped';
 
 export interface RepoConfig {
   id: string; name: string; remoteUrl: string; protocol: GitProtocol;
+  provider?: GitProvider;
   credentialRef?: string;
+  sshKeyRef?: string;
+  description?: string;
   baseBranch: string; prTargets: string[]; flowRules?: string;
 }
 export interface TaskManagerConfig { provider: 'jira'; baseUrl: string; project: string; }
@@ -18,7 +22,7 @@ export interface ClaudeExtensions {
 }
 export interface Workspace {
   id: string; name: string; root: string; status: WorkspaceStatus;
-  gitProvider: 'azure_devops';
+  gitProvider?: GitProvider;
   repos: RepoConfig[]; taskManager: TaskManagerConfig;
   runtime: { apps: RuntimeApp[]; infra: string[] };
   claudeExtensions: ClaudeExtensions;
