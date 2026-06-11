@@ -1,6 +1,6 @@
 export type WorkspaceStatus = 'draft' | 'active' | 'inactive' | 'deleted';
 export type GitProtocol = 'http' | 'https' | 'ssh';
-export type GitProvider = 'azure_devops' | 'github' | 'gitlab' | 'bitbucket';
+export type GitProvider = 'azure_devops' | 'github' | 'gitlab' | 'gitlab_self_hosted' | 'bitbucket';
 export type DopStatus = 'new' | 'doing' | 'done' | 'delivered';
 export type StageStatus = 'pending' | 'running' | 'done' | 'blocked';
 export type TestStatus = 'running' | 'success' | 'fail' | 'skipped';

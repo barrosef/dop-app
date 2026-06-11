@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import {
   Plus, Trash2, Github, GitBranch, Cloud, Link2,
-  Upload, AlertCircle, ChevronDown, ChevronUp, CheckCircle2, Server,
+  Upload, CheckCircle2, Server, KeyRound, FileKey,
 } from 'lucide-react';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -10,11 +10,14 @@ import { Badge } from './ui/badge';
 import { RepoConfig, GitProvider, GitProtocol } from '../lib/api/types';
 
 /* ── providers ─────────────────────────────────────────────────── */
-const PROVIDERS: { id: GitProvider; label: string; icon: React.ElementType; color: string; bg: string }[] = [
-  { id: 'github',       label: 'GitHub',       icon: Github,    color: 'text-white',       bg: 'bg-[#24292e]' },
-  { id: 'gitlab',       label: 'GitLab',       icon: GitBranch, color: 'text-orange-300',  bg: 'bg-orange-950/60' },
-  { id: 'azure_devops', label: 'Azure DevOps', icon: Cloud,     color: 'text-blue-300',    bg: 'bg-blue-950/60' },
-  { id: 'bitbucket',    label: 'Bitbucket',    icon: Server,    color: 'text-sky-300',     bg: 'bg-sky-950/60' },
+const PROVIDERS: {
+  id: GitProvider; label: string; icon: React.ElementType; color: string; bg: string;
+}[] = [
+  { id: 'github',             label: 'GitHub',            icon: Github,    color: 'text-white',      bg: 'bg-[#24292e]' },
+  { id: 'gitlab',             label: 'GitLab',            icon: GitBranch, color: 'text-orange-300', bg: 'bg-orange-950/60' },
+  { id: 'gitlab_self_hosted', label: 'GitLab Self Hosted',icon: GitBranch, color: 'text-orange-200', bg: 'bg-orange-900/40' },
+  { id: 'azure_devops',       label: 'Azure DevOps',      icon: Cloud,     color: 'text-blue-300',   bg: 'bg-blue-950/60' },
+  { id: 'bitbucket',          label: 'Bitbucket',         icon: Server,    color: 'text-sky-300',    bg: 'bg-sky-950/60' },
 ];
 
 function providerInfo(id?: GitProvider) {
@@ -40,10 +43,6 @@ function RepoCard({ repo, onDelete }: { repo: RepoConfig; onDelete: () => void }
           <p className="text-xs text-muted-foreground mt-0.5 truncate">{repo.description}</p>
         )}
         <p className="text-[11px] font-mono text-muted-foreground/70 mt-1 truncate">{repo.remoteUrl}</p>
-        <div className="flex gap-3 mt-1 text-[10px] text-muted-foreground">
-          <span>base: <span className="font-mono">{repo.baseBranch}</span></span>
-          <span>PR→ <span className="font-mono">{repo.prTargets.join(', ')}</span></span>
-        </div>
       </div>
       <button
         onClick={onDelete}
@@ -67,50 +66,57 @@ interface FormState {
   token: string;
   sshKeyName: string;
   sshKeyContent: string;
-  baseBranch: string;
-  prTarget: string;
 }
 
 const BLANK: FormState = {
   mode: 'existing', provider: 'github', name: '', description: '',
   remoteUrl: '', protocol: 'ssh', token: '', sshKeyName: '', sshKeyContent: '',
-  baseBranch: 'main', prTarget: 'develop',
 };
 
-function AddRepoPanel({
-  onAdd,
-  onCancel,
-}: {
-  onAdd: (r: RepoConfig) => void;
-  onCancel: () => void;
-}) {
-  const [form, setForm] = useState<FormState>(BLANK);
+function AddRepoPanel({ onAdd, onCancel }: { onAdd: (r: RepoConfig) => void; onCancel: () => void }) {
+  const [form, setForm]     = useState<FormState>(BLANK);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [dragging, setDragging] = useState(false);
+  const [sshMode, setSshMode]   = useState<'drop' | 'text'>('drop');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm(p => ({ ...p, [k]: v }));
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const loadFile = (file: File) => {
     set('sshKeyName', file.name);
     const reader = new FileReader();
     reader.onload = ev => set('sshKeyContent', ev.target?.result as string ?? '');
     reader.readAsText(file);
   };
 
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) loadFile(f);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const f = e.dataTransfer.files[0];
+    if (f) loadFile(f);
+  };
+
   const validate = (): boolean => {
     const errs: typeof errors = {};
-    if (!form.name.trim())                                         errs.name = 'Nome é obrigatório';
-    if (form.mode === 'existing' && !form.remoteUrl.trim())        errs.remoteUrl = 'URL remota é obrigatória';
-    if (form.protocol === 'https' && !form.token.trim())           errs.token = 'Token de acesso é obrigatório';
+    if (!form.name.trim())                                  errs.name = 'Nome é obrigatório';
+    if (form.mode === 'existing' && !form.remoteUrl.trim()) errs.remoteUrl = 'URL remota é obrigatória';
+    if (form.protocol === 'https' && !form.token.trim())    errs.token = 'Token de acesso é obrigatório';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const handleSave = () => {
     if (!validate()) return;
+    const domainMap: Partial<Record<GitProvider, string>> = {
+      github: 'github.com', gitlab: 'gitlab.com',
+      gitlab_self_hosted: 'gitlab.empresa.com', azure_devops: 'dev.azure.com', bitbucket: 'bitbucket.org',
+    };
     const repo: RepoConfig = {
       id: `r-${Date.now()}`,
       name: form.name.trim(),
@@ -118,12 +124,14 @@ function AddRepoPanel({
       description: form.description.trim() || undefined,
       remoteUrl: form.mode === 'existing'
         ? form.remoteUrl.trim()
-        : `git@${form.provider === 'github' ? 'github.com' : form.provider === 'gitlab' ? 'gitlab.com' : 'dev.azure.com'}:org/${form.name.trim()}.git`,
+        : `git@${domainMap[form.provider] ?? 'git.example.com'}:org/${form.name.trim()}.git`,
       protocol: form.protocol,
       credentialRef: form.protocol === 'https' ? '***' : undefined,
-      sshKeyRef: form.protocol === 'ssh' && form.sshKeyContent ? form.sshKeyName : undefined,
-      baseBranch: form.baseBranch || 'main',
-      prTargets: form.prTarget.split(',').map(s => s.trim()).filter(Boolean),
+      sshKeyRef: form.protocol === 'ssh' && form.sshKeyContent
+        ? (form.sshKeyName || 'chave-colada')
+        : undefined,
+      baseBranch: 'main',
+      prTargets: ['develop'],
     };
     onAdd(repo);
   };
@@ -156,23 +164,23 @@ function AddRepoPanel({
         ))}
       </div>
 
-      {/* Provider */}
+      {/* Provider — horizontal pills */}
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">Provedor Git</Label>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {PROVIDERS.map(p => {
             const PIcon = p.icon;
             return (
               <button
                 key={p.id}
                 onClick={() => set('provider', p.id)}
-                className={`rounded-lg border py-2.5 px-2 flex flex-col items-center gap-1.5 text-[11px] font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-all ${
                   form.provider === p.id
                     ? `border-primary/40 ${p.bg} ${p.color}`
                     : 'border-border/40 text-muted-foreground hover:border-border hover:text-foreground'
                 }`}
               >
-                <PIcon className="w-4 h-4" />
+                <PIcon className="w-3.5 h-3.5 shrink-0" />
                 {p.label}
               </button>
             );
@@ -180,7 +188,7 @@ function AddRepoPanel({
         </div>
       </div>
 
-      {/* Name / URL */}
+      {/* Name / Description */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label className="text-xs" htmlFor="repo-name">
@@ -207,6 +215,7 @@ function AddRepoPanel({
         </div>
       </div>
 
+      {/* Remote URL (existing mode only) */}
       {form.mode === 'existing' && (
         <div className="space-y-2">
           <Label className="text-xs" htmlFor="repo-url">URL remota</Label>
@@ -221,7 +230,7 @@ function AddRepoPanel({
         </div>
       )}
 
-      {/* Protocol */}
+      {/* Protocol toggle */}
       <div className="space-y-2">
         <Label className="text-xs">Protocolo de autenticação</Label>
         <div className="flex rounded-lg border border-border/50 overflow-hidden w-fit">
@@ -241,35 +250,79 @@ function AddRepoPanel({
         </div>
       </div>
 
-      {/* SSH key upload */}
+      {/* SSH key */}
       {form.protocol === 'ssh' && (
-        <div className="space-y-3">
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 text-xs text-amber-300">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>
-              Faça upload da <strong>chave privada SSH</strong>. A chave pública correspondente deve estar
-              adicionada ao repositório de destino ({providerInfo(form.provider).label}).
-            </span>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs flex items-center gap-1.5">
+              <KeyRound className="w-3.5 h-3.5" />
+              Chave privada SSH
+            </Label>
+            <button
+              type="button"
+              onClick={() => {
+                setSshMode(m => m === 'drop' ? 'text' : 'drop');
+                if (sshMode === 'text') set('sshKeyContent', '');
+              }}
+              className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {sshMode === 'drop'
+                ? <><FileKey className="w-3 h-3" /> Colar / digitar</>
+                : <><Upload className="w-3 h-3" /> Upload de arquivo</>
+              }
+            </button>
           </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Chave privada SSH</Label>
-            <input type="file" ref={fileRef} onChange={handleFile} className="hidden" accept=".pem,.key,id_rsa,id_ed25519" />
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
+
+          {sshMode === 'drop' ? (
+            <>
+              <input
+                type="file"
+                ref={fileRef}
+                onChange={handleFileInput}
+                className="hidden"
+                accept=".pem,.key,id_rsa,id_ed25519,.txt"
+              />
+              <div
+                onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={handleDrop}
                 onClick={() => fileRef.current?.click()}
-                className="flex items-center gap-2 px-3 py-2 rounded-md border border-border/60 text-sm text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+                className={`rounded-lg border-2 border-dashed p-5 text-center cursor-pointer select-none transition-all ${
+                  dragging
+                    ? 'border-primary/60 bg-primary/10'
+                    : form.sshKeyContent
+                      ? 'border-emerald-500/40 bg-emerald-500/5'
+                      : 'border-border/40 hover:border-border/70 hover:bg-muted/20'
+                }`}
               >
-                <Upload className="w-3.5 h-3.5" />
-                {form.sshKeyName || 'Selecionar arquivo...'}
-              </button>
-              {form.sshKeyContent && (
-                <span className="flex items-center gap-1 text-xs text-emerald-400">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Carregada
-                </span>
-              )}
-            </div>
-          </div>
+                {form.sshKeyContent ? (
+                  <div className="flex items-center justify-center gap-2 text-sm text-emerald-400">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{form.sshKeyName || 'Chave carregada'}</span>
+                    <span className="text-xs text-emerald-400/60">— clique para substituir</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-1.5 text-muted-foreground">
+                    <Upload className="w-5 h-5" />
+                    <span className="text-sm">
+                      Arraste o arquivo da chave aqui ou{' '}
+                      <span className="text-primary underline underline-offset-2">selecione</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground/60">id_rsa · id_ed25519 · .pem · .key</span>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <textarea
+              value={form.sshKeyContent}
+              onChange={e => { set('sshKeyContent', e.target.value); set('sshKeyName', ''); }}
+              placeholder={'-----BEGIN OPENSSH PRIVATE KEY-----\n...\n-----END OPENSSH PRIVATE KEY-----'}
+              rows={7}
+              spellCheck={false}
+              className="w-full font-mono text-xs resize-y rounded-md border border-border/60 bg-muted/20 p-3 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/50 leading-relaxed"
+            />
+          )}
         </div>
       )}
 
@@ -288,30 +341,6 @@ function AddRepoPanel({
           {errors.token && <p className="text-xs text-red-400">{errors.token}</p>}
         </div>
       )}
-
-      {/* Branch config */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label className="text-xs" htmlFor="repo-base">Branch base</Label>
-          <Input
-            id="repo-base"
-            value={form.baseBranch}
-            onChange={e => set('baseBranch', e.target.value)}
-            placeholder="main"
-            className="font-mono text-sm"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label className="text-xs" htmlFor="repo-target">Branch(es) alvo do PR <span className="text-muted-foreground">(vírgula)</span></Label>
-          <Input
-            id="repo-target"
-            value={form.prTarget}
-            onChange={e => set('prTarget', e.target.value)}
-            placeholder="develop, main"
-            className="font-mono text-sm"
-          />
-        </div>
-      </div>
 
       {/* Actions */}
       <div className="flex gap-2 pt-1">
@@ -335,7 +364,7 @@ export function RepoManager({
   const [adding, setAdding] = useState(false);
 
   const handleDelete = (id: string) => onChange(repos.filter(r => r.id !== id));
-  const handleAdd = (repo: RepoConfig) => { onChange([...repos, repo]); setAdding(false); };
+  const handleAdd    = (repo: RepoConfig) => { onChange([...repos, repo]); setAdding(false); };
 
   return (
     <div className="space-y-3">
