@@ -1,11 +1,10 @@
 import { DopApi } from './client';
-import { Workspace, Demand, ChatMessage, LogLine } from './types';
+import { Workspace, Card, ChatMessage, LogLine } from './types';
 import { mockWorkspaces } from '../mocks/workspaces';
-import { mockDemands } from '../mocks/demands';
+import { mockCards } from '../mocks/demands';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Per-app log templates for realistic app streaming
 const APP_SERVICE_LOGS: Record<string, string[]> = {
   frontend: [
     '[vite] page reload triggered',
@@ -56,7 +55,6 @@ const APP_SERVICE_LOGS: Record<string, string[]> = {
   ],
 };
 
-// Per-service log templates for realistic infra streaming
 const INFRA_LOGS: Record<string, string[]> = {
   mysql: [
     'InnoDB: Buffer pool(s) load completed at',
@@ -132,7 +130,6 @@ const TEST_LOGS = [
   '  ◌ protected route e2e — running...',
 ];
 
-// Repo + type specific test log pools
 const REPO_TEST_LOGS: Record<string, Partial<Record<'unit' | 'e2e', string[]>>> = {
   'portal-backend': {
     unit: [
@@ -168,7 +165,7 @@ const REPO_TEST_LOGS: Record<string, Partial<Record<'unit' | 'e2e', string[]>>> 
 
 class MockDopApi implements DopApi {
   private workspaces = [...mockWorkspaces];
-  private demands = [...mockDemands];
+  private cards = [...mockCards];
 
   async listWorkspaces(): Promise<Workspace[]> {
     await delay(300 + Math.random() * 500);
@@ -191,7 +188,20 @@ class MockDopApi implements DopApi {
         return this.workspaces[idx];
       }
     }
-    const newWs = { ...ws, id: `ws-${Date.now()}` } as Workspace;
+    const newWs: Workspace = {
+      id: `ws-${Date.now()}`,
+      name: ws.name ?? 'Workspace',
+      root: '',
+      status: ws.status ?? 'draft',
+      repos: ws.repos ?? [],
+      taskManager: ws.taskManager ?? { provider: 'custom', baseUrl: '', project: '' },
+      cardTypes: ws.cardTypes ?? ['Task'],
+      runtime: ws.runtime ?? { apps: [], infra: [] },
+      claudeExtensions: ws.claudeExtensions ?? { mcps: [], plugins: [], skills: [], commands: [] },
+      rules: ws.rules ?? [],
+      context: ws.context ?? '',
+      gitProvider: ws.gitProvider,
+    };
     this.workspaces.push(newWs);
     return newWs;
   }
@@ -204,27 +214,27 @@ class MockDopApi implements DopApi {
       : { ok: false, message: 'Falha na conexão. Verifique as credenciais.' };
   }
 
-  async listDemands(workspaceId: string): Promise<Demand[]> {
+  async listCards(workspaceId: string): Promise<Card[]> {
     await delay(300 + Math.random() * 500);
-    return this.demands.filter(d => d.workspaceId === workspaceId);
+    return this.cards.filter(d => d.workspaceId === workspaceId);
   }
 
-  async listAllDemands(): Promise<Demand[]> {
+  async listAllCards(): Promise<Card[]> {
     await delay(400);
-    return this.demands;
+    return this.cards;
   }
 
-  async getDemand(workspaceId: string, demandId: string): Promise<Demand> {
+  async getCard(workspaceId: string, cardId: string): Promise<Card> {
     await delay(200 + Math.random() * 400);
-    const demand = this.demands.find(d => d.id === demandId && d.workspaceId === workspaceId);
-    if (!demand) throw new Error('Demand not found');
+    const demand = this.cards.find(d => d.id === cardId && d.workspaceId === workspaceId);
+    if (!demand) throw new Error('Card not found');
     return demand;
   }
 
-  async sendChatMessage(demandId: string, text: string): Promise<ChatMessage> {
+  async sendChatMessage(cardId: string, text: string): Promise<ChatMessage> {
     await delay(300);
-    const demand = this.demands.find(d => d.id === demandId);
-    if (!demand) throw new Error('Demand not found');
+    const demand = this.cards.find(d => d.id === cardId);
+    if (!demand) throw new Error('Card not found');
 
     const devMsg: ChatMessage = { id: `c-${Date.now()}`, author: 'dev', text, at: new Date().toISOString() };
     demand.chat.push(devMsg);
@@ -235,7 +245,7 @@ class MockDopApi implements DopApi {
         author: 'claude',
         text: `Entendido. Vou proceder com: "${text}". Analisando o impacto e planejando os próximos passos.`,
         at: new Date().toISOString(),
-        actions: ['Analisou o pedido', `Registrou no contexto da demanda`]
+        actions: ['Analisou o pedido', `Registrou no contexto`]
       };
       demand.chat.push(claudeMsg);
     }, 1500);
@@ -244,7 +254,7 @@ class MockDopApi implements DopApi {
   }
 
   async *streamLogs(
-    demandId: string,
+    cardId: string,
     source: LogLine['source'],
     filter?: { testType?: 'unit' | 'e2e'; testRepo?: string },
   ): AsyncIterable<LogLine> {
@@ -257,7 +267,6 @@ class MockDopApi implements DopApi {
         const pool = INFRA_LOGS[svc] ?? INFRA_LOGS['db-container'];
         yield { source, service: svc, line: pool[Math.floor(Math.random() * pool.length)], at: new Date().toISOString() };
       } else if (source === 'test' && filter?.testRepo && filter?.testType) {
-        // Repo + type specific test logs
         const repoLogs = REPO_TEST_LOGS[filter.testRepo]?.[filter.testType] ?? TEST_LOGS;
         yield {
           source,
@@ -278,7 +287,6 @@ class MockDopApi implements DopApi {
     }
   }
 
-  // Stream logs for a specific service or app (used by the infra log overlay)
   async *streamServiceLogs(service: string): AsyncIterable<LogLine> {
     const isApp  = service in APP_SERVICE_LOGS || !INFRA_LOGS[service];
     const pool   = APP_SERVICE_LOGS[service]

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDemand, useSendChatMessage, useWorkspace } from '../hooks/use-api';
+import { useCard, useSendChatMessage, useWorkspace } from '../hooks/use-api';
 import { Badge } from '../components/ui/badge';
 import { ScrollArea } from '../components/ui/scroll-area';
 import {
@@ -12,18 +12,19 @@ import {
   CreditCard, XCircle, SkipForward, Search, Minus, Plus, Cloud, Settings,
 } from 'lucide-react';
 import { marked } from 'marked';
-import { LogLine, Stage, FileTouched, PullRequest, TestResult, Demand, Workspace } from '../lib/api/types';
+import { LogLine, Stage, FileTouched, PullRequest, TestResult, Card, Workspace } from '../lib/api/types';
 import { api } from '../lib/api/mockClient';
 import { DocViewer } from '../components/doc-viewer';
 import { ExecStageView } from '../components/exec-stage-view';
 import { TestStageView } from '../components/test-stage-view';
 import { PlanStageView, TestPlan } from '../components/plan-stage-view';
+import { useI18n } from '../lib/i18n';
 
-type SectionKey = 'chat' | 'repos' | 'branches' | 'dossier' | 'infra';
+type SectionKey = 'chat' | 'repos' | 'branches' | 'repositoryOverview' | 'infra';
 
 type CentralOverlay =
   | { kind: 'file-diff'; file: FileTouched }
-  | { kind: 'jira-card' }
+  | { kind: 'provider-card' }
   | { kind: 'time-detail' }
   | { kind: 'allure' }
   | { kind: 'manage-repos' }
@@ -42,14 +43,14 @@ const MOCK_AZURE_EXTRA_REPOS: Record<string, { name: string; url: string }[]> = 
   ],
 };
 
-const STAGE_DEFS = [
-  { key: 'init',    short: 'Iniciar',   title: 'Iniciar a demanda',   hasLogs: false },
-  { key: 'context', short: 'Contexto',  title: 'Contextualização',    hasLogs: false },
-  { key: 'plan',    short: 'Plano',     title: 'Plano',               hasLogs: false },
-  { key: 'exec',    short: 'Execução',  title: 'Execução do plano',   hasLogs: false },
-  { key: 'test',    short: 'Testes',    title: 'Execução dos testes', hasLogs: true  },
-  { key: 'val',     short: 'Validação', title: 'Validação humana',    hasLogs: false },
-  { key: 'fin',     short: 'Finalizar', title: 'Finalização',         hasLogs: false },
+const getStageDefs = (t: any) => [
+  { key: 'init',    short: t('exec.stage.init.short'),   title: t('exec.stage.init.title'),   hasLogs: false },
+  { key: 'context', short: t('exec.stage.context.short'),  title: t('exec.stage.context.title'),    hasLogs: false },
+  { key: 'plan',    short: t('exec.stage.plan.short'),     title: t('exec.stage.plan.title'),               hasLogs: false },
+  { key: 'exec',    short: t('exec.stage.exec.short'),  title: t('exec.stage.exec.title'),   hasLogs: false },
+  { key: 'test',    short: t('exec.stage.test.short'),    title: t('exec.stage.test.title'), hasLogs: true  },
+  { key: 'val',     short: t('exec.stage.val.short'), title: t('exec.stage.val.title'),    hasLogs: false },
+  { key: 'fin',     short: t('exec.stage.fin.short'), title: t('exec.stage.fin.title'),         hasLogs: false },
 ];
 
 type E2eTestStatus = 'pending' | 'passed' | 'failed';
@@ -87,6 +88,7 @@ function StatusIcon({ status, size = 'md' }: { status: string; size?: 'sm' | 'md
 }
 
 function DopStatusBadge({ status }: { status: string }) {
+  const { t } = useI18n();
   const map: Record<string, string> = {
     new:       'bg-slate-500/20 text-slate-300 border-slate-500/30',
     doing:     'bg-primary/20 text-primary border-primary/30',
@@ -94,7 +96,10 @@ function DopStatusBadge({ status }: { status: string }) {
     delivered: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   };
   const labels: Record<string, string> = {
-    new: 'Novo', doing: 'Em andamento', done: 'Concluído', delivered: 'Entregue',
+    new: t('card.status.new'),
+    doing: t('card.status.doing'),
+    done: t('card.status.done'),
+    delivered: t('card.status.delivered'),
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${map[status] ?? ''}`}>
@@ -227,6 +232,7 @@ function FilesByRepoBranch({ files, onDiff }: {
 }
 
 function PrCard({ pr }: { pr: PullRequest }) {
+  const { t } = useI18n();
   return (
     <div className="p-2.5 rounded-md bg-muted/30 border border-border/40 space-y-2">
       <div className="flex items-center gap-2">
@@ -280,7 +286,7 @@ function PrCard({ pr }: { pr: PullRequest }) {
             ))}
           </div>
           <span className="text-[9px] text-muted-foreground">
-            {pr.reviewers.filter(r => r.status === 'approved').length}/{pr.reviewers.length} aprovaram
+            {pr.reviewers.filter(r => r.status === 'approved').length}/{pr.reviewers.length} {t('exec.review.approved')}
           </span>
         </div>
       )}
@@ -288,10 +294,11 @@ function PrCard({ pr }: { pr: PullRequest }) {
   );
 }
 
-function JiraCardOverlay({ demand }: { demand: Demand }) {
+function ProviderCardOverlay({ card }: { card: Card }) {
+  const { t } = useI18n();
   const [tab, setTab] = useState<'card' | 'rfc'>('card');
-  const initStage = demand.stages.find(s => s.key === 'init');
-  const isSecurity = demand.title.toLowerCase().includes('cve') || demand.title.toLowerCase().includes('segurança');
+  const initStage = card.stages.find(s => s.key === 'init');
+  const isSecurity = card.title.toLowerCase().includes('cve') || card.title.toLowerCase().includes('segurança');
 
   return (
     <div className="p-5 space-y-4 max-w-3xl">
@@ -306,7 +313,7 @@ function JiraCardOverlay({ demand }: { demand: Demand }) {
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            {k === 'card' ? '📋 Card Jira' : '📄 RFC / PRD'}
+            {k === 'card' ? t('exec.provider.card') : 'RFC / PRD'}
           </button>
         ))}
       </div>
@@ -315,25 +322,25 @@ function JiraCardOverlay({ demand }: { demand: Demand }) {
         <div className="rounded-lg border border-border/40 overflow-hidden">
           <div className="px-4 py-3 bg-muted/30 border-b border-border/40">
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <span className="text-xs font-mono font-bold text-primary">{demand.jiraKey}</span>
+              <span className="text-xs font-mono font-bold text-primary">{card.externalKey}</span>
               {isSecurity
                 ? <>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30">🐛 Bug</span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-500/25">🔴 Crítica</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30">{card.type}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-300 border border-red-500/25">{t('exec.provider.critical')}</span>
                   </>
-                : <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">✨ Melhoria</span>
+                : <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">{card.type}</span>
               }
-              <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/25">{demand.jiraStatus}</span>
+              <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/25">{card.providerStatus}</span>
             </div>
-            <h3 className="text-sm font-semibold">{demand.title}</h3>
+            <h3 className="text-sm font-semibold">{card.title}</h3>
           </div>
           <div className="p-4 space-y-3">
             <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[11px]">
               {[
-                ['Responsável', demand.assignee],
-                ['Sprint',      'Sprint 42'],
-                ['Reporter',    'Dev Team'],
-                ['Tipo',        isSecurity ? 'Security Bug' : 'Story'],
+                [t('card.assignee'), card.assignee],
+                [t('exec.provider.sprint'), 'Sprint 42'],
+                [t('exec.provider.reporter'), 'Dev Team'],
+                [t('exec.provider.type'), card.type],
               ].map(([label, val]) => (
                 <div key={label} className="flex gap-2">
                   <span className="text-muted-foreground w-24 shrink-0">{label}</span>
@@ -342,15 +349,15 @@ function JiraCardOverlay({ demand }: { demand: Demand }) {
               ))}
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Descrição</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{t('exec.provider.description')}</p>
               <p className="text-xs text-foreground/80 leading-relaxed bg-muted/20 border border-border/30 rounded p-3">
                 {isSecurity
                   ? 'CVE-2026-1234 foi identificada no pacote jsonwebtoken utilizado nos repos portal-frontend e portal-backend. Versões < 9.0.2 são vulneráveis a ataques de falsificação de tokens JWT. Atualização urgente necessária antes do próximo deploy.'
-                  : demand.title + '. Consulte a RFC/PRD gerada na aba ao lado para detalhes técnicos completos.'}
+                  : `${card.title}. ${t('exec.provider.rfcHint')}`}
               </p>
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Labels</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{t('exec.provider.labels')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {(isSecurity ? ['security', 'CVE', 'dependencies', 'urgent'] : ['feature', 'backend', 'sprint-42']).map(l => (
                   <span key={l} className="text-[9px] px-2 py-0.5 rounded-full bg-muted/50 border border-border/50 text-muted-foreground">{l}</span>
@@ -367,13 +374,14 @@ function JiraCardOverlay({ demand }: { demand: Demand }) {
               className="prose prose-invert prose-sm max-w-none text-sm leading-relaxed"
               dangerouslySetInnerHTML={{ __html: marked.parse(initStage.document) as string }}
             />
-          : <p className="text-sm text-muted-foreground italic py-8 text-center">Nenhum documento RFC/PRD disponível para esta demanda.</p>
+          : <p className="text-sm text-muted-foreground italic py-8 text-center">{t('exec.provider.noRfc')}</p>
       )}
     </div>
   );
 }
 
-function TimeDetailOverlay({ demand }: { demand: Demand }) {
+function TimeDetailOverlay({ card }: { card: Card }) {
+  const { t } = useI18n();
   function stageDuration(stage: Stage): string | null {
     if (!stage.startedAt) return null;
     const end  = stage.finishedAt ? new Date(stage.finishedAt) : new Date();
@@ -386,7 +394,7 @@ function TimeDetailOverlay({ demand }: { demand: Demand }) {
     return `${s}s`;
   }
 
-  const elapsed = demand.dossier.elapsedSeconds;
+  const elapsed = card.repositoryOverview.elapsedSeconds;
   const elapsedStr = elapsed
     ? `${Math.floor(elapsed / 3600)}h ${Math.floor((elapsed % 3600) / 60)}m ${elapsed % 60}s`
     : null;
@@ -395,10 +403,10 @@ function TimeDetailOverlay({ demand }: { demand: Demand }) {
     <div className="p-5 max-w-2xl space-y-4">
       <div className="rounded-lg border border-border/40 overflow-hidden">
         <div className="px-4 py-2 bg-muted/30 border-b border-border/40">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo por etapa</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('exec.time.byStage')}</p>
         </div>
-        {STAGE_DEFS.map(def => {
-          const stage  = demand.stages.find(s => s.key === def.key);
+        {getStageDefs(t).map(def => {
+          const stage  = card.stages.find(s => s.key === def.key);
           const status = stage?.status ?? 'pending';
           const dur    = stage ? stageDuration(stage) : null;
           return (
@@ -409,7 +417,7 @@ function TimeDetailOverlay({ demand }: { demand: Demand }) {
                 ? <span className="text-[10px] text-muted-foreground/30">—</span>
                 : <span className="text-xs font-mono text-muted-foreground flex items-center gap-1.5">
                     {dur ?? <Loader2 className="w-3 h-3 animate-spin inline" />}
-                    {status === 'running' && <span className="text-[9px] text-primary">em curso</span>}
+                    {status === 'running' && <span className="text-[9px] text-primary">{t('exec.view.inProgress')}</span>}
                   </span>
               }
             </div>
@@ -420,7 +428,7 @@ function TimeDetailOverlay({ demand }: { demand: Demand }) {
         <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-muted/30 border border-border/40">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-semibold">Total acumulado</span>
+            <span className="text-sm font-semibold">{t('exec.time.total')}</span>
           </div>
           <span className="text-sm font-mono font-bold">{elapsedStr}</span>
         </div>
@@ -430,6 +438,7 @@ function TimeDetailOverlay({ demand }: { demand: Demand }) {
 }
 
 function AllureOverlay({ tests }: { tests: TestResult[] }) {
+  const { t } = useI18n();
   const total = tests.length;
   const pass  = tests.filter(t => t.status === 'success').length;
   const fail  = tests.filter(t => t.status === 'fail').length;
@@ -441,11 +450,11 @@ function AllureOverlay({ tests }: { tests: TestResult[] }) {
     <div className="p-5 max-w-3xl space-y-4">
       <div className="grid grid-cols-5 gap-3">
         {[
-          { label: 'Passou',    val: pass, cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
-          { label: 'Falhou',    val: fail, cls: 'text-red-400 bg-red-500/10 border-red-500/20' },
-          { label: 'Pulado',    val: skip, cls: 'text-muted-foreground bg-muted/30 border-border/40' },
-          { label: 'Rodando',   val: run,  cls: 'text-primary bg-primary/10 border-primary/20' },
-          { label: '% Sucesso', val: pct,  cls: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20', suffix: '%' },
+          { label: t('test.status.passed'), val: pass, cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
+          { label: t('test.status.failed'), val: fail, cls: 'text-red-400 bg-red-500/10 border-red-500/20' },
+          { label: t('test.status.skipped'), val: skip, cls: 'text-muted-foreground bg-muted/30 border-border/40' },
+          { label: t('test.status.running'), val: run, cls: 'text-primary bg-primary/10 border-primary/20' },
+          { label: t('exec.tests.successRate'), val: pct, cls: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20', suffix: '%' },
         ].map(({ label, val, cls, suffix }) => (
           <div key={label} className={`text-center p-3 rounded-lg border ${cls}`}>
             <div className="text-2xl font-bold">{val}{suffix}</div>
@@ -460,7 +469,7 @@ function AllureOverlay({ tests }: { tests: TestResult[] }) {
         return (
           <div key={type} className="rounded-lg border border-border/40 overflow-hidden">
             <div className="px-3 py-2 bg-muted/25 border-b border-border/40 text-xs font-bold">
-              {type === 'unit' ? '⚗ Testes Unitários' : '🌐 Testes E2E'}
+              {type === 'unit' ? t('plan.tests.unit') : t('plan.tests.e2e')}
             </div>
             <div className="divide-y divide-border/20">
               {typeTests.map((t, i) => (
@@ -483,8 +492,8 @@ function AllureOverlay({ tests }: { tests: TestResult[] }) {
         disabled
         className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-border/40 text-sm text-muted-foreground cursor-not-allowed opacity-60"
       >
-        <ExternalLink className="w-3.5 h-3.5" /> Ver relatório completo no CI / CD (Allure)
-        <span className="text-[9px] bg-muted/50 px-1.5 py-0.5 rounded ml-1">em breve</span>
+        <ExternalLink className="w-3.5 h-3.5" /> {t('exec.tests.fullReport')}
+        <span className="text-[9px] bg-muted/50 px-1.5 py-0.5 rounded ml-1">{t('exec.tests.soon')}</span>
       </button>
     </div>
   );
@@ -503,6 +512,7 @@ function RepoManagerOverlay({
   onAdd: (name: string) => void;
   onRemove: (name: string) => void;
 }) {
+  const { t } = useI18n();
   const [search, setSearch]     = useState('');
   const [loading, setLoading]   = useState(true);
 
@@ -512,13 +522,13 @@ function RepoManagerOverlay({
   }, []);
 
   const q = search.toLowerCase();
-  const inDemandSet     = new Set(currentRepos);
+  const inCardSet     = new Set(currentRepos);
   const wsRepoNameSet   = new Set(workspace.repos.map(r => r.name));
 
-  const inDemand        = currentRepos.filter(r => r.toLowerCase().includes(q));
-  const addableFromWs   = workspace.repos.filter(r => !inDemandSet.has(r.name) && r.name.toLowerCase().includes(q));
+  const inCard        = currentRepos.filter(r => r.toLowerCase().includes(q));
+  const addableFromWs   = workspace.repos.filter(r => !inCardSet.has(r.name) && r.name.toLowerCase().includes(q));
   const extraInAzure    = (MOCK_AZURE_EXTRA_REPOS[workspaceId] ?? []).filter(
-    r => !wsRepoNameSet.has(r.name) && !inDemandSet.has(r.name) && r.name.toLowerCase().includes(q),
+    r => !wsRepoNameSet.has(r.name) && !inCardSet.has(r.name) && r.name.toLowerCase().includes(q),
   );
 
   return (
@@ -536,7 +546,7 @@ function RepoManagerOverlay({
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] text-emerald-400">Conectado</span>
+          <span className="text-[10px] text-emerald-400">{t('exec.repo.connected')}</span>
         </div>
       </div>
 
@@ -546,7 +556,7 @@ function RepoManagerOverlay({
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Filtrar repositórios..."
+          placeholder={t('exec.repo.filter')}
           className="w-full bg-muted/40 border border-border/60 rounded-lg pl-8 pr-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/50"
         />
       </div>
@@ -558,20 +568,20 @@ function RepoManagerOverlay({
             <div key={i} className="h-11 rounded-md bg-muted/20 border border-border/20 animate-pulse" />
           ))}
           <p className="text-[10px] text-muted-foreground text-center pt-1">
-            Buscando repositórios no Azure DevOps...
+            {t('exec.repo.searching')}
           </p>
         </div>
       ) : (
         <>
-          {/* ── Section 1: Nesta demanda ── */}
-          {inDemand.length > 0 && (
+          {/* ── Section 1: Nesto card ── */}
+          {inCard.length > 0 && (
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                Conectados ({inDemand.length})
+                {t('exec.repo.connectedCount', { count: inCard.length })}
               </p>
               <div className="space-y-1.5">
-                {inDemand.map(r => {
+                {inCard.map(r => {
                   const wsRepo = workspace.repos.find(wr => wr.name === r);
                   return (
                     <div key={r} className="flex items-center gap-3 p-2.5 rounded-md bg-emerald-500/5 border border-emerald-500/15 group">
@@ -586,7 +596,7 @@ function RepoManagerOverlay({
                         onClick={() => onRemove(r)}
                         className="flex items-center gap-1 text-[9px] px-2 py-1 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
                       >
-                        <Minus className="w-3 h-3" /> Remover
+                        <Minus className="w-3 h-3" /> {t('exec.repo.remove')}
                       </button>
                     </div>
                   );
@@ -600,7 +610,7 @@ function RepoManagerOverlay({
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <Package className="w-3 h-3" />
-                Disponíveis
+                {t('exec.repo.available')}
               </p>
               <div className="space-y-1.5">
                 {addableFromWs.map(r => (
@@ -617,7 +627,7 @@ function RepoManagerOverlay({
                       onClick={() => onAdd(r.name)}
                       className="flex items-center gap-1 text-[9px] px-2 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-colors shrink-0"
                     >
-                      <Plus className="w-3 h-3" /> Adicionar
+                      <Plus className="w-3 h-3" /> {t('exec.repo.add')}
                     </button>
                   </div>
                 ))}
@@ -630,9 +640,9 @@ function RepoManagerOverlay({
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <Cloud className="w-3 h-3" />
-                Outros
+                {t('exec.repo.others')}
                 <span className="text-[8px] px-1.5 py-0.5 rounded bg-muted/50 border border-border/40 normal-case font-normal tracking-normal">
-                  não configurados no workspace
+                  {t('exec.repo.notConfigured')}
                 </span>
               </p>
               <div className="space-y-1.5">
@@ -644,7 +654,7 @@ function RepoManagerOverlay({
                       <p className="text-[9px] text-muted-foreground/60 font-mono truncate">{r.url}</p>
                     </div>
                     <span className="text-[9px] px-2 py-1 rounded border border-border/30 text-muted-foreground/60 shrink-0 cursor-default">
-                      Adicionar ao workspace primeiro
+                      {t('exec.repo.addWorkspaceFirst')}
                     </span>
                   </div>
                 ))}
@@ -652,9 +662,9 @@ function RepoManagerOverlay({
             </div>
           )}
 
-          {inDemand.length === 0 && addableFromWs.length === 0 && extraInAzure.length === 0 && (
+          {inCard.length === 0 && addableFromWs.length === 0 && extraInAzure.length === 0 && (
             <p className="text-xs text-muted-foreground italic text-center py-6">
-              Nenhum repositório encontrado para "{search}"
+              {t('exec.repo.notFound', { search })}
             </p>
           )}
         </>
@@ -694,6 +704,7 @@ function ValidationStageView({
   onMarkAll: (status: E2eTestStatus) => void;
   onChatRequest: (testTitle: string) => void;
 }) {
+  const { t } = useI18n();
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const tests = React.useMemo(() => parseE2eTests(testPlan?.e2e ?? ''), [testPlan?.e2e]);
 
@@ -706,9 +717,9 @@ function ValidationStageView({
       <div className="border border-amber-500/30 bg-amber-500/5 rounded-lg p-4 flex items-start gap-3">
         <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-medium text-amber-300">Sua atenção é necessária</p>
+          <p className="text-sm font-medium text-amber-300">{t('card.attention')}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Nenhum teste E2E definido no plano. Valide a feature manualmente e confirme no chat.
+            {t('exec.validation.noTests')}
           </p>
         </div>
       </div>
@@ -719,23 +730,23 @@ function ValidationStageView({
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm font-semibold">Testes E2E</span>
+        <span className="text-sm font-semibold">{t('plan.tests.e2e')}</span>
         <div className="flex items-center gap-1.5">
           {passed  > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 font-medium">{passed} ok</span>}
-          {failed  > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/25 font-medium">{failed} falhou</span>}
-          {pending > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted/50 text-muted-foreground border border-border/50 font-medium">{pending} pendente</span>}
+          {failed  > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/25 font-medium">{failed} {t('test.status.failed')}</span>}
+          {pending > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted/50 text-muted-foreground border border-border/50 font-medium">{pending} {t('exec.view.pending')}</span>}
         </div>
         <div className="flex items-center gap-1.5 ml-auto">
           <button
             onClick={() => onMarkAll('passed')}
             className="text-[10px] px-2 py-1 rounded border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-colors flex items-center gap-1"
           >
-            <CheckCircle2 className="w-3 h-3" /> Marcar todos OK
+            <CheckCircle2 className="w-3 h-3" /> {t('exec.validation.markAll')}
           </button>
           <button
             onClick={() => onMarkAll('pending')}
             className="text-[10px] px-2 py-1 rounded border border-border/50 text-muted-foreground hover:bg-muted/30 transition-colors"
-            title="Redefinir todos"
+            title={t('exec.validation.resetAll')}
           >
             ↺
           </button>
@@ -765,7 +776,7 @@ function ValidationStageView({
                     onStatusChange(test.id, next);
                   }}
                   className="shrink-0"
-                  title="Clique para alternar status"
+                  title={t('exec.validation.toggleStatus')}
                 >
                   {status === 'passed'
                     ? <CheckCircle2 className="w-5 h-5 text-emerald-400" />
@@ -796,11 +807,11 @@ function ValidationStageView({
                       <button
                         onClick={() => onStatusChange(test.id, 'passed')}
                         className="text-[10px] px-2 py-0.5 rounded border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                      >✓ Passou</button>
+                      >Passou</button>
                       <button
                         onClick={() => onStatusChange(test.id, 'failed')}
                         className="text-[10px] px-2 py-0.5 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
-                      >✗ Falhou</button>
+                      >Falhou</button>
                     </>
                   )}
                   {status !== 'pending' && (
@@ -847,7 +858,7 @@ function ValidationStageView({
       {/* Footer */}
       <div className="flex items-start justify-between gap-3 pt-1">
         <p className="text-[10px] text-muted-foreground/50 italic leading-relaxed">
-          💬 Chat: <span className="font-mono">"teste e2e-1 realizado com sucesso"</span> · <span className="font-mono">"teste e2e-2 falhou"</span>
+          Chat: <span className="font-mono">"teste e2e-1 realizado com sucesso"</span> · <span className="font-mono">"teste e2e-2 falhou"</span>
           <br />O Claude pode continuar codando via chat mesmo durante a validação.
         </p>
         {failed === 0 && pending === 0 && (
@@ -866,6 +877,7 @@ function ValidationStageView({
 }
 
 function PrDiffOverlay({ pr, files, scrollToFile }: { pr: PullRequest; files: FileTouched[]; scrollToFile?: string | null }) {
+  const { t } = useI18n();
   const totalAdded   = files.reduce((s, f) => s + (f.linesAdded   ?? 0), 0);
   const totalRemoved = files.reduce((s, f) => s + (f.linesRemoved  ?? 0), 0);
 
@@ -898,7 +910,7 @@ function PrDiffOverlay({ pr, files, scrollToFile }: { pr: PullRequest; files: Fi
 
       {/* File diffs */}
       {files.length === 0 && (
-        <div className="px-5 py-6 text-xs text-muted-foreground italic">Nenhum arquivo associado a este PR.</div>
+        <div className="px-5 py-6 text-xs text-muted-foreground italic">{t('exec.pr.noFiles')}</div>
       )}
       {files.map((file, i) => (
         <div key={i} id={prFileId(file.path)}>
@@ -914,7 +926,7 @@ function PrDiffOverlay({ pr, files, scrollToFile }: { pr: PullRequest; files: Fi
               {file.diff.split('\n').map((line, j) => <DiffLine key={j} line={line} />)}
             </div>
           ) : (
-            <div className="px-5 py-3 text-xs text-muted-foreground/60 italic bg-[#080b10]">Diff não disponível</div>
+            <div className="px-5 py-3 text-xs text-muted-foreground/60 italic bg-[#080b10]">{t('exec.pr.noDiff')}</div>
           )}
         </div>
       ))}
@@ -923,14 +935,15 @@ function PrDiffOverlay({ pr, files, scrollToFile }: { pr: PullRequest; files: Fi
 }
 
 function FinalizationStageView({
-  demand,
+  card,
   autoStart,
   onStart,
 }: {
-  demand: Demand;
+  card: Card;
   autoStart: boolean;
   onStart: () => void;
 }) {
+  const { t } = useI18n();
   const [started, setStarted] = useState(false);
   const [steps,   setSteps]   = useState<FinStep[]>([]);
   const [phase,   setPhase]   = useState<'idle' | 'running' | 'done'>('idle');
@@ -951,26 +964,33 @@ function FinalizationStageView({
     setStarted(true);
     setPhase('running');
 
-    const repos = demand.dossier.repos;
-    const prs   = demand.dossier.prs;
+    const repos = card.repositoryOverview.repos;
+    const prs   = card.repositoryOverview.prs;
     const commitCounts: Record<string, number> = {};
     repos.forEach(r => {
-      commitCounts[r] = Math.max(1, demand.dossier.files.filter(f => f.repo === r && f.gitStatus !== 'untracked').length);
+      commitCounts[r] = Math.max(1, card.repositoryOverview.files.filter(f => f.repo === r && f.gitStatus !== 'untracked').length);
     });
     const conflictIdx = prs.length > 0 ? prs.length - 1 : -1; // last PR gets conflict for demo
-    const dossierLabels = ['PRs e branches', 'Commits e pushes', 'Arquivos modificados', 'Testes implementados', 'Resultados E2E', 'Finalizando dossiê'];
+    const repositoryOverviewLabels = [
+      t('exec.fin.overview.pr') || 'PRs e branches',
+      t('exec.fin.overview.commits') || 'Commits e pushes',
+      t('exec.fin.overview.files') || 'Arquivos modificados',
+      t('exec.fin.overview.tests') || 'Testes implementados',
+      t('exec.fin.overview.e2e') || 'Resultados E2E',
+      t('exec.fin.overview.finalizing') || 'Finalizando visão geral'
+    ];
 
     const init: FinStep[] = [
-      { id: 'repos',     label: 'Verificação dos repositórios', status: 'idle', visible: true,
+      { id: 'repos',     label: t('exec.fin.repos'), status: 'idle', visible: true,
         items: repos.map(r => ({ label: r, status: 'idle' as FinStepStatus })) },
-      { id: 'prs',       label: 'Criação dos Pull Requests',    status: 'idle', visible: true,
+      { id: 'prs',       label: t('exec.fin.prs'),    status: 'idle', visible: true,
         items: prs.map(p => ({ label: `${p.repo} — ${p.sourceBranch} → ${p.targetBranch}`, status: 'idle' as FinStepStatus })) },
-      { id: 'conflicts', label: 'Verificação de conflitos',     status: 'idle', visible: true,
+      { id: 'conflicts', label: t('exec.fin.conflicts'),     status: 'idle', visible: true,
         items: prs.map(p => ({ label: p.repo, status: 'idle' as FinStepStatus })) },
-      { id: 'resolve',   label: 'Resolução de conflitos',       status: 'idle', visible: false,
+      { id: 'resolve',   label: t('exec.fin.resolve'),       status: 'idle', visible: false,
         items: conflictIdx >= 0 ? [{ label: prs[conflictIdx].repo, status: 'idle' as FinStepStatus }] : [] },
-      { id: 'dossier',   label: 'Gerando dossiê final',         status: 'idle', visible: true,
-        items: dossierLabels.map(l => ({ label: l, status: 'idle' as FinStepStatus })) },
+      { id: 'repositoryOverview',   label: t('exec.fin.overview'),    status: 'idle', visible: true,
+        items: repositoryOverviewLabels.map(l => ({ label: l, status: 'idle' as FinStepStatus })) },
     ];
     setSteps(init);
     await d(350);
@@ -1020,7 +1040,7 @@ function FinalizationStageView({
         if (isConflict) hasConflict = true;
         updItem('conflicts', i, {
           status: isConflict ? 'warn' : 'done',
-          detail: isConflict ? '⚠ conflito detectado' : 'sem conflitos ✓',
+          detail: isConflict ? 'conflito detectado' : 'sem conflitos ✓',
         });
         await d(200);
       }
@@ -1041,16 +1061,16 @@ function FinalizationStageView({
     }
     await d(400);
 
-    /* ── dossier ── */
-    upd('dossier', { status: 'running' });
-    for (let i = 0; i < dossierLabels.length; i++) {
+    /* ── repositoryOverview ── */
+    upd('repositoryOverview', { status: 'running' });
+    for (let i = 0; i < repositoryOverviewLabels.length; i++) {
       if (cancelRef.current) return;
-      updItem('dossier', i, { status: 'running', detail: 'gerando...' });
+      updItem('repositoryOverview', i, { status: 'running', detail: 'gerando...' });
       await d(380 + Math.random() * 300);
-      updItem('dossier', i, { status: 'done', detail: 'gerado ✓' });
+      updItem('repositoryOverview', i, { status: 'done', detail: 'gerado ✓' });
       await d(120);
     }
-    upd('dossier', { status: 'done' });
+    upd('repositoryOverview', { status: 'done' });
     await d(500);
     setPhase('done');
   };
@@ -1066,9 +1086,9 @@ function FinalizationStageView({
         <div className="border border-border/40 rounded-lg p-4 flex items-start gap-3 bg-muted/10">
           <GitMerge className="w-4 h-4 text-primary shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium">Pronto para finalizar</p>
+            <p className="text-sm font-medium">{t('exec.fin.ready')}</p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Irá verificar os repos, criar PRs, resolver conflitos e gerar o dossiê final.
+              {t('exec.fin.desc') || 'Irá verificar os repos, criar PRs, resolver conflitos e gerar a visão geral final.'}
             </p>
           </div>
         </div>
@@ -1077,9 +1097,9 @@ function FinalizationStageView({
             onClick={() => { onStart(); run(); }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
           >
-            <GitMerge className="w-4 h-4" /> Finalizar demanda
+            <GitMerge className="w-4 h-4" /> {t('exec.fin.start') || 'Finalizar card'}
           </button>
-          <p className="text-[10px] text-muted-foreground/50 italic">ou chat: "finalizar demanda"</p>
+          <p className="text-[10px] text-muted-foreground/50 italic"></p>
         </div>
       </div>
     );
@@ -1169,8 +1189,8 @@ function FinalizationStageView({
         <div className="flex items-center gap-3 mt-1 py-3 px-4 rounded-lg bg-emerald-500/10 border border-emerald-500/25">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-emerald-300">Demanda finalizada com sucesso</p>
-            <p className="text-xs text-muted-foreground mt-0.5">PRs criados · Conflitos resolvidos · Dossiê atualizado</p>
+            <p className="text-sm font-semibold text-emerald-300">{t('exec.fin.success')}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t('exec.fin.successDetail')}</p>
           </div>
         </div>
       )}
@@ -1178,10 +1198,11 @@ function FinalizationStageView({
   );
 }
 
-export default function DemandExecution() {
-  const { id, demandId } = useParams();
+export default function CardExecution() {
+  const { t } = useI18n();
+  const { id, cardId } = useParams();
   const navigate = useNavigate();
-  const { data: demand, isLoading } = useDemand(id, demandId);
+  const { data: card, isLoading } = useCard(id, cardId);
   const { data: workspace } = useWorkspace(id);
   const sendChat = useSendChatMessage();
 
@@ -1208,7 +1229,7 @@ export default function DemandExecution() {
   const COMMANDS = [
     { name: '/plan',   description: 'Solicitar plano de execução' },
     { name: '/test',   description: 'Executar testes' },
-    { name: '/status', description: 'Ver status da demanda' },
+    { name: '/status', description: 'Ver status do card' },
     { name: '/commit', description: 'Commitar e abrir PR' },
     ...(workspace?.claudeExtensions?.commands ?? []).map(c => ({
       name: `/${c.name}`, description: c.description,
@@ -1218,7 +1239,7 @@ export default function DemandExecution() {
   useEffect(() => {
     if (chatScrollRef.current)
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-  }, [demand?.chat, sendChat.isPending]);
+  }, [card?.chat, sendChat.isPending]);
 
   useEffect(() => {
     if (!infraLogService) return;
@@ -1235,7 +1256,7 @@ export default function DemandExecution() {
     return () => { active = false; };
   }, [infraLogService]);
 
-  if (isLoading || !demand) {
+  if (isLoading || !card) {
     return (
       <div className="flex flex-1 items-center justify-center">
         <Loader2 className="w-7 h-7 animate-spin text-primary" />
@@ -1245,7 +1266,7 @@ export default function DemandExecution() {
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !demandId) return;
+    if (!message.trim() || !cardId) return;
 
     if (currentStageKey === 'val') {
       const valE2eMd = getStage('plan')?.testPlan?.e2e ?? '';
@@ -1264,7 +1285,7 @@ export default function DemandExecution() {
 
     if (/finaliz/i.test(message)) setFinTriggered(true);
 
-    sendChat.mutate({ demandId, text: message });
+    sendChat.mutate({ cardId, text: message });
     setMessage('');
     setShowSlash(false);
   };
@@ -1309,10 +1330,10 @@ export default function DemandExecution() {
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
-  const isDemandEditable = !['done', 'delivered'].includes(demand.dopStatus);
-  const currentRepos     = editedRepos ?? demand.dossier.repos;
-  const addRepo    = (name: string) => setEditedRepos(prev => [...(prev ?? demand.dossier.repos), name]);
-  const removeRepo = (name: string) => setEditedRepos(prev => (prev ?? demand.dossier.repos).filter(r => r !== name));
+  const isCardEditable = !['done', 'delivered'].includes(card.dopStatus);
+  const currentRepos     = editedRepos ?? card.repositoryOverview.repos;
+  const addRepo    = (name: string) => setEditedRepos(prev => [...(prev ?? card.repositoryOverview.repos), name]);
+  const removeRepo = (name: string) => setEditedRepos(prev => (prev ?? card.repositoryOverview.repos).filter(r => r !== name));
 
   const handleInputChange = (v: string) => {
     setMessage(v);
@@ -1320,48 +1341,48 @@ export default function DemandExecution() {
   };
 
   const getStage = (key: string): Stage | undefined =>
-    demand.stages.find(s => s.key === key);
+    card.stages.find(s => s.key === key);
 
   const currentStageKey = selectedStage ??
-    STAGE_DEFS.find(d => {
-      const s = demand.stages.find(st => st.key === d.key);
+    getStageDefs(t).find(d => {
+      const s = card.stages.find(st => st.key === d.key);
       return s?.status === 'running' || s?.status === 'blocked';
     })?.key ??
-    STAGE_DEFS.find(d => !demand.stages.find(st => st.key === d.key))?.key ??
-    STAGE_DEFS[0].key;
+    getStageDefs(t).find(d => !card.stages.find(st => st.key === d.key))?.key ??
+    getStageDefs(t)[0].key;
 
-  const currentStageDef  = STAGE_DEFS.find(d => d.key === currentStageKey)!;
+  const currentStageDef  = getStageDefs(t).find(d => d.key === currentStageKey)!;
   const currentStageData = getStage(currentStageKey);
 
-  const elapsed    = demand.dossier.elapsedSeconds;
+  const elapsed    = card.repositoryOverview.elapsedSeconds;
   const elapsedStr = elapsed
     ? `${Math.floor(elapsed / 3600)}h ${Math.floor((elapsed % 3600) / 60)}m ${elapsed % 60}s`
     : null;
 
-  const branchesByRepo = groupBranchesByRepo(demand.dossier.branches);
+  const branchesByRepo = groupBranchesByRepo(card.repositoryOverview.branches);
   const infraServices  = workspace?.runtime?.infra ?? [];
   const infraApps      = workspace?.runtime?.apps  ?? [];
 
-  const trackedFiles = demand.dossier.files.filter(f => f.gitStatus !== 'untracked' && f.repo && f.branch);
-  const untrackedFiles = demand.dossier.files.filter(f => f.gitStatus === 'untracked');
+  const trackedFiles = card.repositoryOverview.files.filter(f => f.gitStatus !== 'untracked' && f.repo && f.branch);
+  const untrackedFiles = card.repositoryOverview.files.filter(f => f.gitStatus === 'untracked');
   const filesByRepoBranch = trackedFiles.reduce<Record<string, Record<string, FileTouched[]>>>((acc, f) => {
     if (!acc[f.repo!]) acc[f.repo!] = {};
     if (!acc[f.repo!][f.branch!]) acc[f.repo!][f.branch!] = [];
     acc[f.repo!][f.branch!].push(f);
     return acc;
   }, {});
-  const prsByRepo = demand.dossier.prs.reduce<Record<string, PullRequest[]>>((acc, pr) => {
+  const prsByRepo = card.repositoryOverview.prs.reduce<Record<string, PullRequest[]>>((acc, pr) => {
     if (!acc[pr.repo]) acc[pr.repo] = [];
     acc[pr.repo].push(pr);
     return acc;
   }, {});
 
   const NAV_ITEMS: { key: SectionKey; icon: React.ReactNode; label: string }[] = [
-    { key: 'chat',     icon: <MessageSquare className="w-5 h-5" />, label: 'Chat'          },
-    { key: 'repos',    icon: <GitBranch     className="w-5 h-5" />, label: 'Repositórios'  },
-    { key: 'branches', icon: <GitMerge      className="w-5 h-5" />, label: 'Branches'     },
-    { key: 'dossier',  icon: <ScrollText    className="w-5 h-5" />, label: 'Dossiê'        },
-    { key: 'infra',    icon: <Server        className="w-5 h-5" />, label: 'Infra'         },
+    { key: 'chat', icon: <MessageSquare className="w-5 h-5" />, label: t('exec.nav.chat') },
+    { key: 'repos', icon: <GitBranch className="w-5 h-5" />, label: t('exec.nav.repos') },
+    { key: 'branches', icon: <GitMerge className="w-5 h-5" />, label: t('exec.nav.branches') },
+    { key: 'repositoryOverview', icon: <ScrollText className="w-5 h-5" />, label: t('exec.nav.overview') },
+    { key: 'infra', icon: <Server className="w-5 h-5" />, label: t('exec.nav.infra') },
   ];
 
   return (
@@ -1370,10 +1391,10 @@ export default function DemandExecution() {
       {/* ── Icon sidebar ── */}
       <div className="w-12 shrink-0 border-r border-border bg-card flex flex-col items-center py-3 gap-1">
         <button
-          onClick={() => navigate(`/workspaces/${id}/demands`)}
+          onClick={() => navigate(`/workspaces/${id}/cards`)}
           className="w-9 h-9 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors mb-2"
-          title="Voltar"
-          data-testid="button-back-demands"
+          title={t('exec.action.back')}
+          data-testid="button-back-cards"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
@@ -1409,7 +1430,7 @@ export default function DemandExecution() {
                   onClick={() => setBranchTab(tab)}
                   className={`text-xs font-semibold px-2 py-1 rounded transition-colors ${branchTab === tab ? 'text-foreground bg-muted/60' : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'}`}
                 >
-                  {tab === 'branches' ? 'Branches' : 'PRs'}
+                  {tab === 'branches' ? t('repo.branches') : t('repo.prs')}
                   {i === 0 && <span className="inline-block mx-1.5 text-border select-none">|</span>}
                 </button>
               ))}
@@ -1424,10 +1445,10 @@ export default function DemandExecution() {
               <Loader2 className="w-3 h-3 animate-spin" /> Claude...
             </span>
           )}
-          {activeSection === 'repos' && isDemandEditable && (
+          {activeSection === 'repos' && isCardEditable && (
             <button
               onClick={() => setCentralOverlay({ kind: 'manage-repos' })}
-              title="Gerenciar repositórios"
+               title={t('exec.repo.manage')}
               className="ml-auto w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             >
               <Settings className="w-3.5 h-3.5" />
@@ -1439,12 +1460,12 @@ export default function DemandExecution() {
         {activeSection === 'chat' && (
           <>
             <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
-              {demand.chat.length === 0 && (
+              {card.chat.length === 0 && (
                 <div className="text-center text-muted-foreground text-xs mt-10 leading-relaxed px-4">
-                  Nenhuma mensagem ainda.<br />Inicie a conversa com o Claude.
+                   {t('exec.chat.empty')}<br />{t('exec.chat.start')}
                 </div>
               )}
-              {demand.chat.map(msg => (
+              {card.chat.map(msg => (
                 <div key={msg.id} className={`flex flex-col ${msg.author === 'dev' ? 'items-end' : 'items-start'}`}>
                   <div className={`max-w-[95%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
                     msg.author === 'dev'
@@ -1471,7 +1492,7 @@ export default function DemandExecution() {
                 <div className="flex items-start">
                   <div className="bg-muted/50 border border-border/50 rounded-xl rounded-bl-sm px-3 py-2 text-xs flex items-center gap-2">
                     <Loader2 className="w-3 h-3 animate-spin text-primary" />
-                    <span className="text-muted-foreground">Claude trabalhando...</span>
+                    <span className="text-muted-foreground">{t('exec.chat.working')}</span>
                   </div>
                 </div>
               )}
@@ -1497,7 +1518,7 @@ export default function DemandExecution() {
                   ref={inputRef}
                   value={message}
                   onChange={e => handleInputChange(e.target.value)}
-                  placeholder="Comande... (/ para atalhos)"
+                  placeholder={t('exec.chat.command')}
                   className="flex-1 bg-muted/40 border border-border/60 rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/50 min-w-0"
                   disabled={sendChat.isPending}
                   data-testid="input-chat"
@@ -1520,12 +1541,12 @@ export default function DemandExecution() {
           <ScrollArea className="flex-1 p-3">
             <div className="space-y-2">
               {currentRepos.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">Nenhum repositório impactado ainda.</p>
+                <p className="text-xs text-muted-foreground italic">{t('exec.repo.noneImpacted')}</p>
               ) : (
                 currentRepos.map(r => {
-                  const branch = demand.dossier.branches
+                  const branch = card.repositoryOverview.branches
                     .find(b => b.startsWith(r + '|'))?.split('|')[1];
-                  const fileCount = demand.dossier.files
+                  const fileCount = card.repositoryOverview.files
                     .filter(f => f.repo === r && f.gitStatus !== 'untracked').length;
                   return (
                     <div key={r} className="flex items-start gap-2 p-2.5 rounded-md bg-muted/30 border border-border/40 group">
@@ -1538,15 +1559,15 @@ export default function DemandExecution() {
                           </span>
                           {fileCount > 0 && (
                             <span className="text-[9px] text-muted-foreground/60 shrink-0">
-                              {fileCount} arq.
+                               {fileCount} {t('exec.files.abbr')}
                             </span>
                           )}
                         </div>
                       </div>
-                      {isDemandEditable && (
+                      {isCardEditable && (
                         <button
                           onClick={() => removeRepo(r)}
-                          title="Remover repositório"
+                           title={t('exec.repo.remove')}
                           className="w-5 h-5 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 shrink-0 mt-0.5"
                         >
                           <X className="w-3 h-3" />
@@ -1558,8 +1579,8 @@ export default function DemandExecution() {
               )}
 
               <div className="pt-3 mt-1 border-t border-border/40">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Commits totais</p>
-                <span className="text-2xl font-bold">{demand.dossier.commits}</span>
+                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t('cockpit.repo.commits')}</p>
+                <span className="text-2xl font-bold">{card.repositoryOverview.commits}</span>
               </div>
             </div>
           </ScrollArea>
@@ -1574,8 +1595,8 @@ export default function DemandExecution() {
               {branchTab === 'branches' && (
                 trackedFiles.length === 0 && untrackedFiles.length === 0
                   ? (
-                    demand.dossier.branches.length === 0
-                      ? <p className="text-xs text-muted-foreground italic">Nenhuma branch criada ainda.</p>
+                    card.repositoryOverview.branches.length === 0
+                       ? <p className="text-xs text-muted-foreground italic">{t('exec.branches.none')}</p>
                       : Object.entries(branchesByRepo).map(([repo, repoBranches]) => (
                           <div key={repo}>
                             <div className="flex items-center gap-1.5 mb-1.5">
@@ -1625,7 +1646,7 @@ export default function DemandExecution() {
                         <>
                           <div className="flex items-center gap-2 text-[9px] text-muted-foreground/50">
                             <div className="flex-1 h-px border-t border-dashed border-border/40" />
-                            <span className="uppercase tracking-wider shrink-0">não rastreados</span>
+                             <span className="uppercase tracking-wider shrink-0">{t('exec.files.untracked')}</span>
                             <div className="flex-1 h-px border-t border-dashed border-border/40" />
                           </div>
                           <div className="space-y-0.5">
@@ -1645,8 +1666,8 @@ export default function DemandExecution() {
 
               {/* ── PRs tab ── */}
               {branchTab === 'prs' && (
-                demand.dossier.prs.length === 0
-                  ? <p className="text-xs text-muted-foreground italic">Nenhum PR criado ainda.</p>
+                card.repositoryOverview.prs.length === 0
+                  ? <p className="text-xs text-muted-foreground italic">{t('exec.pr.none')}</p>
                   : Object.entries(prsByRepo).map(([repo, prs]) => (
                       <div key={repo}>
                         <div className="flex items-center gap-1.5 mb-1.5">
@@ -1656,7 +1677,7 @@ export default function DemandExecution() {
                         <div className="ml-4 border-l border-border/40 pl-3 space-y-2">
                           {prs.map(pr => {
                             const isExpanded = expandedPrId === pr.id;
-                            const prFiles = demand.dossier.files.filter(
+                            const prFiles = card.repositoryOverview.files.filter(
                               f => f.repo === pr.repo && f.branch === pr.sourceBranch && f.gitStatus !== 'untracked',
                             );
                             return (
@@ -1674,8 +1695,8 @@ export default function DemandExecution() {
                                     {pr.merged
                                       ? <span className="text-[8px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30 shrink-0 font-semibold">MERGED</span>
                                       : pr.hasConflict
-                                        ? <span className="text-[8px] px-1 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 shrink-0 font-semibold">CONFLITO</span>
-                                        : <span className="text-[8px] px-1 py-0.5 rounded bg-primary/20 text-primary border border-primary/30 shrink-0 font-semibold">OPEN</span>
+                                         ? <span className="text-[8px] px-1 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 shrink-0 font-semibold">{t('cockpit.pr.conflict').toUpperCase()}</span>
+                                         : <span className="text-[8px] px-1 py-0.5 rounded bg-primary/20 text-primary border border-primary/30 shrink-0 font-semibold">{t('cockpit.pr.open').toUpperCase()}</span>
                                     }
                                     <span className="text-[10px] font-mono text-muted-foreground truncate flex-1">{pr.sourceBranch}</span>
                                     <ChevronDown className={`w-3 h-3 text-muted-foreground shrink-0 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
@@ -1738,61 +1759,61 @@ export default function DemandExecution() {
         )}
 
         {/* DOSSIER */}
-        {activeSection === 'dossier' && (
+        {activeSection === 'repositoryOverview' && (
           <ScrollArea className="flex-1 p-3">
             <div className="space-y-4">
 
-              {/* 1 — Card Jira / RFC */}
+              {/* 1 — Card Provider / RFC */}
               <div>
                 <button
-                  onClick={() => setCentralOverlay({ kind: 'jira-card' })}
+                  onClick={() => setCentralOverlay({ kind: 'provider-card' })}
                   className="w-full p-2.5 rounded-md bg-muted/30 border border-border/40 hover:bg-muted/50 hover:border-primary/30 transition-colors text-left group"
                 >
                   <div className="flex items-center gap-2">
                     <CreditCard className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                    <span className="text-xs font-semibold text-foreground">{demand.jiraKey}</span>
+                    <span className="text-xs font-semibold text-foreground">{card.externalKey}</span>
                     <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors ml-auto shrink-0" />
                   </div>
-                  <p className="text-[9px] text-muted-foreground mt-1 ml-5 truncate">{demand.title}</p>
-                  <p className="text-[8px] text-muted-foreground/50 mt-0.5 ml-5">Card Jira · RFC / PRD</p>
+                  <p className="text-[9px] text-muted-foreground mt-1 ml-5 truncate">{card.title}</p>
+                  <p className="text-[8px] text-muted-foreground/50 mt-0.5 ml-5">Card Provider · RFC / PRD</p>
                 </button>
               </div>
 
               {/* 2 — Arquivos tocados */}
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">
-                  Arquivos tocados ({demand.dossier.files.length})
+                   {t('exec.overview.files', { count: card.repositoryOverview.files.length })}
                 </p>
-                {demand.dossier.files.length === 0
-                  ? <p className="text-xs text-muted-foreground italic">Nenhum arquivo ainda.</p>
+                {card.repositoryOverview.files.length === 0
+                   ? <p className="text-xs text-muted-foreground italic">{t('exec.overview.noFiles')}</p>
                   : <FilesByRepoBranch
-                      files={demand.dossier.files}
+                      files={card.repositoryOverview.files}
                       onDiff={file => setCentralOverlay({ kind: 'file-diff', file })}
                     />
                 }
               </div>
 
               {/* 3 — PRs criados */}
-              {demand.dossier.prs.length > 0 && (
+              {card.repositoryOverview.prs.length > 0 && (
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">
-                    PRs criados ({demand.dossier.prs.length})
+                     {t('exec.overview.prs', { count: card.repositoryOverview.prs.length })}
                   </p>
                   <div className="space-y-2">
-                    {demand.dossier.prs.map(pr => <PrCard key={pr.id} pr={pr} />)}
+                    {card.repositoryOverview.prs.map(pr => <PrCard key={pr.id} pr={pr} />)}
                   </div>
                 </div>
               )}
 
               {/* 4 — Testes / Allure */}
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Testes</p>
+                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{t('exec.stage.test.short')}</p>
                 <button
                   onClick={() => setCentralOverlay({ kind: 'allure' })}
                   className="w-full flex items-center gap-2 py-2 px-3 rounded-md border border-border/40 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 hover:border-primary/30 transition-colors"
                 >
                   <FlaskConical className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                  Ver relatório Allure
+                   {t('exec.tests.viewAllure')}
                   <ExternalLink className="w-3 h-3 ml-auto shrink-0" />
                 </button>
               </div>
@@ -1800,7 +1821,7 @@ export default function DemandExecution() {
               {/* 5 — Tempo gasto */}
               {elapsedStr && (
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Tempo gasto</p>
+                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{t('exec.time.elapsed')}</p>
                   <button
                     onClick={() => setCentralOverlay({ kind: 'time-detail' })}
                     className="flex items-center gap-1.5 text-sm font-mono hover:text-primary transition-colors group"
@@ -1821,7 +1842,7 @@ export default function DemandExecution() {
             <div className="space-y-4">
               {infraApps.length > 0 && (
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Aplicações</p>
+                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{t('exec.infra.apps')}</p>
                   {infraApps.map(app => (
                     <div key={app.name} className="flex items-center justify-between p-2.5 rounded-md bg-muted/30 border border-border/40 mb-1.5">
                       <div className="flex items-center gap-2 min-w-0">
@@ -1838,7 +1859,7 @@ export default function DemandExecution() {
                         data-testid={`button-app-logs-${app.name}`}
                         className="text-[10px] px-2 py-1 rounded border border-border/50 text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-primary/10 transition-colors flex items-center gap-1 shrink-0"
                       >
-                        <Terminal className="w-3 h-3" /> Ver logs
+                         <Terminal className="w-3 h-3" /> {t('exec.logs.view')}
                       </button>
                     </div>
                   ))}
@@ -1847,7 +1868,7 @@ export default function DemandExecution() {
 
               {infraServices.length > 0 && (
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Serviços</p>
+                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{t('exec.infra.services')}</p>
                   {infraServices.map(svc => (
                     <div key={svc} className="flex items-center justify-between p-2.5 rounded-md bg-muted/30 border border-border/40 mb-1.5">
                       <div className="flex items-center gap-2">
@@ -1859,7 +1880,7 @@ export default function DemandExecution() {
                         data-testid={`button-infra-logs-${svc}`}
                         className="text-[10px] px-2 py-1 rounded border border-border/50 text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-primary/10 transition-colors flex items-center gap-1"
                       >
-                        <Terminal className="w-3 h-3" /> Ver logs
+                         <Terminal className="w-3 h-3" /> {t('exec.logs.view')}
                       </button>
                     </div>
                   ))}
@@ -1867,7 +1888,7 @@ export default function DemandExecution() {
               )}
 
               {infraServices.length === 0 && infraApps.length === 0 && (
-                <p className="text-xs text-muted-foreground italic">Sem infra configurada.</p>
+                 <p className="text-xs text-muted-foreground italic">{t('exec.infra.none')}</p>
               )}
             </div>
           </ScrollArea>
@@ -1877,12 +1898,12 @@ export default function DemandExecution() {
       {/* ── Central panel ── */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
 
-        {/* Demand header */}
+        {/* Card header */}
         <div className="h-10 border-b border-border flex items-center gap-3 px-4 shrink-0 bg-card">
-          <Badge variant="outline" className="font-mono text-[11px] shrink-0">{demand.jiraKey}</Badge>
-          <span className="text-sm font-medium truncate flex-1">{demand.title}</span>
-          <DopStatusBadge status={demand.dopStatus} />
-          <span className="text-[10px] text-muted-foreground shrink-0">{demand.jiraStatus}</span>
+          <Badge variant="outline" className="font-mono text-[11px] shrink-0">{card.externalKey}</Badge>
+          <span className="text-sm font-medium truncate flex-1">{card.title}</span>
+          <DopStatusBadge status={card.dopStatus} />
+          <span className="text-[10px] text-muted-foreground shrink-0">{card.providerStatus}</span>
         </div>
 
         {/* ── Infra logs overlay ── */}
@@ -1891,16 +1912,16 @@ export default function DemandExecution() {
             <div className="h-10 border-b border-border flex items-center gap-3 px-4 shrink-0 bg-muted/20">
               <Package className={`w-4 h-4 shrink-0 ${SERVICE_COLORS[infraLogService] ?? 'text-muted-foreground'}`} />
               <span className="text-sm font-semibold font-mono">{infraLogService}</span>
-              <span className="text-[10px] text-muted-foreground">— logs em tempo real</span>
+               <span className="text-[10px] text-muted-foreground">— {t('exec.logs.realtime')}</span>
               <div className="flex items-center gap-1.5 ml-auto">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] text-emerald-400">ao vivo</span>
+                 <span className="text-[10px] text-emerald-400">{t('exec.logs.live')}</span>
               </div>
               <button
                 onClick={() => setInfraLogService(null)}
                 data-testid="button-close-infra-logs"
                 className="ml-3 w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                title="Fechar logs"
+                 title={t('exec.logs.close')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1909,7 +1930,7 @@ export default function DemandExecution() {
               {infraLogs.length === 0 && (
                 <div className="flex items-center gap-2 text-[#555]">
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  <span className="italic">Conectando ao serviço {infraLogService}...</span>
+                   <span className="italic">{t('exec.logs.connecting', { service: infraLogService })}</span>
                 </div>
               )}
               {infraLogs.map((log, i) => (
@@ -1924,7 +1945,7 @@ export default function DemandExecution() {
           </div>
 
         ) : centralOverlay ? (
-          /* ── Dossier overlay ── */
+          /* ── RepositoryOverview overlay ── */
           <div className="flex-1 flex flex-col min-h-0">
             {/* Overlay header */}
             <div className="h-10 border-b border-border flex items-center gap-3 px-4 shrink-0 bg-muted/20">
@@ -1938,30 +1959,30 @@ export default function DemandExecution() {
                   {centralOverlay.file.linesRemoved != null && <span className="text-[11px] font-mono text-red-400 shrink-0 ml-0.5">-{centralOverlay.file.linesRemoved}</span>}
                 </>
               )}
-              {centralOverlay.kind === 'jira-card' && (
+              {centralOverlay.kind === 'provider-card' && (
                 <>
                   <CreditCard className="w-4 h-4 text-blue-400 shrink-0" />
-                  <span className="text-sm font-semibold flex-1">{demand.jiraKey} — Card & RFC</span>
+                  <span className="text-sm font-semibold flex-1">{card.externalKey} — Card & RFC</span>
                 </>
               )}
               {centralOverlay.kind === 'time-detail' && (
                 <>
                   <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm font-semibold flex-1">Tempo gasto — detalhe por etapa</span>
+                   <span className="text-sm font-semibold flex-1">{t('exec.time.detail')}</span>
                 </>
               )}
               {centralOverlay.kind === 'allure' && (
                 <>
                   <FlaskConical className="w-4 h-4 text-purple-400 shrink-0" />
-                  <span className="text-sm font-semibold flex-1">Relatório de Testes — Allure</span>
+                   <span className="text-sm font-semibold flex-1">{t('exec.tests.allureTitle')}</span>
                 </>
               )}
               {centralOverlay.kind === 'manage-repos' && (
                 <>
                   <GitBranch className="w-4 h-4 text-primary shrink-0" />
-                  <span className="text-sm font-semibold flex-1">Gerenciar Repositórios</span>
+                   <span className="text-sm font-semibold flex-1">{t('exec.repo.manage')}</span>
                   <span className="text-[10px] text-muted-foreground">
-                    {currentRepos.length} adicionado{currentRepos.length !== 1 ? 's' : ''}
+                     {t('exec.repo.addedCount', { count: currentRepos.length })}
                   </span>
                 </>
               )}
@@ -1977,7 +1998,7 @@ export default function DemandExecution() {
               <button
                 onClick={() => setCentralOverlay(null)}
                 className="ml-auto w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                title="Fechar"
+                 title={t('exec.view.close')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1992,14 +2013,14 @@ export default function DemandExecution() {
                   ))}
                 </div>
               )}
-              {centralOverlay.kind === 'jira-card' && (
-                <JiraCardOverlay demand={demand} />
+              {centralOverlay.kind === 'provider-card' && (
+                <ProviderCardOverlay card={card} />
               )}
               {centralOverlay.kind === 'time-detail' && (
-                <TimeDetailOverlay demand={demand} />
+                <TimeDetailOverlay card={card} />
               )}
               {centralOverlay.kind === 'allure' && (
-                <AllureOverlay tests={demand.dossier.tests} />
+                <AllureOverlay tests={card.repositoryOverview.tests} />
               )}
               {centralOverlay.kind === 'manage-repos' && workspace && (
                 <RepoManagerOverlay
@@ -2012,14 +2033,14 @@ export default function DemandExecution() {
               )}
               {centralOverlay.kind === 'manage-repos' && !workspace && (
                 <div className="p-6 flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Carregando workspace...
+                   <Loader2 className="w-4 h-4 animate-spin" /> {t('exec.workspace.loading')}
                 </div>
               )}
               {centralOverlay.kind === 'pr-diff' && (
                 <PrDiffOverlay
                   pr={centralOverlay.pr}
                   scrollToFile={selectedPrFilePath}
-                  files={demand.dossier.files.filter(
+                  files={card.repositoryOverview.files.filter(
                     f => f.repo === centralOverlay.pr.repo &&
                          f.branch === centralOverlay.pr.sourceBranch &&
                          f.gitStatus !== 'untracked',
@@ -2034,7 +2055,7 @@ export default function DemandExecution() {
           <>
             <div className="border-b border-border bg-card/60 shrink-0">
               <div className="flex items-stretch h-14 px-2 gap-1 overflow-x-auto">
-                {STAGE_DEFS.map((def, i) => {
+                {getStageDefs(t).map((def, i) => {
                   const stageData  = getStage(def.key);
                   const status     = stageData?.status ?? 'pending';
                   const isSelected = currentStageKey === def.key;
@@ -2070,8 +2091,8 @@ export default function DemandExecution() {
                   <h2 className="text-base font-semibold">{currentStageDef?.title}</h2>
                   {currentStageData?.startedAt && (
                     <p className="text-[11px] text-muted-foreground">
-                      Iniciado {new Date(currentStageData.startedAt).toLocaleString()}
-                      {currentStageData.finishedAt && <> · Concluído {new Date(currentStageData.finishedAt).toLocaleString()}</>}
+                       {t('exec.time.started')} {new Date(currentStageData.startedAt).toLocaleString()}
+                       {currentStageData.finishedAt && <> · {t('exec.stage.done')} {new Date(currentStageData.finishedAt).toLocaleString()}</>}
                     </p>
                   )}
                 </div>
@@ -2081,7 +2102,7 @@ export default function DemandExecution() {
                       ? 'bg-red-500/15 text-red-400 border-red-500/25'
                       : 'bg-primary/15 text-primary border-primary/25'
                   }`}>
-                    {currentStageData.status === 'blocked' ? 'Bloqueado' : 'Em andamento'}
+                     {currentStageData.status === 'blocked' ? t('exec.status.blocked') : t('exec.view.inProgress')}
                   </span>
                 )}
               </div>
@@ -2098,7 +2119,7 @@ export default function DemandExecution() {
                 ) : (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground italic py-4">
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    Claude preparando execução do plano...
+                     {t('exec.stage.preparing')}
                   </div>
                 )
               )}
@@ -2127,13 +2148,13 @@ export default function DemandExecution() {
                 ) : (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground italic py-4">
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    Claude está gerando o documento...
+                     {t('exec.stage.generatingDocument')}
                   </div>
                 )
               )}
 
               {!currentStageData && (
-                <p className="text-sm text-muted-foreground italic">Esta etapa ainda não foi iniciada.</p>
+                 <p className="text-sm text-muted-foreground italic">{t('exec.stage.notStarted')}</p>
               )}
 
               {currentStageDef?.key === 'val' && currentStageData && (
@@ -2146,16 +2167,16 @@ export default function DemandExecution() {
                 />
               )}
 
-              {currentStageKey === 'test' && currentStageData && demandId && (
+              {currentStageKey === 'test' && currentStageData && cardId && (
                 <TestStageView
-                  tests={demand.dossier.tests}
-                  demandId={demandId}
+                  tests={card.repositoryOverview.tests}
+                  cardId={cardId}
                 />
               )}
 
               {currentStageDef?.key === 'fin' && (
                 <FinalizationStageView
-                  demand={demand}
+                  card={card}
                   autoStart={finTriggered}
                   onStart={() => setFinTriggered(true)}
                 />

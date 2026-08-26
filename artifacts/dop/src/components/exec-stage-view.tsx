@@ -1,3 +1,4 @@
+import { useI18n } from '../lib/i18n';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Progress } from './ui/progress';
 import { ExecData, ExecFile, StageStatus } from '../lib/api/types';
@@ -47,6 +48,7 @@ function DiffViewer({ diff, path, repo, linesAdded, linesRemoved }: {
 }
 
 export function ExecStageView({ execData, stageStatus }: Props) {
+  const { t } = useI18n();
   const isDone = stageStatus === 'done';
 
   const filesByRepo = useMemo(() => {
@@ -121,17 +123,17 @@ export function ExecStageView({ execData, stageStatus }: Props) {
       {/* ── Overall progress ── */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold">Progresso geral</span>
-          <span className="text-muted-foreground font-mono">{doneCount} / {totalFiles} arquivos</span>
+          <span className="font-semibold">{t('exec.view.progress') || 'Progresso geral'}</span>
+          <span className="text-muted-foreground font-mono">{doneCount} / {totalFiles} {t('exec.view.files') || 'arquivos'}</span>
         </div>
         <Progress value={totalFiles > 0 ? (doneCount / totalFiles) * 100 : 0} className="h-2.5" />
         <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
-          <span>{execData.tasks.length} tarefas</span>
+          <span>{execData.tasks.length} {t('exec.view.tasks') || 'tarefas'}</span>
           <span>·</span>
-          <span>{numRepos} repositório{numRepos !== 1 ? 's' : ''}</span>
+          <span>{numRepos} {numRepos === 1 ? (t('exec.view.repo') || 'repositório') : (t('exec.view.repos') || 'repositórios')}</span>
           {isParallel && (
             <span className="flex items-center gap-1 text-primary font-semibold ml-1">
-              <Zap className="w-3 h-3" /> repos em paralelo
+              <Zap className="w-3 h-3" /> {t('exec.view.parallel') || 'repos em paralelo'}
             </span>
           )}
         </div>
@@ -141,7 +143,7 @@ export function ExecStageView({ execData, stageStatus }: Props) {
       {activeFiles.length > 0 && (
         <div className="flex items-center gap-2.5 p-2.5 rounded-md bg-primary/10 border border-primary/20 animate-pulse">
           <Loader2 className="w-3.5 h-3.5 text-primary animate-spin shrink-0" />
-          <span className="text-xs text-muted-foreground shrink-0">Modificando:</span>
+          <span className="text-xs text-muted-foreground shrink-0">{t('exec.view.modifying') || 'Modificando:'}</span>
           <div className="flex flex-wrap gap-x-3 gap-y-1">
             {activeFiles.map(f => (
               <span key={fk(f)} className="text-xs font-mono text-primary font-semibold">
@@ -178,17 +180,17 @@ export function ExecStageView({ execData, stageStatus }: Props) {
               <div className="flex-1" />
               {repoActive && (
                 <span className="flex items-center gap-1 text-[10px] text-primary">
-                  <Loader2 className="w-3 h-3 animate-spin" /> em andamento
+                  <Loader2 className="w-3 h-3 animate-spin" /> {t('exec.view.inProgress') || 'em andamento'}
                 </span>
               )}
               {!repoActive && repoFailed && (
                 <span className="flex items-center gap-1 text-[10px] text-red-400">
-                  <AlertCircle className="w-3 h-3" /> falhou
+                  <AlertCircle className="w-3 h-3" /> {t('exec.view.failed') || 'falhou'}
                 </span>
               )}
               {!repoActive && !repoFailed && repoDone === files.length && (
                 <span className="flex items-center gap-1 text-[10px] text-emerald-400">
-                  <CheckCircle2 className="w-3 h-3" /> concluído
+                  <CheckCircle2 className="w-3 h-3" /> {t('exec.view.completed') || 'concluído'}
                 </span>
               )}
               <span className="text-[10px] text-muted-foreground font-mono">{repoDone}/{files.length}</span>
@@ -240,17 +242,17 @@ export function ExecStageView({ execData, stageStatus }: Props) {
                         </span>
                         {st === 'active' && (
                           <span className="text-[9px] text-primary bg-primary/10 border border-primary/25 rounded px-1 ml-1">
-                            escrevendo...
+                            {t('exec.view.writing') || 'escrevendo...'}
                           </span>
                         )}
                         {st === 'pending' && (
                           <span className="text-[9px] text-muted-foreground/50 bg-muted/40 border border-border/40 rounded px-1 ml-1">
-                            na fila
+                            {t('exec.view.queued') || 'na fila'}
                           </span>
                         )}
                         {st === 'fail' && (
                           <span className="text-[9px] text-red-400 bg-red-500/10 border border-red-500/25 rounded px-1 ml-1">
-                            falhou
+                            {t('exec.view.failed') || 'falhou'}
                           </span>
                         )}
                       </div>
@@ -271,8 +273,8 @@ export function ExecStageView({ execData, stageStatus }: Props) {
                           className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border border-border/50 text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-primary/10 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
                         >
                           {expanded
-                            ? <><ChevronDown  className="w-3 h-3" /> Fechar</>
-                            : <><ChevronRight className="w-3 h-3" /> Ver diff</>}
+                            ? <><ChevronDown  className="w-3 h-3" /> {t('exec.view.close') || 'Fechar'}</>
+                            : <><ChevronRight className="w-3 h-3" /> {t('exec.view.diff') || 'Ver diff'}</>}
                         </button>
                       )}
                     </div>

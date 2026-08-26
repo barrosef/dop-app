@@ -1,0 +1,1 @@
+- [DOP phase boundary](dop-phase-boundary.md) — the IDE experience is validated with mocks first; real providers and mutations are separate follow-up phases.

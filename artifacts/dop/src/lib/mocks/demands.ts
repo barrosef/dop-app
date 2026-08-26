@@ -428,45 +428,45 @@ const PAY_203_EXEC_DATA: ExecData = {
   ],
 };
 
-export const mockDemands: Demand[] = [
+export const mockCards: Demand[] = [
   {
     id: 'd-1',
     workspaceId: 'ws-1',
-    jiraKey: 'PORTAL-101',
-    title: 'Adicionar exportação para PDF',
+    externalKey: 'PORTAL-101',
+    title: 'Adicionar exportação para PDF', type: 'Story', provider: 'jira',
     assignee: 'João Silva',
-    jiraStatus: 'To Do',
+    providerStatus: 'To Do',
     dopStatus: 'new',
     stages: [],
-    dossier: { repos: [], branches: [], commits: 0, prs: [], files: [], tests: [] },
+    repositoryOverview: { repos: [], branches: [], commits: 0, prs: [], files: [], tests: [] },
     chat: []
   },
   {
     id: 'd-2',
     workspaceId: 'ws-1',
-    jiraKey: 'PORTAL-102',
-    title: 'Corrigir bug na paginação',
+    externalKey: 'PORTAL-102',
+    title: 'Corrigir bug na paginação', type: 'Bug', provider: 'jira',
     assignee: 'Maria Oliveira',
-    jiraStatus: 'To Do',
+    providerStatus: 'To Do',
     dopStatus: 'new',
     stages: [],
-    dossier: { repos: [], branches: [], commits: 0, prs: [], files: [], tests: [] },
+    repositoryOverview: { repos: [], branches: [], commits: 0, prs: [], files: [], tests: [] },
     chat: []
   },
   {
     id: 'd-3',
     workspaceId: 'ws-1',
-    jiraKey: 'PORTAL-103',
-    title: 'Integração com novo gateway de pagamentos',
+    externalKey: 'PORTAL-103',
+    title: 'Integração com novo gateway de pagamentos', type: 'Epic', provider: 'jira',
     assignee: 'João Silva',
-    jiraStatus: 'In Progress',
+    providerStatus: 'In Progress',
     dopStatus: 'doing',
     stages: [
       { key: 'init',    title: 'Iniciar a demanda',    status: 'done',    summary: 'Card PORTAL-103 lido via MCP Jira. RFC gerada e aprovada.',                                              document: PORTAL_103_INIT_DOC,    startedAt: new Date(Date.now() - 3700000).toISOString(), finishedAt: new Date(Date.now() - 3500000).toISOString() },
       { key: 'context', title: 'Contextualização',     status: 'done',    summary: 'Análise forense concluída. Identificados 3 pontos de integração no portal-backend.',                    document: PORTAL_103_CONTEXT_DOC, startedAt: new Date(Date.now() - 3500000).toISOString(), finishedAt: new Date(Date.now() - 3200000).toISOString() },
       { key: 'plan',    title: 'Plano',                status: 'running', summary: 'Elaborando plano de desenvolvimento: 4 tarefas no backend, 2 no frontend.',                            document: PORTAL_103_PLAN_DOC,    testPlan: PORTAL_103_TEST_PLAN, startedAt: new Date(Date.now() - 3200000).toISOString() }
     ],
-    dossier: {
+    repositoryOverview: {
       repos: ['portal-backend'],
       branches: ['portal-backend|feature/PORTAL-103-gateway'],
       commits: 2,
@@ -489,10 +489,10 @@ export const mockDemands: Demand[] = [
   {
     id: 'd-4',
     workspaceId: 'ws-1',
-    jiraKey: 'PORTAL-104',
-    title: 'Atualizar dependências de segurança (CVE-2026-1234)',
+    externalKey: 'PORTAL-104',
+    title: 'Atualizar dependências de segurança (CVE-2026-1234)', type: 'Bug', provider: 'jira',
     assignee: 'Ana Costa',
-    jiraStatus: 'In Progress',
+    providerStatus: 'In Progress',
     dopStatus: 'doing',
     stages: [
       { key: 'init',    title: 'Iniciar a demanda',    status: 'done',    summary: 'Card lido. CVE-2026-1234 afeta `jsonwebtoken` < 9.0.2. PRD de segurança gerada.',           document: PORTAL_104_INIT_DOC,    startedAt: new Date(Date.now() - 7200000).toISOString(), finishedAt: new Date(Date.now() - 7100000).toISOString() },
@@ -503,7 +503,7 @@ export const mockDemands: Demand[] = [
       { key: 'val',     title: 'Validação humana',     status: 'done',    startedAt: new Date(Date.now() - 3600000).toISOString(), finishedAt: new Date(Date.now() - 1800000).toISOString() },
       { key: 'fin',     title: 'Finalização',          status: 'running', startedAt: new Date(Date.now() -  900000).toISOString() },
     ],
-    dossier: {
+    repositoryOverview: {
       repos: ['portal-frontend', 'portal-backend'],
       branches: [
         'portal-frontend|feature/PORTAL-104-sec-deps',
@@ -593,10 +593,10 @@ export const mockDemands: Demand[] = [
   {
     id: 'd-5',
     workspaceId: 'ws-2',
-    jiraKey: 'PAY-201',
-    title: 'Refatorar serviço de reconciliação',
+    externalKey: 'PAY-201',
+    title: 'Refatorar serviço de reconciliação', type: 'Task', provider: 'clickup',
     assignee: 'Carlos Mendes',
-    jiraStatus: 'In Review',
+    providerStatus: 'In Review',
     dopStatus: 'done',
     stages: [
       { key: 'init',    title: 'Iniciar a demanda',   status: 'done' },
@@ -607,7 +607,7 @@ export const mockDemands: Demand[] = [
       { key: 'val',     title: 'Validação humana',    status: 'done' },
       { key: 'fin',     title: 'Finalização',         status: 'done' }
     ],
-    dossier: {
+    repositoryOverview: {
       repos: ['api-pagamentos', 'worker-cobrancas'],
       branches: [
         'api-pagamentos|feature/PAY-201-reconcile-refactor',
@@ -642,10 +642,10 @@ export const mockDemands: Demand[] = [
   {
     id: 'd-6',
     workspaceId: 'ws-2',
-    jiraKey: 'PAY-202',
-    title: 'Otimizar queries do banco de dados',
+    externalKey: 'PAY-202',
+    title: 'Otimizar queries do banco de dados', type: 'Task', provider: 'clickup',
     assignee: 'João Silva',
-    jiraStatus: 'Done',
+    providerStatus: 'Done',
     dopStatus: 'delivered',
     stages: [
       { key: 'init',    title: 'Iniciar a demanda',    status: 'done' },
@@ -656,7 +656,7 @@ export const mockDemands: Demand[] = [
       { key: 'val',     title: 'Validação humana',     status: 'done' },
       { key: 'fin',     title: 'Finalização',          status: 'done' }
     ],
-    dossier: {
+    repositoryOverview: {
       repos: ['api-pagamentos'],
       branches: ['api-pagamentos|feature/PAY-202-query-opt'],
       commits: 8,
@@ -679,10 +679,10 @@ export const mockDemands: Demand[] = [
   {
     id: 'd-7',
     workspaceId: 'ws-2',
-    jiraKey: 'PAY-203',
-    title: 'Adicionar logs de auditoria em todas as transações',
+    externalKey: 'PAY-203',
+    title: 'Adicionar logs de auditoria em todas as transações', type: 'Task', provider: 'clickup',
     assignee: 'Pedro Gomes',
-    jiraStatus: 'In Progress',
+    providerStatus: 'In Progress',
     dopStatus: 'doing',
     stages: [
       { key: 'init',    title: 'Iniciar a demanda',   status: 'done' },
@@ -691,7 +691,7 @@ export const mockDemands: Demand[] = [
       { key: 'exec',    title: 'Execução do plano',   status: 'done', execData: PAY_203_EXEC_DATA },
       { key: 'test',    title: 'Execução dos testes', status: 'blocked', summary: 'Teste e2e "auditoria de chargeback" falha por timeout no RabbitMQ. Aguardando decisão do Dev sobre retry policy.' }
     ],
-    dossier: {
+    repositoryOverview: {
       repos: ['api-pagamentos', 'shared-contracts'],
       branches: [
         'api-pagamentos|feature/PAY-203-audit-log',
@@ -720,17 +720,17 @@ export const mockDemands: Demand[] = [
   {
     id: 'd-8',
     workspaceId: 'ws-2',
-    jiraKey: 'PAY-204',
-    title: 'Corrigir falha intermitente no cron de cobrança',
+    externalKey: 'PAY-204',
+    title: 'Corrigir falha intermitente no cron de cobrança', type: 'Bug', provider: 'clickup',
     assignee: 'Ana Costa',
-    jiraStatus: 'In Progress',
+    providerStatus: 'In Progress',
     dopStatus: 'doing',
     stages: [
       { key: 'init',    title: 'Iniciar a demanda', status: 'done' },
       { key: 'context', title: 'Contextualização',  status: 'done' },
       { key: 'plan',    title: 'Plano',             status: 'running', summary: 'Análise forense em andamento. Suspeita de race condition no lock distribuído do Redis.' }
     ],
-    dossier: {
+    repositoryOverview: {
       repos: ['worker-cobrancas'],
       branches: ['worker-cobrancas|feature/PAY-204-cron-fix'],
       commits: 1,

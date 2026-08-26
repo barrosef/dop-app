@@ -13,7 +13,7 @@ export interface RepoConfig {
   description?: string;
   baseBranch: string; prTargets: string[]; flowRules?: string;
 }
-export interface TaskManagerConfig { provider: 'jira'; baseUrl: string; project: string; }
+export interface TaskManagerConfig { provider: 'jira' | 'clickup' | 'redmine' | 'custom'; baseUrl: string; project: string; }
 export interface RuntimeApp { name: string; role: 'frontend' | 'backend'; port: number; dependsOn?: string[]; }
 export interface ClaudeExtensions {
   mcps: { name: string; kind: string }[];
@@ -28,21 +28,22 @@ export interface Workspace {
   claudeExtensions: ClaudeExtensions;
   rules: string[];
   context: string;
+  cardTypes: string[];
 }
 export interface ExecFile {
-  path: string;          // relative path within repo, e.g. "src/auth/tokenService.ts"
+  path: string;          // relative path within repo
   repo: string;          // repo name
   branch: string;        // feature branch
   linesAdded: number;
   linesRemoved: number;
   diff: string;          // unified diff content
-  error?: string;        // present when this file's change failed
+  error?: string;
 }
 export interface ExecTask {
   id: string;
   label: string;
-  parallelGroup: number; // tasks with same group number run simultaneously
-  filePaths: string[];   // "repo::path" keys matching ExecFile
+  parallelGroup: number;
+  filePaths: string[];
   status: 'pending' | 'running' | 'done';
 }
 export interface ExecData { tasks: ExecTask[]; files: ExecFile[]; }
@@ -53,21 +54,28 @@ export interface PullRequest { id: string; repo: string; sourceBranch: string; t
 export interface FileTouched { path: string; kind: 'plan' | 'context' | 'adr' | 'source' | 'test'; change: 'created' | 'modified'; gitStatus?: 'staged' | 'modified' | 'untracked' | 'deleted'; repo?: string; branch?: string; diff?: string; linesAdded?: number; linesRemoved?: number; }
 export interface TestResult {
   name: string;
-  repo?: string;       // for hierarchical grouping by repository
+  repo?: string;
   type: 'unit' | 'e2e';
   status: TestStatus;
-  durationMs?: number; // execution time in ms
+  durationMs?: number;
 }
-export interface DemandDossier {
+export interface RepositoryOverview {
   repos: string[]; branches: string[]; commits: number;
   prs: PullRequest[]; files: FileTouched[]; tests: TestResult[];
   startedAt?: string; finishedAt?: string; elapsedSeconds?: number;
 }
-export interface ChatMessage { id: string; author: 'dev' | 'claude'; text: string; at: string; actions?: string[]; }
 export interface LogLine { source: 'app' | 'test' | 'infra'; service: string; line: string; at: string; testType?: 'unit' | 'e2e'; testRepo?: string; }
-export interface Demand {
-  id: string; jiraKey: string; title: string; assignee: string;
-  jiraStatus: string; dopStatus: DopStatus;
-  stages: Stage[]; dossier: DemandDossier; chat: ChatMessage[];
+export interface ChatMessage { id: string; author: 'dev' | 'claude'; text: string; at: string; actions?: string[]; }
+
+export interface Card {
+  id: string; externalKey: string; title: string; assignee: string;
+  type: string;
+  provider: string;
+  providerStatus: string; dopStatus: DopStatus;
+  stages: Stage[]; repositoryOverview: RepositoryOverview; chat: ChatMessage[];
   workspaceId: string;
 }
+
+// Aliases for compatibility
+export type Demand = Card;
+export type DemandDossier = RepositoryOverview;

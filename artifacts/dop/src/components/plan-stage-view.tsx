@@ -1,3 +1,4 @@
+import { useI18n } from '../lib/i18n';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { marked } from 'marked';
 import {
@@ -32,6 +33,7 @@ interface TestPlanSectionProps {
 }
 
 function TestPlanSection({ title, icon, content, itemTemplate, onSave, onChatRequest }: TestPlanSectionProps) {
+  const { t } = useI18n();
   const [mode, setMode]       = useState<'preview' | 'source'>('preview');
   const [editing, setEditing] = useState(false);
   const [draft, setDraft]     = useState(content);
@@ -92,7 +94,7 @@ function TestPlanSection({ title, icon, content, itemTemplate, onSave, onChatReq
                   mode === 'preview' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
                 }`}
               >
-                <Eye className="w-3 h-3" /> Preview
+                <Eye className="w-3 h-3" /> {t('plan.action.preview') || 'Preview'}
               </button>
               <button
                 onClick={() => setMode('source')}
@@ -100,7 +102,7 @@ function TestPlanSection({ title, icon, content, itemTemplate, onSave, onChatReq
                   mode === 'source' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
                 }`}
               >
-                <Code2 className="w-3 h-3" /> Fonte
+                <Code2 className="w-3 h-3" /> {t('plan.action.source') || 'Fonte'}
               </button>
             </div>
 
@@ -112,19 +114,19 @@ function TestPlanSection({ title, icon, content, itemTemplate, onSave, onChatReq
                   onClick={onChatRequest}
                   className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded border border-border/40 text-muted-foreground hover:text-primary hover:border-primary/50 hover:bg-primary/10 transition-colors"
                 >
-                  <MessageSquare className="w-3 h-3" /> Via Claude
+                  <MessageSquare className="w-3 h-3" /> {t('plan.action.chat') || 'Via Claude'}
                 </button>
                 <button
                   onClick={handleEdit}
                   className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                 >
-                  <Pencil className="w-3 h-3" /> Editar
+                  <Pencil className="w-3 h-3" /> {t('plan.action.edit')}
                 </button>
                 <button
                   onClick={handleAdd}
                   className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
                 >
-                  <Plus className="w-3 h-3" /> Adicionar
+                  <Plus className="w-3 h-3" /> {t('plan.action.add')}
                 </button>
               </>
             )}
@@ -135,19 +137,19 @@ function TestPlanSection({ title, icon, content, itemTemplate, onSave, onChatReq
                   onClick={handleAdd}
                   className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
                 >
-                  <Plus className="w-3 h-3" /> Adicionar
+                  <Plus className="w-3 h-3" /> {t('plan.action.add')}
                 </button>
                 <button
                   onClick={handleSave}
                   className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 transition-colors"
                 >
-                  <Save className="w-3 h-3" /> Salvar
+                  <Save className="w-3 h-3" /> {t('plan.action.save')}
                 </button>
                 <button
                   onClick={handleCancel}
                   className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                 >
-                  <X className="w-3 h-3" /> Cancelar
+                  <X className="w-3 h-3" /> {t('plan.action.cancel')}
                 </button>
               </>
             )}
@@ -199,6 +201,7 @@ export function PlanStageView({
   onTestPlanSave,
   onTestPlanChatRequest,
 }: PlanStageViewProps) {
+  const { t } = useI18n();
   const [tab, setTab] = useState<PlanTab>('plan');
 
   return (
@@ -206,8 +209,8 @@ export function PlanStageView({
       {/* Tab bar */}
       <div className="flex border-b border-border/40">
         {([
-          { key: 'plan'  as PlanTab, Icon: FileText,    label: 'Plano de Implementação' },
-          { key: 'tests' as PlanTab, Icon: FlaskConical, label: 'Plano de Testes'        },
+          { key: 'plan'  as PlanTab, Icon: FileText,    label: t('plan.tab.impl') || 'Plano de Implementação' },
+          { key: 'tests' as PlanTab, Icon: FlaskConical, label: t('plan.tab.tests') || 'Plano de Testes'        },
         ]).map(({ key, Icon, label }) => (
           <button
             key={key}
@@ -243,7 +246,7 @@ export function PlanStageView({
       {tab === 'tests' && (
         <div className="space-y-3">
           <TestPlanSection
-            title="Testes Unitários (AAA)"
+            title={t('plan.tests.unit') || "Testes Unitários (AAA)"}
             icon={<FlaskConical className="w-3.5 h-3.5 text-purple-400 shrink-0" />}
             content={testPlan.unit}
             itemTemplate={UNIT_ITEM_TEMPLATE}
@@ -251,7 +254,7 @@ export function PlanStageView({
             onChatRequest={() => onTestPlanChatRequest('unit')}
           />
           <TestPlanSection
-            title="Testes E2E"
+            title={t('plan.tests.e2e') || "Testes E2E"}
             icon={<span className="text-sm leading-none shrink-0">🌐</span>}
             content={testPlan.e2e}
             itemTemplate={E2E_ITEM_TEMPLATE}

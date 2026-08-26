@@ -1,3 +1,4 @@
+import { useI18n } from '../lib/i18n';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Progress } from './ui/progress';
 import { api } from '../lib/api/mockClient';
@@ -8,7 +9,7 @@ import {
   ChevronDown, ChevronRight
 } from 'lucide-react';
 
-interface Props { tests: TestResult[]; demandId: string; }
+interface Props { tests: TestResult[]; cardId: string; }
 
 type LogSource = 'test' | 'app' | 'infra';
 type PanelTab  = 'results' | 'logs';
@@ -25,6 +26,7 @@ function StatusIcon({ status }: { status: TestResult['status'] }) {
 }
 
 function TestRow({ test }: { test: TestResult }) {
+  const { t } = useI18n();
   const isRunning = test.status === 'running';
   const isFail    = test.status === 'fail';
   const isSkip    = test.status === 'skipped';
@@ -43,13 +45,14 @@ function TestRow({ test }: { test: TestResult }) {
         <span className="text-[10px] text-muted-foreground/40 font-mono shrink-0">{test.durationMs}ms</span>
       )}
       {isRunning && (
-        <span className="text-[9px] text-primary bg-primary/10 border border-primary/25 rounded px-1.5 py-0.5 shrink-0">rodando</span>
+        <span className="text-[9px] text-primary bg-primary/10 border border-primary/25 rounded px-1.5 py-0.5 shrink-0">{t('test.status.running') || 'rodando'}</span>
       )}
     </div>
   );
 }
 
 function RepoGroup({ repo, tests }: { repo: string; tests: TestResult[] }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(true);
 
   const doneCount = tests.filter(isDone).length;
@@ -77,29 +80,29 @@ function RepoGroup({ repo, tests }: { repo: string; tests: TestResult[] }) {
           {/* Status badges */}
           {failCount > 0 && (
             <span className="flex items-center gap-0.5 text-[9px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">
-              <XCircle className="w-2.5 h-2.5" /> {failCount} falhou
+              <XCircle className="w-2.5 h-2.5" /> {failCount} {t('test.status.failed') || 'falhou'}
             </span>
           )}
           {passCount > 0 && (
             <span className="flex items-center gap-0.5 text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-              <CheckCircle2 className="w-2.5 h-2.5" /> {passCount} passou
+              <CheckCircle2 className="w-2.5 h-2.5" /> {passCount} {t('test.status.passed') || 'passou'}
             </span>
           )}
           {skipCount > 0 && (
             <span className="text-[9px] text-muted-foreground/60 bg-muted/30 px-1.5 py-0.5 rounded border border-border/30">
-              {skipCount} pulado
+              {skipCount} {t('test.status.skipped') || 'pulado'}
             </span>
           )}
 
           {/* Right-aligned status */}
           {repoFinished && (
             <span className="ml-auto flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
-              <CheckCircle2 className="w-3 h-3" /> concluído
+              <CheckCircle2 className="w-3 h-3" /> {t('exec.view.completed')}
             </span>
           )}
           {!repoFinished && runCount > 0 && (
             <span className="ml-auto flex items-center gap-1 text-[10px] text-primary">
-              <Loader2 className="w-3 h-3 animate-spin" /> rodando
+              <Loader2 className="w-3 h-3 animate-spin" /> {t('test.status.running') || 'rodando'}
             </span>
           )}
         </div>
@@ -117,6 +120,7 @@ function RepoGroup({ repo, tests }: { repo: string; tests: TestResult[] }) {
 function TestTypeSection({ title, icon, tests }: {
   title: string; icon: React.ReactNode; tests: TestResult[];
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(true);
 
   if (tests.length === 0) return null;
@@ -150,26 +154,26 @@ function TestTypeSection({ title, icon, tests }: {
             ? <ChevronDown  className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
             : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />}
           {icon}
-          <span className="text-xs font-bold">Testes {title}</span>
+          <span className="text-xs font-bold">{t('test.view.section', { title })}</span>
           <span className="text-[10px] text-muted-foreground font-mono">{doneCount}/{tests.length}</span>
 
           {/* Status badges */}
           {failCount > 0 && (
             <span className="flex items-center gap-0.5 text-[10px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 font-semibold">
-              <XCircle className="w-3 h-3" /> {failCount} falhou
+              <XCircle className="w-3 h-3" /> {failCount} {t('test.status.failed') || 'falhou'}
             </span>
           )}
           {passCount > 0 && (
             <span className="flex items-center gap-0.5 text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-semibold">
-              <CheckCircle2 className="w-3 h-3" /> {passCount} passou
+              <CheckCircle2 className="w-3 h-3" /> {passCount} {t('test.status.passed') || 'passou'}
             </span>
           )}
           {skipCount > 0 && (
-            <span className="text-[10px] text-muted-foreground/60 ml-0.5">{skipCount} pulado</span>
+            <span className="text-[10px] text-muted-foreground/60 ml-0.5">{skipCount} {t('test.status.skipped') || 'pulado'}</span>
           )}
           {runCount > 0 && (
             <span className="flex items-center gap-1 text-[10px] text-primary ml-0.5">
-              <Loader2 className="w-3 h-3 animate-spin" /> {runCount} rodando
+              <Loader2 className="w-3 h-3 animate-spin" /> {runCount} {t('test.status.running') || 'rodando'}
             </span>
           )}
 
@@ -179,7 +183,7 @@ function TestTypeSection({ title, icon, tests }: {
               {failCount > 0
                 ? <XCircle className="w-3 h-3" />
                 : <CheckCircle2 className="w-3 h-3" />}
-              {failCount > 0 ? 'com falhas' : 'concluído'}
+               {failCount > 0 ? t('test.status.withFailures') : t('exec.view.completed')}
             </span>
           )}
         </div>
@@ -191,9 +195,9 @@ function TestTypeSection({ title, icon, tests }: {
             <div className="px-3 pt-2 pb-1.5 bg-muted/10 border-t border-border/30">
               <Progress value={pct} className="h-1.5" />
               <div className="flex items-center gap-3 text-[10px] mt-1.5">
-                <span className="text-emerald-400">✓ {passCount} passou</span>
-                <span className="text-red-400">✗ {failCount} falhou</span>
-                <span className="text-muted-foreground/60">⊘ {skipCount} pulado</span>
+                <span className="text-emerald-400">✓ {passCount} {t('test.status.passed') || 'passou'}</span>
+                <span className="text-red-400">✗ {failCount} {t('test.status.failed') || 'falhou'}</span>
+                <span className="text-muted-foreground/60">⊘ {skipCount} {t('test.status.skipped') || 'pulado'}</span>
               </div>
             </div>
           )}
@@ -208,17 +212,14 @@ function TestTypeSection({ title, icon, tests }: {
   );
 }
 
-const LOG_SOURCES: { key: LogSource; label: string }[] = [
-  { key: 'test',  label: 'Testes' },
-  { key: 'app',   label: 'App'    },
-  { key: 'infra', label: 'Infra'  },
-];
+const LOG_SOURCES: LogSource[] = ['test', 'app', 'infra'];
 
-export function TestStageView({ tests, demandId }: Props) {
+export function TestStageView({ tests, cardId }: Props) {
+  const { t } = useI18n();
   const [tab,       setTab]       = useState<PanelTab>('results');
   const [logSource, setLogSource] = useState<LogSource>('test');
   const [logType,   setLogType]   = useState<'unit' | 'e2e' | null>(null);
-  const [logRepo,   setLogRepo]   = useState<string | null>(null);
+  const [logRepo, setLogRepo] = useState<string | null>(null);
   const [stageLogs, setStageLogs] = useState<LogLine[]>([]);
   const logsEndRef                = useRef<HTMLDivElement>(null);
 
@@ -229,7 +230,7 @@ export function TestStageView({ tests, demandId }: Props) {
     return [...repos];
   }, [tests]);
 
-  // Repos that have a specific test type (for disabling irrelevant combos)
+  // Repositories that have a specific test type (for disabling irrelevant combinations).
   const reposForType = useMemo(() => {
     if (!logType) return new Set(allRepos);
     const s = new Set<string>();
@@ -248,7 +249,7 @@ export function TestStageView({ tests, demandId }: Props) {
       ? { testType: logType ?? undefined, testRepo: logRepo ?? undefined }
       : undefined;
     const consume = async () => {
-      for await (const line of api.streamLogs(demandId, logSource, filter)) {
+      for await (const line of api.streamLogs(cardId, logSource, filter)) {
         if (!active) break;
         setStageLogs(prev => [...prev, line]);
         setTimeout(() => logsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
@@ -256,7 +257,7 @@ export function TestStageView({ tests, demandId }: Props) {
     };
     consume();
     return () => { active = false; };
-  }, [demandId, logSource, logType, logRepo, logsReady]);
+  }, [cardId, logSource, logType, logRepo, logsReady]);
 
   const unitTests = tests.filter(t => t.type === 'unit');
   const e2eTests  = tests.filter(t => t.type === 'e2e');
@@ -274,17 +275,17 @@ export function TestStageView({ tests, demandId }: Props) {
       {/* ── Overall progress ── */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold">Progresso geral</span>
-          <span className="text-muted-foreground font-mono">{totalDone} / {tests.length} testes</span>
+          <span className="font-semibold">{t('test.view.progress') || 'Progresso geral'}</span>
+          <span className="text-muted-foreground font-mono">{totalDone} / {tests.length} {t('test.view.tests') || 'testes'}</span>
         </div>
         <Progress value={overallPct} className="h-2.5" />
         <div className="flex items-center gap-3 text-[10px] flex-wrap">
-          <span className="text-emerald-400">✓ {totalPass} passou</span>
-          <span className="text-red-400">✗ {totalFail} falhou</span>
-          <span className="text-muted-foreground/60">⊘ {totalSkip} pulado</span>
+          <span className="text-emerald-400">✓ {totalPass} {t('test.status.passed') || 'passou'}</span>
+          <span className="text-red-400">✗ {totalFail} {t('test.status.failed') || 'falhou'}</span>
+          <span className="text-muted-foreground/60">⊘ {totalSkip} {t('test.status.skipped') || 'pulado'}</span>
           {totalRunning > 0 && (
             <span className="flex items-center gap-1 text-primary">
-              <Loader2 className="w-3 h-3 animate-spin" /> {totalRunning} rodando
+              <Loader2 className="w-3 h-3 animate-spin" /> {totalRunning} {t('test.status.running') || 'rodando'}
             </span>
           )}
         </div>
@@ -293,8 +294,8 @@ export function TestStageView({ tests, demandId }: Props) {
       {/* ── Tab bar ── */}
       <div className="flex border-b border-border/40">
         {([
-          { key: 'results' as PanelTab, Icon: FlaskConical, label: 'Resultados' },
-          { key: 'logs'    as PanelTab, Icon: Terminal,     label: 'Logs'        },
+          { key: 'results' as PanelTab, Icon: FlaskConical, label: t('test.tab.results') },
+          { key: 'logs'    as PanelTab, Icon: Terminal,     label: t('test.tab.logs') },
         ]).map(({ key, Icon, label }) => (
           <button
             key={key}
@@ -310,35 +311,35 @@ export function TestStageView({ tests, demandId }: Props) {
         ))}
       </div>
 
-      {/* ── Resultados ── */}
+      {/* Results */}
       {tab === 'results' && (
         <div className="space-y-3">
           <TestTypeSection
-            title="Unitários"
+            title={t('test.type.unit')}
             icon={<FlaskConical className="w-3.5 h-3.5 text-purple-400" />}
             tests={unitTests}
           />
           <TestTypeSection
-            title="E2E"
+            title={t('test.type.e2e')}
             icon={<span className="text-sm leading-none">🌐</span>}
             tests={e2eTests}
           />
           {tests.length === 0 && (
-            <p className="text-sm text-muted-foreground italic py-4">Nenhum resultado de teste ainda.</p>
+            <p className="text-sm text-muted-foreground italic py-4">{t('test.view.empty')}</p>
           )}
         </div>
       )}
 
-      {/* ── Logs ── */}
+      {/* Logs */}
       {tab === 'logs' && (
         <div className="rounded-lg border border-border/40 overflow-hidden">
 
           {/* Source row */}
           <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/40">
             <Terminal className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fonte</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('test.filter.source') || 'Fonte'}</span>
             <div className="flex gap-1 ml-1">
-              {LOG_SOURCES.map(({ key, label }) => (
+              {LOG_SOURCES.map(key => (
                 <button
                   key={key}
                   onClick={() => { setLogSource(key); setLogType(null); setLogRepo(null); }}
@@ -349,7 +350,7 @@ export function TestStageView({ tests, demandId }: Props) {
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                   }`}
                 >
-                  {label}
+                  {t(`test.log.${key}` as 'test.log.test' | 'test.log.app' | 'test.log.infra')}
                 </button>
               ))}
             </div>
@@ -361,7 +362,7 @@ export function TestStageView({ tests, demandId }: Props) {
 
               {/* Type filter */}
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] text-muted-foreground w-10 shrink-0">Tipo</span>
+                <span className="text-[10px] text-muted-foreground w-10 shrink-0">{t('test.filter.type') || 'Tipo'}</span>
                 {(['unit', 'e2e'] as const).map(type => (
                   <button
                     key={type}
@@ -372,15 +373,15 @@ export function TestStageView({ tests, demandId }: Props) {
                         : 'border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/40'
                     }`}
                   >
-                    {type === 'unit' ? '⚗ Unitários' : '🌐 E2E'}
+                    {type === 'unit' ? `⚗ ${t('test.type.unit')}` : `🌐 ${t('test.type.e2e')}`}
                   </button>
                 ))}
               </div>
 
-              {/* Repo filter */}
+              {/* Repository filter */}
               {allRepos.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] text-muted-foreground w-10 shrink-0">Repo</span>
+                  <span className="text-[10px] text-muted-foreground w-10 shrink-0">{t('test.filter.repo') || 'Repo'}</span>
                   {allRepos.map(repo => {
                     const available = reposForType.has(repo);
                     const selected  = logRepo === repo;
@@ -412,11 +413,11 @@ export function TestStageView({ tests, demandId }: Props) {
               <div className="h-full flex flex-col items-center justify-center gap-2 text-center">
                 <Terminal className="w-5 h-5 text-muted-foreground/30" />
                 <p className="text-[#555] italic text-xs">
-                  Selecione o tipo de teste e o repositório<br/>para visualizar os logs
+                   {t('test.log.select')}
                 </p>
               </div>
             ) : stageLogs.length === 0 ? (
-              <span className="text-[#555] italic">Aguardando logs...</span>
+              <span className="text-[#555] italic">{t('test.log.waiting') || 'Aguardando logs...'}</span>
             ) : (
               stageLogs.map((log, i) => (
                 <div key={i} className="flex gap-2 mb-0.5 hover:bg-white/5 px-1 rounded">

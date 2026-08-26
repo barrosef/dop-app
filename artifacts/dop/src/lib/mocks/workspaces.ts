@@ -16,6 +16,7 @@ export const mockWorkspaces: Workspace[] = [
       { id: 'r2', name: 'portal-backend',  provider: GH, remoteUrl: 'git@github.com:org/portal-backend.git',         protocol: 'ssh', baseBranch: 'main', prTargets: ['develop'], description: 'API Node.js do portal' },
     ],
     taskManager: { provider: 'jira', baseUrl: 'https://org.atlassian.net', project: 'PORTAL' },
+    cardTypes: ['Story', 'Bug', 'Epic'],
     runtime: {
       apps: [
         { name: 'frontend', role: 'frontend', port: 3000, dependsOn: ['backend'] },
@@ -45,7 +46,8 @@ export const mockWorkspaces: Workspace[] = [
       { id: 'r4', name: 'worker-cobrancas', provider: GL, remoteUrl: 'https://gitlab.com/org/worker-cobrancas.git',                         protocol: 'https', baseBranch: 'main', prTargets: ['develop'] },
       { id: 'r5', name: 'shared-contracts', provider: AZ, remoteUrl: 'https://org@dev.azure.com/org/api-pagamentos/_git/shared-contracts',   protocol: 'https', baseBranch: 'main', prTargets: ['develop'] },
     ],
-    taskManager: { provider: 'jira', baseUrl: 'https://org.atlassian.net', project: 'PAY' },
+    taskManager: { provider: 'clickup', baseUrl: 'https://app.clickup.com', project: 'PAY' },
+    cardTypes: ['Task', 'Subtask'],
     runtime: {
       apps: [
         { name: 'api',    role: 'backend', port: 8081 },
@@ -68,7 +70,8 @@ export const mockWorkspaces: Workspace[] = [
     status: 'draft',
     gitProvider: 'azure_devops',
     repos: [],
-    taskManager: { provider: 'jira', baseUrl: 'https://org.atlassian.net', project: 'APP' },
+    taskManager: { provider: 'redmine', baseUrl: 'https://redmine.org.com', project: 'APP' },
+    cardTypes: ['Feature', 'Defect'],
     runtime: { apps: [], infra: [] },
     claudeExtensions: { mcps: [], plugins: [], skills: [], commands: [] },
     rules: [],

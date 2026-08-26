@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { Workspace, Demand, ChatMessage } from '../lib/api/types';
+import { Workspace, Card, ChatMessage } from '../lib/api/types';
 
 export function useWorkspaces() {
   return useQuery({
@@ -27,34 +27,42 @@ export function useSaveWorkspace() {
   });
 }
 
-export function useDemands(workspaceId?: string) {
+export function useCards(workspaceId?: string) {
   return useQuery({
-    queryKey: ['demands', workspaceId],
-    queryFn: () => workspaceId ? api.listDemands(workspaceId) : [],
+    queryKey: ['cards', workspaceId],
+    queryFn: () => workspaceId ? api.listCards(workspaceId) : [],
     enabled: !!workspaceId,
   });
 }
 
-export function useAllDemands() {
+// Keeping aliased for retrocompatibility
+export const useDemands = useCards;
+
+export function useAllCards() {
   return useQuery({
-    queryKey: ['demands', 'all'],
-    queryFn: () => api.listAllDemands(),
+    queryKey: ['cards', 'all'],
+    queryFn: () => api.listAllCards(),
   });
 }
 
-export function useDemand(workspaceId?: string, demandId?: string) {
+export const useAllDemands = useAllCards;
+
+export function useCard(workspaceId?: string, cardId?: string) {
   return useQuery({
-    queryKey: ['demand', workspaceId, demandId],
-    queryFn: () => workspaceId && demandId ? api.getDemand(workspaceId, demandId) : null,
-    enabled: !!workspaceId && !!demandId,
+    queryKey: ['card', workspaceId, cardId],
+    queryFn: () => workspaceId && cardId ? api.getCard(workspaceId, cardId) : null,
+    enabled: !!workspaceId && !!cardId,
   });
 }
+
+export const useDemand = useCard;
 
 export function useSendChatMessage() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ demandId, text }: { demandId: string; text: string }) => api.sendChatMessage(demandId, text),
+    mutationFn: ({ cardId, text }: { cardId: string; text: string }) => api.sendChatMessage(cardId, text),
     onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['card'] });
       queryClient.invalidateQueries({ queryKey: ['demand'] });
     },
   });
