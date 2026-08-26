@@ -69,6 +69,7 @@ export function AppSidebar() {
   const { theme, setTheme, sidebarOpen, toggleSidebar } = useUiStore();
   const { lang, setLang, t } = useI18n();
   const location = useLocation();
+  const [isMobile, setIsMobile] = React.useState(false);
 
   const wsMatch = useMatch({ path: '/workspaces/:id', end: false });
   const rawId    = wsMatch?.params?.id;
@@ -78,7 +79,15 @@ export function AppSidebar() {
   const at = (to: string, exact = false) =>
     exact ? location.pathname === to : location.pathname.startsWith(to);
 
-  const open = sidebarOpen;
+  React.useEffect(() => {
+    const media = window.matchMedia('(max-width: 639px)');
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  const open = sidebarOpen && !isMobile;
 
   return (
     <div

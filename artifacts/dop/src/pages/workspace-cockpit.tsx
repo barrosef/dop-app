@@ -1,356 +1,728 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useWorkspace, useCards } from '../hooks/use-api';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useCards, useWorkspace } from '../hooks/use-api';
 import { Button } from '../components/ui/button';
-import { Card as UICard } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { ScrollArea } from '../components/ui/scroll-area';
-import { Search, Loader2, GitBranch, GitPullRequest, Settings, TerminalSquare, AlertCircle, PlayCircle, FolderGit2, ChevronDown, ChevronRight, CheckCircle2 } from 'lucide-react';
-import { useI18n } from '../lib/i18n';
-import { Card, PullRequest } from '../lib/api/types';
+import {
+  Activity,
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  CircleDot,
+  ExternalLink,
+  FileCode2,
+  FileText,
+  FolderGit2,
+  GitBranch,
+  GitCommitHorizontal,
+  GitPullRequest,
+  Layers3,
+  Loader2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PlayCircle,
+  Search,
+  Settings,
+  TestTube2,
+  X,
+} from 'lucide-react';
+import { dictionaries, useI18n } from '../lib/i18n';
+import { Card, FileTouched, PullRequest, RepoConfig, TestResult } from '../lib/api/types';
+
+type NodeKind = 'overview' | 'branches' | 'branch' | 'prs' | 'pr';
+type SelectedNode = { repo: string; kind: NodeKind; id?: string };
+type BranchItem = { name: string; category: 'new' | 'modified'; files: FileTouched[] };
+type Translator = (key: keyof typeof dictionaries['pt-BR'], params?: Record<string, string | number>) => string;
+
+type RepoAggregate = {
+  name: string;
+  config?: RepoConfig;
+  relatedCards: Card[];
+  branches: BranchItem[];
+  prs: PullRequest[];
+  files: FileTouched[];
+  tests: TestResult[];
+  commits: number;
+};
+
+function parseBranch(raw: string) {
+  const separator = raw.indexOf('|');
+  return separator === -1
+    ? { repo: '', branch: raw }
+    : { repo: raw.slice(0, separator), branch: raw.slice(separator + 1) };
+}
+
+function branchCategory(name: string): BranchItem['category'] {
+  return /(^|[/_-])(feature|bug|fix)([/_-]|$)/i.test(name) ? 'new' : 'modified';
+}
+
+function fileKey(file: FileTouched) {
+  return `${file.repo ?? ''}|${file.branch ?? ''}|${file.path}`;
+}
+
+function fileIcon(kind: FileTouched['kind']) {
+  if (kind === 'source') return <FileCode2 className="h-3.5 w-3.5 text-emerald-400" />;
+  if (kind === 'test') return <TestTube2 className="h-3.5 w-3.5 text-purple-400" />;
+  if (kind === 'adr') return <Layers3 className="h-3.5 w-3.5 text-amber-400" />;
+  return <FileText className="h-3.5 w-3.5 text-blue-400" />;
+}
+
+function changeBadge(change: FileTouched['change'], t: Translator) {
+  return change === 'created'
+    ? { label: t('cockpit.file.created'), className: 'text-emerald-400 border-emerald-500/25 bg-emerald-500/10' }
+    : { label: t('cockpit.file.modified'), className: 'text-amber-400 border-amber-500/25 bg-amber-500/10' };
+}
+
+function DiffViewer({ file, onBack }: { file: FileTouched; onBack: () => void }) {
+  const { t } = useI18n();
+  const lines = file.diff?.split('\n') ?? [];
+  const badge = changeBadge(file.change, t);
+
+  return (
+    <div className="flex h-full min-h-0 flex-col" data-testid="panel-file-diff">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          data-testid="button-back-from-diff"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          {t('cockpit.file.back')}
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-mono text-xs font-semibold" data-testid="text-diff-file">{file.path}</p>
+          <p className="truncate text-[10px] text-muted-foreground">
+            {file.repo} {file.branch ? `· ${file.branch}` : ''}
+          </p>
+        </div>
+        <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-semibold ${badge.className}`}>
+          {badge.label}
+        </span>
+      </div>
+      <ScrollArea className="min-h-0 flex-1 bg-[#0d1117]">
+        {lines.length > 0 ? (
+          <div className="py-3" data-testid="diff-content">
+            {lines.map((line, index) => {
+              const added = line.startsWith('+') && !line.startsWith('+++');
+              const removed = line.startsWith('-') && !line.startsWith('---');
+              const hunk = line.startsWith('@@');
+              return (
+                <div
+                  key={`${index}-${line}`}
+                  className={`min-h-[1.45rem] whitespace-pre px-4 font-mono text-[11px] leading-snug ${
+                    added ? 'bg-emerald-500/10 text-emerald-300' :
+                    removed ? 'bg-red-500/10 text-red-300' :
+                    hunk ? 'bg-purple-500/10 text-purple-300' :
+                    'text-slate-300/75'
+                  }`}
+                >
+                  {line || '\u00a0'}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex h-full min-h-48 items-center justify-center px-6 text-center text-xs italic text-muted-foreground" data-testid="text-no-diff">
+            {t('cockpit.file.noDiff')}
+          </div>
+        )}
+      </ScrollArea>
+    </div>
+  );
+}
+
+function FileList({
+  files,
+  onFileClick,
+}: {
+  files: FileTouched[];
+  onFileClick: (file: FileTouched) => void;
+}) {
+  const { t } = useI18n();
+
+  if (files.length === 0) {
+    return <p className="rounded-md border border-dashed border-border/50 px-3 py-5 text-center text-xs italic text-muted-foreground">{t('cockpit.file.none')}</p>;
+  }
+
+  return (
+    <div className="divide-y divide-border/30 overflow-hidden rounded-md border border-border/50" data-testid="list-repository-files">
+      {files.map(file => {
+        const badge = changeBadge(file.change, t);
+        return (
+          <button
+            type="button"
+            key={fileKey(file)}
+            onClick={() => onFileClick(file)}
+            className="group flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-primary/5"
+            data-testid={`button-file-${file.repo}-${file.path.replace(/[^a-zA-Z0-9]/g, '-')}`}
+          >
+            {fileIcon(file.kind)}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-mono text-[11px] font-medium">{file.path}</span>
+              {file.branch && <span className="block truncate font-mono text-[9px] text-muted-foreground">{file.branch}</span>}
+            </span>
+            <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-semibold ${badge.className}`}>{badge.label}</span>
+            <span className="text-[10px] text-primary opacity-0 transition-opacity group-hover:opacity-100">{t('cockpit.file.openDiff')}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function statusLabel(pr: PullRequest, t: Translator) {
+  if (pr.merged) return { label: t('cockpit.pr.merged'), className: 'text-purple-400 border-purple-500/30 bg-purple-500/10' };
+  if (pr.hasConflict) return { label: t('cockpit.pr.conflict'), className: 'text-red-400 border-red-500/30 bg-red-500/10' };
+  return { label: t('cockpit.pr.open'), className: 'text-primary border-primary/30 bg-primary/10' };
+}
+
+function PullRequestList({
+  prs,
+  onPrClick,
+}: {
+  prs: PullRequest[];
+  onPrClick: (pr: PullRequest) => void;
+}) {
+  const { t } = useI18n();
+
+  if (prs.length === 0) {
+    return <p className="rounded-md border border-dashed border-border/50 px-3 py-5 text-center text-xs italic text-muted-foreground">{t('cockpit.repo.noPrs')}</p>;
+  }
+
+  return (
+    <div className="space-y-2" data-testid="list-repository-prs">
+      {prs.map(pr => {
+        const status = statusLabel(pr, t);
+        return (
+          <button
+            type="button"
+            key={pr.id}
+            onClick={() => onPrClick(pr)}
+            className="w-full rounded-md border border-border/50 bg-muted/15 p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
+            data-testid={`button-pr-${pr.id}`}
+          >
+            <div className="flex items-center gap-2">
+              <GitPullRequest className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1 truncate font-mono text-xs font-semibold">{pr.sourceBranch}</span>
+              <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-semibold ${status.className}`}>{status.label}</span>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5 pl-5 text-[10px] text-muted-foreground">
+              <ChevronRight className="h-3 w-3" />
+              <span className="font-mono">{pr.targetBranch}</span>
+              {pr.reviewers && <span className="ml-auto">{pr.reviewers.filter(r => r.status === 'approved').length}/{pr.reviewers.length} {t('exec.review.approved')}</span>}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function OverviewPanel({
+  repo,
+  onFileClick,
+}: {
+  repo: RepoAggregate;
+  onFileClick: (file: FileTouched) => void;
+}) {
+  const { t } = useI18n();
+  const openPrs = repo.prs.filter(pr => !pr.merged).length;
+  const failedTests = repo.tests.filter(test => test.status === 'fail').length;
+
+  return (
+    <div className="space-y-5 p-5" data-testid={`panel-repository-overview-${repo.name}`}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="mb-2 flex items-center gap-2">
+            <span className="rounded-md border border-primary/25 bg-primary/10 p-1.5"><GitBranch className="h-4 w-4 text-primary" /></span>
+            <h2 className="font-mono text-lg font-bold">{repo.name}</h2>
+          </div>
+          <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
+            {repo.config?.description || t('cockpit.repo.summary')}
+          </p>
+        </div>
+        <Badge variant="outline" className="text-[10px]">{t('cockpit.repository.context')}</Badge>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          { label: t('cockpit.repo.commits'), value: repo.commits, icon: GitCommitHorizontal, className: 'text-foreground' },
+          { label: t('cockpit.repository.branches'), value: repo.branches.length, icon: GitBranch, className: 'text-emerald-400' },
+          { label: t('cockpit.repository.openPrs'), value: openPrs, icon: GitPullRequest, className: 'text-primary' },
+          { label: t('cockpit.repository.files'), value: repo.files.length, icon: FileText, className: 'text-blue-400' },
+        ].map(metric => (
+          <div key={metric.label} className="rounded-md border border-border/50 bg-muted/15 p-3" data-testid={`metric-${repo.name}-${metric.label}`}>
+            <metric.icon className={`mb-2 h-3.5 w-3.5 ${metric.className}`} />
+            <p className="font-mono text-lg font-bold">{metric.value}</p>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{metric.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(220px,0.65fr)]">
+        <section className="rounded-md border border-border/50">
+          <div className="flex items-center justify-between border-b border-border/40 px-3 py-2.5">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider">{t('cockpit.repository.files')}</h3>
+            <span className="font-mono text-[10px] text-muted-foreground">{repo.files.length}</span>
+          </div>
+          <div className="p-2"><FileList files={repo.files} onFileClick={onFileClick} /></div>
+        </section>
+        <section className="space-y-3">
+          <div className="rounded-md border border-border/50 bg-muted/10 p-3">
+            <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t('cockpit.repository.metadata')}</h3>
+            <dl className="space-y-2 text-[11px]">
+              <div className="flex justify-between gap-3"><dt className="text-muted-foreground">{t('cockpit.repository.baseBranch')}</dt><dd className="font-mono font-semibold">{repo.config?.baseBranch || 'main'}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-muted-foreground">{t('cockpit.repository.provider')}</dt><dd className="font-mono font-semibold">{repo.config?.provider || 'Git'}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-muted-foreground">{t('cockpit.repository.cards')}</dt><dd className="font-mono font-semibold">{repo.relatedCards.length}</dd></div>
+            </dl>
+          </div>
+          <div className={`rounded-md border p-3 ${failedTests > 0 ? 'border-red-500/25 bg-red-500/5' : 'border-border/50 bg-muted/10'}`}>
+            <div className="flex items-center gap-2">
+              {failedTests > 0 ? <AlertCircle className="h-3.5 w-3.5 text-red-400" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />}
+              <span className="text-xs font-semibold">{t('cockpit.repository.tests')}</span>
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              {failedTests > 0 ? t('cockpit.repository.testFailures', { count: failedTests }) : t('cockpit.repository.testsHealthy')}
+            </p>
+          </div>
+        </section>
+      </div>
+
+      <section>
+        <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('cockpit.repository.cardsLinked')}</h3>
+        {repo.relatedCards.length === 0 ? (
+          <p className="text-xs italic text-muted-foreground">{t('cockpit.repo.emptySelection')}</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {repo.relatedCards.map(card => (
+              <Badge key={card.id} variant="outline" className="font-mono text-[10px]" data-testid={`badge-related-card-${card.id}`}>{card.externalKey}</Badge>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function BranchPanel({
+  repo,
+  branch,
+  onFileClick,
+}: {
+  repo: RepoAggregate;
+  branch?: BranchItem;
+  onFileClick: (file: FileTouched) => void;
+}) {
+  const { t } = useI18n();
+  const branches = branch ? [branch] : repo.branches;
+
+  return (
+    <div className="space-y-5 p-5" data-testid={`panel-branches-${repo.name}`}>
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">{t('cockpit.tree.branches')}</p>
+        <h2 className="mt-1 text-lg font-semibold">{branch?.name || t('cockpit.repository.allBranches')}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{t('cockpit.repository.branchHint')}</p>
+      </div>
+      {branches.length === 0 ? <p className="text-xs italic text-muted-foreground">{t('cockpit.repo.noBranches')}</p> : (
+        branches.map(item => (
+          <section key={item.name} className="rounded-md border border-border/50">
+            <div className="flex items-center gap-2 border-b border-border/40 bg-muted/15 px-3 py-2.5">
+              {item.category === 'new' ? <CircleDot className="h-3.5 w-3.5 text-emerald-400" /> : <GitBranch className="h-3.5 w-3.5 text-amber-400" />}
+              <span className="flex-1 font-mono text-xs font-semibold">{item.name}</span>
+              <Badge variant="outline" className="text-[9px]">{item.category === 'new' ? t('cockpit.branch.new') : t('cockpit.branch.modified')}</Badge>
+              <span className="font-mono text-[10px] text-muted-foreground">{item.files.length} {t('cockpit.branch.files')}</span>
+            </div>
+            <div className="p-2"><FileList files={item.files} onFileClick={onFileClick} /></div>
+          </section>
+        ))
+      )}
+    </div>
+  );
+}
+
+function PrPanel({
+  repo,
+  pr,
+  onPrClick,
+  onFileClick,
+}: {
+  repo: RepoAggregate;
+  pr?: PullRequest;
+  onPrClick: (pr: PullRequest) => void;
+  onFileClick: (file: FileTouched) => void;
+}) {
+  const { t } = useI18n();
+  const prs = pr ? [pr] : repo.prs;
+
+  return (
+    <div className="space-y-5 p-5" data-testid={`panel-prs-${repo.name}`}>
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">{t('cockpit.tree.pullRequests')}</p>
+        <h2 className="mt-1 text-lg font-semibold">{pr ? pr.sourceBranch : t('cockpit.repository.allPullRequests')}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{t('cockpit.repository.prHint')}</p>
+      </div>
+      {prs.length === 0 ? <p className="text-xs italic text-muted-foreground">{t('cockpit.repo.noPrs')}</p> : (
+        prs.map(item => {
+          const status = statusLabel(item, t);
+          const files = repo.files.filter(file => file.repo === repo.name && file.branch === item.sourceBranch);
+          return (
+            <section key={item.id} className="rounded-md border border-border/50">
+              <button type="button" onClick={() => onPrClick(item)} className="flex w-full items-center gap-2 border-b border-border/40 bg-muted/15 px-3 py-2.5 text-left hover:bg-muted/25" data-testid={`button-pr-panel-${item.id}`}>
+                <GitPullRequest className="h-3.5 w-3.5 text-primary" />
+                <span className="min-w-0 flex-1 truncate font-mono text-xs font-semibold">{item.sourceBranch}</span>
+                <span className={`rounded border px-1.5 py-0.5 text-[9px] font-semibold ${status.className}`}>{status.label}</span>
+              </button>
+              <div className="space-y-3 p-3">
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground"><span>{t('cockpit.pr.target')}</span><span className="font-mono text-foreground">{item.targetBranch}</span>{item.url !== '#' && <ExternalLink className="ml-auto h-3 w-3" />}</div>
+                <div><p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t('cockpit.pr.files')}</p><FileList files={files} onFileClick={onFileClick} /></div>
+              </div>
+            </section>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function CardsPanel({
+  workspaceName,
+  filteredCards,
+  selectedCardIds,
+  search,
+  onSearchChange,
+  onToggleCard,
+  onClear,
+  onOpenCard,
+  onClose,
+  onSeeAll,
+}: {
+  workspaceName: string;
+  filteredCards: Card[];
+  selectedCardIds: Set<string>;
+  search: string;
+  onSearchChange: (value: string) => void;
+  onToggleCard: (id: string) => void;
+  onClear: () => void;
+  onOpenCard: (id: string) => void;
+  onClose: () => void;
+  onSeeAll: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <aside className="flex h-full w-[min(19rem,calc(100vw-3.5rem))] shrink-0 flex-col border-r border-border bg-card shadow-2xl md:static md:w-72 md:shadow-none" data-testid="panel-card-filter">
+      <div className="border-b border-border p-3">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <Activity className="h-4 w-4 shrink-0 text-primary" />
+            <h2 className="truncate text-sm font-semibold">{workspaceName}</h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label={t('cockpit.cards.closePanel')} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground md:hidden" data-testid="button-close-card-filter">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <input value={search} onChange={event => onSearchChange(event.target.value)} placeholder={t('card.search')} aria-label={t('card.search')} className="h-8 w-full rounded-md border border-border/60 bg-muted/30 pl-8 pr-3 text-xs outline-none transition-colors focus:border-primary/50" data-testid="input-cockpit-card-search" />
+        </div>
+      </div>
+      <div className="flex items-center justify-between border-b border-border/50 bg-muted/15 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <span>{t('cockpit.cards', { count: filteredCards.length })}</span>
+        {selectedCardIds.size > 0 && <button type="button" onClick={onClear} className="text-primary hover:underline" data-testid="button-clear-card-filter">{t('cockpit.repo.clearSelection')}</button>}
+      </div>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="space-y-1.5 p-2">
+          {filteredCards.length === 0 ? <div className="p-4 text-center text-xs text-muted-foreground">{t('common.empty')}</div> : filteredCards.map(card => {
+            const selected = selectedCardIds.has(card.id);
+            const attention = card.stages.some(stage => stage.status === 'blocked' || (stage.key === 'val' && stage.status === 'running'));
+            return (
+              <div key={card.id} className={`rounded-md border p-2.5 transition-colors ${selected ? 'border-primary/50 bg-primary/10' : 'border-border/50 bg-muted/10 hover:border-border hover:bg-muted/25'}`} data-testid={`card-filter-${card.id}`}>
+                <button type="button" onClick={() => onToggleCard(card.id)} className="w-full text-left" data-testid={`button-select-card-${card.id}`}>
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <span className="rounded border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">{card.externalKey}</span>
+                    {attention && <AlertCircle className="h-3.5 w-3.5 text-destructive" />}
+                  </div>
+                  <p className="line-clamp-2 text-xs font-medium leading-tight">{card.title}</p>
+                </button>
+                <div className="mt-2 flex items-center justify-between">
+                  <Badge variant="outline" className={`px-1.5 py-0 text-[9px] ${card.dopStatus === 'doing' ? 'border-amber-500/30 bg-amber-500/10 text-amber-400' : ''}`}>{t(`card.status.${card.dopStatus}` as 'card.status.new' | 'card.status.doing' | 'card.status.done' | 'card.status.delivered')}</Badge>
+                  <button type="button" onClick={() => onOpenCard(card.id)} className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary" data-testid={`button-open-card-${card.id}`}><PlayCircle className="h-3 w-3" />{t('card.action.open')}</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </ScrollArea>
+      <div className="border-t border-border bg-muted/10 p-2.5">
+        <Button variant="outline" size="sm" className="h-8 w-full text-xs" onClick={onSeeAll} data-testid="button-see-all-cards">{t('cockpit.repo.seeAll')}</Button>
+      </div>
+    </aside>
+  );
+}
 
 export default function WorkspaceCockpit() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { t } = useI18n();
-  const { data: workspace, isLoading: wsLoading } = useWorkspace(id);
+  const { data: workspace, isLoading: workspaceLoading } = useWorkspace(id);
   const { data: cards, isLoading: cardsLoading } = useCards(id);
-
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
+  const [cardsPanelOpen, setCardsPanelOpen] = useState(false);
+  const [mobileTreeOpen, setMobileTreeOpen] = useState(false);
   const [expandedRepos, setExpandedRepos] = useState<Record<string, boolean>>({});
-  const [repoTabs, setRepoTabs] = useState<Record<string, 'overview' | 'branches' | 'prs'>>({});
+  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
+  const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
+  const [selectedFile, setSelectedFile] = useState<FileTouched | null>(null);
 
   useEffect(() => {
-    if (searchParams.get('tab') === 'repos' && workspace) {
-      setExpandedRepos(Object.fromEntries(workspace.repos.map(repo => [repo.name, true])));
+    if (!workspace) return;
+    const repoNames = workspace.repos.map(repo => repo.name);
+    setExpandedRepos(previous => Object.keys(previous).length > 0 ? previous : Object.fromEntries(repoNames.map(name => [name, true])));
+    setSelectedNode(previous => previous ?? (repoNames[0] ? { repo: repoNames[0], kind: 'overview' } : null));
+    if (searchParams.get('tab') === 'repos') {
+      setCardsPanelOpen(false);
+      setExpandedRepos(Object.fromEntries(repoNames.map(name => [name, true])));
     }
-  }, [searchParams, workspace]);
+  }, [workspace, searchParams]);
 
-  if (wsLoading || cardsLoading) return (
-    <div className="flex h-full items-center justify-center text-muted-foreground">
-      <Loader2 className="w-6 h-6 animate-spin mr-3" /> {t('common.loading')}
-    </div>
-  );
-  if (!workspace || !cards) return <div className="p-8 text-center">{t('common.empty')}</div>;
+  const allCards = cards ?? [];
+  const filteredCards = useMemo(() => allCards.filter(card =>
+    card.title.toLowerCase().includes(search.toLowerCase()) || card.externalKey.toLowerCase().includes(search.toLowerCase())
+  ), [allCards, search]);
+  const cardsToAggregate = useMemo(() =>
+    selectedCardIds.size > 0 ? allCards.filter(card => selectedCardIds.has(card.id)) : allCards,
+  [allCards, selectedCardIds]);
 
-  const activeCards = cards.filter(c => ['new', 'doing'].includes(c.dopStatus));
-  const filteredCards = activeCards.filter(c =>
-    c.title.toLowerCase().includes(search.toLowerCase()) ||
-    c.externalKey.toLowerCase().includes(search.toLowerCase())
-  );
+  const aggregates = useMemo(() => {
+    if (!workspace) return [] as RepoAggregate[];
+    const byName: Record<string, RepoAggregate> = {};
+    workspace.repos.forEach(config => {
+      byName[config.name] = { name: config.name, config, relatedCards: [], branches: [], prs: [], files: [], tests: [], commits: 0 };
+    });
 
-  const toggleCardSelection = (cardId: string) => {
-    const next = new Set(selectedCardIds);
-    if (next.has(cardId)) next.delete(cardId);
-    else next.add(cardId);
-    setSelectedCardIds(next);
-  };
-
-  // Aggregation logic
-  const cardsToAggregate = selectedCardIds.size > 0
-    ? cards.filter(c => selectedCardIds.has(c.id))
-    : cards;
-
-  const repoAggregates: Record<string, {
-    name: string;
-    newBranches: Set<string>;
-    modifiedBranches: Set<string>;
-    prs: PullRequest[];
-    relatedCards: Card[];
-  }> = {};
-
-  workspace.repos.forEach(r => {
-    repoAggregates[r.name] = { name: r.name, newBranches: new Set(), modifiedBranches: new Set(), prs: [], relatedCards: [] };
-  });
-
-  cardsToAggregate.forEach(c => {
-    if (c.repositoryOverview) {
-      const o = c.repositoryOverview;
-      o.repos.forEach(rName => {
-        if (!repoAggregates[rName]) {
-          repoAggregates[rName] = { name: rName, newBranches: new Set(), modifiedBranches: new Set(), prs: [], relatedCards: [] };
-        }
-        if (!repoAggregates[rName].relatedCards.some(rc => rc.id === c.id)) {
-          repoAggregates[rName].relatedCards.push(c);
-        }
+    cardsToAggregate.forEach(card => {
+      const overview = card.repositoryOverview;
+      overview.repos.forEach(repoName => {
+        if (!byName[repoName]) byName[repoName] = { name: repoName, relatedCards: [], branches: [], prs: [], files: [], tests: [], commits: 0 };
+        const repo = byName[repoName];
+        if (!repo.relatedCards.some(related => related.id === card.id)) repo.relatedCards.push(card);
+        repo.commits += overview.commits;
+        repo.tests.push(...overview.tests.filter(test => !repo.tests.some(existing => existing.name === test.name && existing.repo === test.repo)));
       });
-      o.branches.forEach(b => {
-        const parts = b.split('|');
-        if (parts.length === 2) {
-          const [rName, bName] = parts;
-          if (repoAggregates[rName]) {
-            // Simple heuristic to differentiate new from modified: assume 'feature' / 'bug' or 'fix' prefixed is new, others are modified
-            // This is mocked since we don't have deep git history
-            if (bName.includes('feature') || bName.includes('bug')) repoAggregates[rName].newBranches.add(bName);
-            else repoAggregates[rName].modifiedBranches.add(bName);
-          }
-        }
+
+      overview.branches.forEach(rawBranch => {
+        const parsed = parseBranch(rawBranch);
+        if (!parsed.repo) return;
+        if (!byName[parsed.repo]) byName[parsed.repo] = { name: parsed.repo, relatedCards: [], branches: [], prs: [], files: [], tests: [], commits: 0 };
+        const repo = byName[parsed.repo];
+        if (!repo.branches.some(branch => branch.name === parsed.branch)) repo.branches.push({ name: parsed.branch, category: branchCategory(parsed.branch), files: [] });
       });
-      o.prs.forEach(pr => {
-        if (repoAggregates[pr.repo]) {
-          if (!repoAggregates[pr.repo].prs.some(p => p.id === pr.id)) {
-            repoAggregates[pr.repo].prs.push(pr);
-          }
-        }
+
+      overview.prs.forEach(pr => {
+        if (!byName[pr.repo]) byName[pr.repo] = { name: pr.repo, relatedCards: [], branches: [], prs: [], files: [], tests: [], commits: 0 };
+        const repo = byName[pr.repo];
+        if (!repo.prs.some(existing => existing.id === pr.id)) repo.prs.push(pr);
       });
+
+      overview.files.forEach(rawFile => {
+        const inferredRepo = rawFile.repo || (overview.repos.length === 1 ? overview.repos[0] : rawFile.path.split('/')[0]);
+        if (!inferredRepo) return;
+        if (!byName[inferredRepo]) byName[inferredRepo] = { name: inferredRepo, relatedCards: [], branches: [], prs: [], files: [], tests: [], commits: 0 };
+        const repo = byName[inferredRepo];
+        const inferredBranch = rawFile.branch || repo.branches.find(branch => branch.name)?.name;
+        const file = { ...rawFile, repo: inferredRepo, branch: inferredBranch };
+        if (!repo.files.some(existing => fileKey(existing) === fileKey(file))) repo.files.push(file);
+      });
+    });
+
+    Object.values(byName).forEach(repo => {
+      repo.files.forEach(file => {
+        if (!file.branch) return;
+        const branch = repo.branches.find(item => item.name === file.branch);
+        if (branch && !branch.files.some(existing => fileKey(existing) === fileKey(file))) branch.files.push(file);
+      });
+    });
+
+    return Object.values(byName)
+      .filter(repo => selectedCardIds.size === 0 || repo.relatedCards.length > 0)
+      .sort((a, b) => b.relatedCards.length - a.relatedCards.length || a.name.localeCompare(b.name));
+  }, [workspace, cardsToAggregate, selectedCardIds]);
+
+  const selectedRepo = aggregates.find(repo => repo.name === selectedNode?.repo) ?? aggregates[0];
+  const selectedBranch = selectedRepo?.branches.find(branch => branch.name === selectedNode?.id);
+  const selectedPr = selectedRepo?.prs.find(pr => pr.id === selectedNode?.id);
+  const activeNode = selectedNode && selectedRepo ? selectedNode : selectedRepo ? { repo: selectedRepo.name, kind: 'overview' as const } : null;
+
+  useEffect(() => {
+    if (aggregates.length === 0) {
+      if (selectedNode) setSelectedNode(null);
+      if (selectedFile) setSelectedFile(null);
+      return;
     }
-  });
+    if (!selectedNode || !aggregates.some(repo => repo.name === selectedNode.repo)) {
+      setSelectedNode({ repo: aggregates[0].name, kind: 'overview' });
+      setSelectedFile(null);
+      return;
+    }
+    if (selectedFile && !aggregates.some(repo => repo.name === selectedFile.repo)) setSelectedFile(null);
+  }, [aggregates, selectedFile, selectedNode]);
 
-  const aggregateList = Object.values(repoAggregates).sort((a, b) => b.relatedCards.length - a.relatedCards.length);
+  if (workspaceLoading || cardsLoading) {
+    return <div className="flex h-full items-center justify-center text-muted-foreground"><Loader2 className="mr-3 h-5 w-5 animate-spin" />{t('common.loading')}</div>;
+  }
+  if (!workspace || !cards) return <div className="p-8 text-center text-sm text-muted-foreground">{t('common.empty')}</div>;
 
   const toggleRepo = (name: string) => {
-    setExpandedRepos(prev => ({ ...prev, [name]: !prev[name] }));
+    setExpandedRepos(previous => ({ ...previous, [name]: !previous[name] }));
+    setSelectedNode({ repo: name, kind: 'overview' });
+    setSelectedFile(null);
+    setMobileTreeOpen(false);
   };
-
-  const setTab = (name: string, tab: 'overview' | 'branches' | 'prs') => {
-    setRepoTabs(prev => ({ ...prev, [name]: tab }));
+  const selectNode = (node: SelectedNode) => {
+    setSelectedNode(node);
+    setSelectedFile(null);
+    setMobileTreeOpen(false);
   };
+  const toggleNode = (key: string) => setExpandedNodes(previous => ({ ...previous, [key]: !previous[key] }));
+  const toggleCard = (cardId: string) => setSelectedCardIds(previous => {
+    const next = new Set(previous);
+    if (next.has(cardId)) next.delete(cardId);
+    else next.add(cardId);
+    return next;
+  });
+  const clearCards = () => setSelectedCardIds(new Set());
 
   return (
-    <div className="flex h-full bg-background overflow-hidden">
-      {/* LEFT PANEL: Compact Cards Selection */}
-      <div className="w-80 border-r border-border bg-card/30 flex flex-col shrink-0">
-        <div className="p-4 border-b border-border">
-          <h2 className="font-semibold mb-3 flex items-center gap-2">
-            <TerminalSquare className="w-4 h-4 text-primary" />
-            {workspace.name}
-          </h2>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder={t('card.search')}
-              className="w-full h-8 pl-8 pr-3 text-xs bg-muted/50 border border-border/50 rounded focus:outline-none focus:border-primary/50 transition-colors"
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-background" data-testid="workspace-cockpit">
+      <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-card/40 px-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <button type="button" onClick={() => { setCardsPanelOpen(previous => !previous); setMobileTreeOpen(false); }} aria-label={cardsPanelOpen ? t('cockpit.cards.closePanel') : t('cockpit.cards.openPanel')} className="rounded-md border border-border/60 p-1.5 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-foreground" data-testid="button-toggle-card-filter" title={cardsPanelOpen ? t('cockpit.cards.closePanel') : t('cockpit.cards.openPanel')}>
+            {cardsPanelOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+          </button>
+          <button type="button" onClick={() => { setMobileTreeOpen(previous => !previous); setCardsPanelOpen(false); }} aria-label={t('cockpit.repositoryTree')} className="rounded-md border border-border/60 p-1.5 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-foreground sm:hidden" data-testid="button-toggle-repository-tree" title={t('cockpit.repositoryTree')}>
+            <GitBranch className="h-4 w-4" />
+          </button>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <FolderGit2 className="h-4 w-4 shrink-0 text-primary" />
+              <h1 className="truncate text-sm font-semibold sm:text-base">{t('cockpit.title')}</h1>
+            </div>
+            <p className="hidden truncate text-[10px] text-muted-foreground sm:block">{workspace.name} · {t('cockpit.subtitle')}</p>
+          </div>
+          <Badge variant="outline" className={`hidden shrink-0 text-[9px] sm:inline-flex ${selectedCardIds.size > 0 ? 'border-primary/40 bg-primary/10 text-primary' : ''}`} data-testid="status-cockpit-scope">
+            {selectedCardIds.size > 0 ? t('cockpit.cards.filterActive', { count: selectedCardIds.size }) : t('cockpit.cards.allScope')}
+          </Badge>
+        </div>
+        <Button variant="outline" size="sm" className="h-8 shrink-0 text-xs" onClick={() => navigate(`/workspaces/${id}/edit`)} data-testid="button-configure-workspace">
+          <Settings className="mr-1.5 h-3.5 w-3.5" /> <span className="hidden sm:inline">{t('cockpit.repo.configure')}</span>
+        </Button>
+      </header>
+
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {cardsPanelOpen && <div className="absolute inset-0 z-20 bg-black/30 md:hidden" onClick={() => setCardsPanelOpen(false)} aria-hidden="true" />}
+        {mobileTreeOpen && <div className="absolute inset-0 z-20 bg-black/30 sm:hidden" onClick={() => setMobileTreeOpen(false)} aria-hidden="true" />}
+        {cardsPanelOpen && (
+          <div className="absolute inset-y-0 left-0 z-30 md:static">
+            <CardsPanel
+              workspaceName={workspace.name}
+              filteredCards={filteredCards}
+              selectedCardIds={selectedCardIds}
+              search={search}
+              onSearchChange={setSearch}
+              onToggleCard={toggleCard}
+              onClear={clearCards}
+              onOpenCard={cardId => navigate(`/workspaces/${id}/cards/${cardId}`)}
+              onClose={() => setCardsPanelOpen(false)}
+              onSeeAll={() => navigate(`/workspaces/${id}/cards`)}
             />
           </div>
-        </div>
-        <div className="px-4 py-2 bg-muted/20 border-b border-border text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex justify-between items-center">
-          <span>{t('cockpit.cards', { count: filteredCards.length })}</span>
-          {selectedCardIds.size > 0 && (
-            <button onClick={() => setSelectedCardIds(new Set())} className="text-primary hover:underline">
-              {t('cockpit.repo.clearSelection')}
-            </button>
-          )}
-        </div>
-        <ScrollArea className="flex-1">
-          <div className="p-2 space-y-1">
-            {filteredCards.length === 0 ? (
-              <div className="p-4 text-center text-xs text-muted-foreground">{t('common.empty')}</div>
-            ) : (
-              filteredCards.map(c => {
-                const isSelected = selectedCardIds.has(c.id);
-                const needsAttention = c.stages.some(s => s.status === 'blocked' || (s.key === 'val' && s.status === 'running'));
-                
+        )}
+
+        <aside className={`${mobileTreeOpen ? 'absolute inset-y-0 left-0 z-30 flex w-[min(18rem,calc(100vw-3.5rem))] shadow-2xl' : 'hidden'} min-h-0 shrink-0 flex-col border-r border-border bg-card sm:static sm:z-auto sm:flex sm:w-60 sm:shadow-none lg:w-72`} data-testid="repository-tree">
+          <div className="border-b border-border/50 px-3 py-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t('cockpit.repositoryTree')}</h2>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[10px] text-muted-foreground">{aggregates.length}</span>
+                <button type="button" onClick={() => setMobileTreeOpen(false)} aria-label={t('cockpit.tree.close')} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground sm:hidden" data-testid="button-close-repository-tree"><X className="h-3.5 w-3.5" /></button>
+              </div>
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">{selectedCardIds.size > 0 ? t('cockpit.cards.scopeCards', { count: selectedCardIds.size }) : t('cockpit.cards.scopeAll')}</p>
+          </div>
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="space-y-1 p-2">
+              {aggregates.map(repo => {
+                const repoOpen = !!expandedRepos[repo.name];
+                const branchesOpen = !!expandedNodes[`${repo.name}:branches`];
+                const prsOpen = !!expandedNodes[`${repo.name}:prs`];
+                const isSelectedRepo = activeNode?.repo === repo.name;
+                const newCount = repo.branches.filter(branch => branch.category === 'new').length;
+                const modifiedCount = repo.branches.filter(branch => branch.category === 'modified').length;
                 return (
-                  <div 
-                    key={c.id}
-                    onClick={() => toggleCardSelection(c.id)}
-                    className={`p-2.5 rounded-md border text-sm cursor-pointer transition-all ${
-                      isSelected 
-                        ? 'bg-primary/10 border-primary/40' 
-                        : 'bg-card border-border/40 hover:border-border hover:bg-muted/30'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-mono text-[10px] font-bold text-primary px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20">
-                        {c.externalKey}
-                      </span>
-                      {needsAttention && <AlertCircle className="w-3.5 h-3.5 text-destructive" />}
-                    </div>
-                    <div className="font-medium text-xs leading-tight mb-2 line-clamp-2">{c.title}</div>
-                    <div className="flex justify-between items-center">
-                      <Badge variant="outline" className={`text-[9px] py-0 px-1.5 ${c.dopStatus === 'doing' ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' : ''}`}>
-                        {c.dopStatus === 'doing' ? t('card.status.doing') : t('card.status.new')}
-                      </Badge>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); navigate(`/workspaces/${id}/cards/${c.id}`); }}
-                        className="text-[10px] text-muted-foreground hover:text-primary flex items-center gap-1"
-                      >
-                        <PlayCircle className="w-3 h-3" /> {t('card.action.open')}
-                      </button>
-                    </div>
+                  <div key={repo.name} className="rounded-md border border-border/40 bg-muted/10" data-testid={`tree-repository-${repo.name}`}>
+                    <button type="button" onClick={() => toggleRepo(repo.name)} aria-expanded={repoOpen} className={`flex w-full items-center gap-1.5 rounded-t-md px-2 py-2 text-left transition-colors hover:bg-muted/30 ${isSelectedRepo ? 'bg-primary/10' : ''}`} data-testid={`button-tree-repository-${repo.name}`}>
+                      {repoOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                      <GitBranch className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <span className="min-w-0 flex-1 truncate font-mono text-[11px] font-bold">{repo.name}</span>
+                      <span className="font-mono text-[9px] text-muted-foreground">{repo.files.length}</span>
+                    </button>
+                    {repoOpen && (
+                      <div className="border-t border-border/30 p-1">
+                        <button type="button" onClick={() => selectNode({ repo: repo.name, kind: 'overview' })} className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[10px] transition-colors ${activeNode?.repo === repo.name && activeNode.kind === 'overview' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-muted/25 hover:text-foreground'}`} data-testid={`button-tree-overview-${repo.name}`}>
+                          <FolderGit2 className="h-3 w-3" />{t('cockpit.tree.overview')}
+                        </button>
+                        <button type="button" onClick={() => { toggleNode(`${repo.name}:branches`); selectNode({ repo: repo.name, kind: 'branches' }); }} aria-expanded={branchesOpen} className={`flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-[10px] transition-colors ${activeNode?.repo === repo.name && (activeNode.kind === 'branches' || activeNode.kind === 'branch') ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-muted/25 hover:text-foreground'}`} data-testid={`button-tree-branches-${repo.name}`}>
+                          {branchesOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}<GitBranch className="h-3 w-3" /> <span className="flex-1">{t('cockpit.tree.branches')}</span><span className="font-mono text-[9px]">{repo.branches.length}</span>
+                        </button>
+                        {branchesOpen && repo.branches.map(branch => (
+                          <button type="button" key={branch.name} onClick={() => selectNode({ repo: repo.name, kind: 'branch', id: branch.name })} className={`ml-5 flex w-[calc(100%-1.25rem)] items-center gap-1.5 rounded px-2 py-1.5 text-left text-[9px] transition-colors ${activeNode?.kind === 'branch' && activeNode.id === branch.name ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-muted/25 hover:text-foreground'}`} data-testid={`button-tree-branch-${repo.name}-${branch.name.replace(/[^a-zA-Z0-9]/g, '-')}`}>
+                            {branch.category === 'new' ? <CircleDot className="h-3 w-3 text-emerald-400" /> : <GitBranch className="h-3 w-3 text-amber-400" />}<span className="min-w-0 flex-1 truncate font-mono">{branch.name}</span><span className="font-mono text-[8px]">{branch.files.length}</span>
+                          </button>
+                        ))}
+                        <button type="button" onClick={() => { toggleNode(`${repo.name}:prs`); selectNode({ repo: repo.name, kind: 'prs' }); }} aria-expanded={prsOpen} className={`flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-[10px] transition-colors ${activeNode?.repo === repo.name && (activeNode.kind === 'prs' || activeNode.kind === 'pr') ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-muted/25 hover:text-foreground'}`} data-testid={`button-tree-prs-${repo.name}`}>
+                          {prsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}<GitPullRequest className="h-3 w-3" /> <span className="flex-1">{t('cockpit.tree.pullRequests')}</span><span className="font-mono text-[9px]">{repo.prs.length}</span>
+                        </button>
+                        {prsOpen && repo.prs.map(pr => (
+                          <button type="button" key={pr.id} onClick={() => selectNode({ repo: repo.name, kind: 'pr', id: pr.id })} className={`ml-5 flex w-[calc(100%-1.25rem)] items-center gap-1.5 rounded px-2 py-1.5 text-left text-[9px] transition-colors ${activeNode?.kind === 'pr' && activeNode.id === pr.id ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-muted/25 hover:text-foreground'}`} data-testid={`button-tree-pr-${pr.id}`}>
+                            <GitPullRequest className="h-3 w-3 text-primary" /><span className="min-w-0 flex-1 truncate font-mono">{pr.sourceBranch}</span>
+                          </button>
+                        ))}
+                        <div className="mt-1 flex items-center gap-2 border-t border-border/30 px-2 pt-2 font-mono text-[9px] text-muted-foreground">
+                          <span className="text-emerald-400">+{newCount}</span><span className="text-amber-400">~{modifiedCount}</span><span className="text-primary">PR {repo.prs.length}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
-              })
-            )}
-          </div>
-        </ScrollArea>
-        <div className="p-3 border-t border-border bg-muted/10">
-          <Button variant="outline" size="sm" className="w-full text-xs h-8" onClick={() => navigate(`/workspaces/${id}/cards`)}>
-            {t('cockpit.repo.seeAll')}
-          </Button>
-        </div>
-      </div>
+              })}
+            </div>
+          </ScrollArea>
+        </aside>
 
-      {/* MAIN AREA: Repositories Exploration */}
-      <div className="flex-1 flex flex-col min-w-0 bg-background">
-        <div className="h-14 border-b border-border flex items-center justify-between px-6 shrink-0 bg-card/20">
-          <h1 className="text-lg font-semibold flex items-center gap-2">
-            <FolderGit2 className="w-5 h-5 text-muted-foreground" />
-            {t('repo.overview')}
-          </h1>
-          <div className="flex gap-2">
-             <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => navigate(`/workspaces/${id}/edit`)}>
-               <Settings className="w-3.5 h-3.5 mr-1.5" /> {t('cockpit.repo.configure')}
-            </Button>
-          </div>
-        </div>
-
-        <ScrollArea className="flex-1">
-          <div className="p-6 max-w-5xl mx-auto space-y-4">
-            {aggregateList.map(repo => {
-              const isExpanded = !!expandedRepos[repo.name];
-              const currentTab = repoTabs[repo.name] || 'overview';
-              const allBranchesCount = repo.newBranches.size + repo.modifiedBranches.size;
-
-              return (
-                <UICard key={repo.name} className="overflow-hidden border-border/60 shadow-sm transition-all">
-                  <div 
-                    className="bg-muted/20 hover:bg-muted/30 px-4 py-3 cursor-pointer flex items-center justify-between transition-colors"
-                    onClick={() => toggleRepo(repo.name)}
-                  >
-                    <div className="flex items-center gap-3">
-                      {isExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-                      <div className="w-8 h-8 rounded bg-primary/10 border border-primary/20 flex items-center justify-center">
-                        <GitBranch className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-mono font-bold text-sm">{repo.name}</h3>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {repo.relatedCards.length > 0 ? (
-                            <>{t('cockpit.repo.involvedIn', { count: repo.relatedCards.length })} {repo.relatedCards.map(c => c.externalKey).join(', ')}</>
-                          ) : (
-                            <>{t('cockpit.repo.emptySelection')}</>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs font-mono">
-                      <div className="flex flex-col items-center">
-                        <span className="text-foreground font-bold">{repo.modifiedBranches.size}</span>
-                        <span className="text-[9px] text-muted-foreground uppercase">{t('cockpit.repo.modifiedBranches')}</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <span className="text-emerald-400 font-bold">{repo.newBranches.size}</span>
-                        <span className="text-[9px] text-emerald-400/60 uppercase">{t('cockpit.repo.newBranches')}</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <span className="text-primary font-bold">{repo.prs.length}</span>
-                        <span className="text-[9px] text-primary/60 uppercase">{t('cockpit.repo.createdPrs')}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {isExpanded && (
-                    <div className="border-t border-border/50 bg-card">
-                      <div className="flex border-b border-border/40 px-2 bg-muted/10">
-                        <button 
-                          className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${currentTab === 'overview' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                          onClick={() => setTab(repo.name, 'overview')}
-                        >{t('cockpit.tabs.overview')}</button>
-                        <button 
-                          className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors flex items-center gap-1.5 ${currentTab === 'branches' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                          onClick={() => setTab(repo.name, 'branches')}
-                        >{t('cockpit.tabs.branches')} <Badge variant="secondary" className="text-[9px] py-0 px-1">{allBranchesCount}</Badge></button>
-                        <button 
-                          className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors flex items-center gap-1.5 ${currentTab === 'prs' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                          onClick={() => setTab(repo.name, 'prs')}
-                        >{t('cockpit.tabs.prs')} <Badge variant="secondary" className="text-[9px] py-0 px-1">{repo.prs.length}</Badge></button>
-                      </div>
-
-                      <div className="p-4">
-                        {currentTab === 'overview' && (
-                          <div className="space-y-4">
-                            <p className="text-xs text-muted-foreground">{t('cockpit.repo.summary')}</p>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="p-3 border border-border/50 rounded bg-muted/10">
-                                <h5 className="text-[10px] uppercase font-bold text-muted-foreground mb-2">{t('cockpit.repo.metrics')}</h5>
-                                <p className="text-xs">
-                                  {t('cockpit.repo.newBranchesTitle')}: <span className="font-mono font-bold text-blue-400">{repo.newBranches.size}</span>
-                                </p>
-                                <p className="text-xs">
-                                  {t('cockpit.repo.modifiedBranchesTitle')}: <span className="font-mono font-bold text-amber-400">{repo.modifiedBranches.size}</span>
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {currentTab === 'branches' && (
-                          <div className="space-y-3">
-                            {allBranchesCount === 0 ? (
-                              <p className="text-xs text-muted-foreground italic">{t('cockpit.repo.noBranches')}</p>
-                            ) : (
-                              <>
-                                {repo.newBranches.size > 0 && (
-                                  <div>
-                                    <h5 className="text-[10px] uppercase font-bold text-emerald-500 mb-2">{t('cockpit.repo.newBranchesTitle')}</h5>
-                                    <div className="space-y-1.5">
-                                      {Array.from(repo.newBranches).map(b => (
-                                        <div key={b} className="flex items-center gap-2 p-2 rounded bg-emerald-500/5 border border-emerald-500/20">
-                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                                          <span className="font-mono text-xs">{b}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {repo.modifiedBranches.size > 0 && (
-                                  <div>
-                                    <h5 className="text-[10px] uppercase font-bold text-muted-foreground mb-2 mt-4">{t('cockpit.repo.modifiedBranchesTitle')}</h5>
-                                    <div className="space-y-1.5">
-                                      {Array.from(repo.modifiedBranches).map(b => (
-                                        <div key={b} className="flex items-center gap-2 p-2 rounded bg-muted/10 border border-border/40">
-                                          <GitBranch className="w-3.5 h-3.5 text-muted-foreground" />
-                                          <span className="font-mono text-xs">{b}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        )}
-
-                        {currentTab === 'prs' && (
-                          <div>
-                            {repo.prs.length === 0 ? (
-                              <p className="text-xs text-muted-foreground italic">{t('cockpit.repo.noPrs')}</p>
-                            ) : (
-                              <div className="space-y-2">
-                                {repo.prs.map(pr => (
-                                  <div key={pr.id} className="p-3 rounded bg-muted/10 border border-border/40 hover:bg-muted/20 transition-colors">
-                                    <div className="flex items-center justify-between mb-1.5">
-                                      <span className="font-mono text-xs font-semibold">{pr.sourceBranch}</span>
-                                      <Badge variant="outline" className={`text-[9px] py-0 px-1 font-semibold ${
-                                        pr.merged ? 'border-purple-500/30 text-purple-400 bg-purple-500/10' :
-                                        pr.hasConflict ? 'border-red-500/30 text-red-400 bg-red-500/10' :
-                                        'border-primary/30 text-primary bg-primary/10'
-                                      }`}>
-                                        {pr.merged ? t('cockpit.pr.merged') : pr.hasConflict ? t('cockpit.pr.conflict') : t('cockpit.pr.open')}
-                                      </Badge>
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
-                                      <span>&rarr; {pr.targetBranch}</span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </UICard>
-              );
-            })}
-          </div>
-        </ScrollArea>
+        <main className="flex min-w-0 flex-1 flex-col bg-background" data-testid="repository-central-panel">
+          {selectedFile ? <DiffViewer file={selectedFile} onBack={() => setSelectedFile(null)} /> : (
+            <>
+              <div className="flex min-h-12 shrink-0 items-center gap-2 border-b border-border bg-card/20 px-4">
+                <FolderGit2 className="h-4 w-4 text-primary" />
+                <span className="font-mono text-xs font-semibold">{selectedRepo?.name || t('repo.none')}</span>
+                {activeNode && activeNode.kind !== 'overview' && <><ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">{activeNode.kind === 'branch' ? selectedBranch?.name : activeNode.kind === 'pr' ? selectedPr?.sourceBranch : activeNode.kind === 'branches' ? t('cockpit.tree.branches') : t('cockpit.tree.pullRequests')}</span></>}
+                <span className="ml-auto text-[10px] text-muted-foreground">{selectedCardIds.size > 0 ? t('cockpit.cards.filterActive', { count: selectedCardIds.size }) : t('cockpit.cards.allScope')}</span>
+              </div>
+              <ScrollArea className="min-h-0 flex-1">
+                {!selectedRepo ? <div className="p-8 text-center text-sm text-muted-foreground">{t('repo.none')}</div> :
+                  activeNode?.kind === 'overview' ? <OverviewPanel repo={selectedRepo} onFileClick={setSelectedFile} /> :
+                  activeNode?.kind === 'branches' || activeNode?.kind === 'branch' ? <BranchPanel repo={selectedRepo} branch={selectedBranch} onFileClick={setSelectedFile} /> :
+                  <PrPanel repo={selectedRepo} pr={selectedPr} onPrClick={pr => selectNode({ repo: selectedRepo.name, kind: 'pr', id: pr.id })} onFileClick={setSelectedFile} />
+                }
+              </ScrollArea>
+            </>
+          )}
+        </main>
       </div>
     </div>
   );
