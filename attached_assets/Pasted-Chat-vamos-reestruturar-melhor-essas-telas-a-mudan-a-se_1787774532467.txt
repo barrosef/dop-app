@@ -1,0 +1,13 @@
+Chat, vamos reestruturar melhor essas telas a mudança será grande, se prepare que vou mandar as instruções.
+
+1. Workspace tem demandas, vamos mudar o nome de demandas por cards e cards tem tipos que são dinamicos, os tipos podem ser por exemplo: task, epic, user history, bugfix, hotfix, feat e por aí vai e esses tipos dependem de cada workspace e eles vem do provider de tasks por exemplo: jira, clickup, redmine etc...
+
+2. A visão detalhada que hoje está limitada a uma demanda / card continua porém, a visão detalhada começa na workspace que lista como forma de filtro (mas diferente) as demandas os repositórios, o usuário consegue facilmente selecionar uma demanda e a tela continua a mesma (atual tela das demandas) porém restrita à demanda selecionada. Temos quep pensar bem em como exibir uma lista das demandas de modo que não ocupe espaço em tela. 
+
+3. Vamos pensar mais como IDE, a plataforma é um ambiete de desenvolvimento, não é um sistema. Então o foco sempre tem que estar no desenvolvimento e nas atividades relacionadas ao dev e ao que um desenvolvedor precisa saber.
+
+4. A barra lateral onde temos chat, repositórios, branches e tal,.. vamos centralizar tudo relacionado ao repositório no botão repositórios, para ver as branches de cada repo o usuário expande o repo que por sua vez a sua exibição inicial continua como está hoje, ele é exibido com a(s) branch(es) modificada(s) pela(s) demanda(s) selecionada(s) caso não selecione nenhuma todas as demandas. Incrementa-se a essa visão a qtde de branches criadas (novas), Qtde de PRs (criados) e permite-se que o dev navege pelo repo nível a nível, ao clicar em cada repo exibe-se opções para ver as branches, PRs e dossiê completo do repo. Dossiê talvez não seja a expressão mais adequada, então pode-se trocar pela expressão tecnicamente mais correta, expressão mais usada no mundo do desenvolvimento de software /devops.
+
+5. A barra lateral, o  botão dossie (ajustado para a expressão correta) continua porém, branches com o painel branches e PR somem pois ficaram acessíveis no botão repositórios.
+
+6. O sistema deve fazer uso de i18n, podendo ser trabalhado em várias linguas, comçando com en e pt_br.
