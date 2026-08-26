@@ -9,20 +9,19 @@ import { Layout } from "@/components/layout";
 import Home from "@/pages/home";
 import WorkspaceWizard from "@/pages/workspace-wizard";
 import WorkspaceCockpit from "@/pages/workspace-cockpit";
-import CardsList from "@/pages/cards-list";
-import CardExecution from "@/pages/card-execution";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
 
-function DemandsRedirect() {
+function CardsRedirect() {
   const { id } = useParams();
-  return <Navigate to={`/workspaces/${id}/cards`} replace />;
+  return <Navigate to={`/workspaces/${id}`} replace />;
 }
 
-function DemandRedirect() {
-  const { id, demandId } = useParams();
-  return <Navigate to={`/workspaces/${id}/cards/${demandId}`} replace />;
+function CardRedirect() {
+  const { id, cardId, demandId } = useParams();
+  const selectedCardId = cardId ?? demandId;
+  return <Navigate to={`/workspaces/${id}${selectedCardId ? `?card=${selectedCardId}` : ''}`} replace />;
 }
 
 function App() {
@@ -37,12 +36,12 @@ function App() {
                 <Route path="/workspaces/new" element={<WorkspaceWizard />} />
                 <Route path="/workspaces/:id/edit" element={<WorkspaceWizard />} />
                 <Route path="/workspaces/:id" element={<WorkspaceCockpit />} />
-                <Route path="/workspaces/:id/cards" element={<CardsList />} />
-                <Route path="/workspaces/:id/cards/:cardId" element={<CardExecution />} />
+                <Route path="/workspaces/:id/cards" element={<CardsRedirect />} />
+                <Route path="/workspaces/:id/cards/:cardId" element={<CardRedirect />} />
 
                 {/* Fallbacks for older routes */}
-                <Route path="/workspaces/:id/demands" element={<DemandsRedirect />} />
-                <Route path="/workspaces/:id/demands/:demandId" element={<DemandRedirect />} />
+                <Route path="/workspaces/:id/demands" element={<CardsRedirect />} />
+                <Route path="/workspaces/:id/demands/:demandId" element={<CardRedirect />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>

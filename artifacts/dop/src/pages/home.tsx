@@ -53,7 +53,7 @@ export default function Home() {
                       variant="ghost"
                       size="sm"
                       className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => navigate(`/workspaces/${c.workspaceId}/cards/${c.id}`)}
+                      onClick={() => navigate(`/workspaces/${c.workspaceId}?card=${c.id}`)}
                     >
                       {t('attention.resolve')} <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                     </Button>

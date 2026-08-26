@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation, useMatch } from 'react-router-dom';
 import {
   LayoutGrid, Plus, Settings, ChevronLeft, ChevronRight,
-  TerminalSquare, Sun, Moon, ListTodo, Globe, Folders
+  TerminalSquare, Sun, Moon, Globe, Folders
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { useUiStore } from '../store/uiStore';
@@ -88,6 +88,7 @@ export function AppSidebar() {
   }, []);
 
   const open = sidebarOpen && !isMobile;
+  const selectedCardId = new URLSearchParams(location.search).get('card');
 
   return (
     <div
@@ -137,22 +138,15 @@ export function AppSidebar() {
             )}
             <NavItem
               icon={TerminalSquare}
-              label={t('sidebar.overview')}
+              label={t('sidebar.cockpit')}
               to={`/workspaces/${wsId}`}
               open={open}
               active={at(`/workspaces/${wsId}`, true) && !location.search}
             />
             <NavItem
-              icon={ListTodo}
-              label={t('sidebar.cards')}
-              to={`/workspaces/${wsId}/cards`}
-              open={open}
-              active={at(`/workspaces/${wsId}/cards`)}
-            />
-            <NavItem
               icon={Folders}
               label={t('sidebar.repositories')}
-              to={`/workspaces/${wsId}?tab=repos`}
+              to={`/workspaces/${wsId}?tab=repos${selectedCardId ? `&card=${encodeURIComponent(selectedCardId)}` : ''}`}
               open={open}
               active={location.search.includes('tab=repos')}
             />
