@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useCard, useCards, useSendChatMessage, useWorkspace } from '../hooks/use-api';
 import { Button } from '../components/ui/button';
@@ -31,7 +31,8 @@ import {
   X,
 } from 'lucide-react';
 import { dictionaries, useI18n } from '../lib/i18n';
-import { Card, FileTouched, PullRequest, RepoConfig, TestResult, Workspace } from '../lib/api/types';
+import { api } from '../lib/api/mockClient';
+import { Card, FileTouched, LogLine, PullRequest, RepoConfig, TestResult, Workspace } from '../lib/api/types';
 
 type NodeKind = 'overview' | 'branches' | 'branch' | 'prs' | 'pr';
 type SelectedNode = { repo: string; kind: NodeKind; id?: string };
@@ -666,6 +667,110 @@ function ListTodoIcon() {
   return <Activity className="mr-1.5 h-3.5 w-3.5" />;
 }
 
+type InfraResource = {
+  kind: 'app' | 'service';
+  id: string;
+  name: string;
+  port?: number;
+  taskId?: string;
+  status?: 'running' | 'stopped';
+  dependsOn?: string[];
+};
+
+function InfraResourcePanel({
+  resource,
+  onBack,
+}: {
+  resource: InfraResource;
+  onBack: () => void;
+}) {
+  const { t } = useI18n();
+  const [tab, setTab] = useState<'logs' | 'terminal'>('logs');
+  const [logs, setLogs] = useState<LogLine[]>([]);
+  const [command, setCommand] = useState('');
+  const [terminalLines, setTerminalLines] = useState<string[]>([]);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setLogs([]);
+    let active = true;
+    const consumeLogs = async () => {
+      for await (const line of api.streamServiceLogs(resource.name)) {
+        if (!active) break;
+        setLogs(previous => [...previous, line]);
+        setTimeout(() => logsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      }
+    };
+    void consumeLogs();
+    return () => { active = false; };
+  }, [resource.id, resource.name]);
+
+  const runCommand = (event: React.FormEvent) => {
+    event.preventDefault();
+    const value = command.trim();
+    if (!value) return;
+    setTerminalLines(previous => [
+      ...previous,
+      `$ ${value}`,
+      `[mock] ${t('cockpit.infrastructure.commandCompleted', { resource: resource.name })}`,
+    ]);
+    setCommand('');
+  };
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col" data-testid="infra-resource-panel">
+      <div className="border-b border-border/50 px-3 py-3">
+        <button type="button" onClick={onBack} className="mb-2 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground" data-testid="button-back-infra-resource">
+          <ArrowLeft className="h-3 w-3" /> {t('cockpit.infrastructure.back')}
+        </button>
+        <div className="flex items-center gap-2">
+          <span className={`h-1.5 w-1.5 rounded-full ${resource.status === 'stopped' ? 'bg-muted-foreground' : 'bg-emerald-400'}`} />
+          <span className="min-w-0 flex-1 truncate font-mono text-sm font-semibold">{resource.name}</span>
+          {resource.port && <span className="font-mono text-[10px] text-muted-foreground">:{resource.port}</span>}
+        </div>
+        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <Badge variant="outline" className="px-1.5 py-0 text-[9px]">{resource.kind === 'app' ? t('cockpit.infrastructure.application') : t('cockpit.infrastructure.service')}</Badge>
+          <span>{resource.status === 'stopped' ? t('exec.infra.stopped') : t('exec.infra.running')}</span>
+        </div>
+      </div>
+      <div className="flex shrink-0 border-b border-border/50 px-2 pt-2">
+        {([
+          { key: 'logs' as const, label: t('cockpit.infrastructure.logs'), icon: Activity },
+          { key: 'terminal' as const, label: t('cockpit.infrastructure.terminal'), icon: Terminal },
+        ]).map(item => (
+          <button key={item.key} type="button" onClick={() => setTab(item.key)} className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-[10px] font-medium transition-colors ${tab === item.key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`} aria-selected={tab === item.key} role="tab" data-testid={`button-infra-tab-${item.key}`}>
+            <item.icon className="h-3 w-3" />{item.label}
+          </button>
+        ))}
+      </div>
+      {tab === 'logs' ? (
+        <div className="flex min-h-0 flex-1 flex-col" data-testid="infra-logs-panel">
+          <div className="flex items-center gap-2 border-b border-border/40 px-3 py-2 text-[10px] text-muted-foreground"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />{t('exec.logs.live')}</div>
+          <ScrollArea className="min-h-0 flex-1 bg-[#0a0d12] px-3 py-2">
+            {logs.length === 0 && <p className="py-6 text-center font-mono text-[10px] italic text-muted-foreground">{t('exec.logs.connecting', { service: resource.name })}</p>}
+            <div className="space-y-1 font-mono text-[10px] leading-relaxed">
+              {logs.map((log, index) => <div key={`${log.at}-${index}`} className="flex gap-2"><span className="shrink-0 text-muted-foreground/50">{new Date(log.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span><span className="break-all text-foreground/80">{log.line}</span></div>)}
+              <div ref={logsEndRef} />
+            </div>
+          </ScrollArea>
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col bg-[#0a0d12]" data-testid="infra-terminal-panel">
+          <ScrollArea className="min-h-0 flex-1 px-3 py-2">
+            {terminalLines.length === 0 ? <p className="py-6 text-center font-mono text-[10px] italic text-muted-foreground">{t('cockpit.infrastructure.terminalHint')}</p> : <div className="space-y-1 font-mono text-[10px] leading-relaxed">{terminalLines.map((line, index) => <p key={`${line}-${index}`} className={line.startsWith('$') ? 'text-primary' : 'text-foreground/75'}>{line}</p>)}</div>}
+          </ScrollArea>
+          <p className="border-t border-border/40 px-3 py-2 text-[9px] text-muted-foreground">{t('cockpit.infrastructure.mockNote')}</p>
+          <form onSubmit={runCommand} className="flex gap-1.5 border-t border-border/40 p-2">
+            <span className="flex items-center px-1 font-mono text-xs text-primary">›</span>
+            <input value={command} onChange={event => setCommand(event.target.value)} placeholder={t('cockpit.infrastructure.terminalPlaceholder')} className="min-w-0 flex-1 rounded border border-border/60 bg-muted/30 px-2 py-1.5 font-mono text-[10px] outline-none focus:border-primary/50" data-testid="input-infra-terminal" />
+            <button type="submit" className="rounded bg-primary px-2.5 py-1.5 text-[10px] font-medium text-primary-foreground hover:bg-primary/90" data-testid="button-infra-terminal-run">{t('cockpit.infrastructure.run')}</button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function InfrastructureSidebar({
   workspace,
   cards,
@@ -687,6 +792,11 @@ function InfrastructureSidebar({
   const services = selectedCard
     ? workspace.runtime.infra.filter(service => !service.taskIds?.length || service.taskIds.includes(selectedCard.id))
     : workspace.runtime.infra;
+  const [selectedResource, setSelectedResource] = useState<InfraResource | null>(null);
+
+  useEffect(() => {
+    setSelectedResource(null);
+  }, [selectedCard?.id]);
 
   return (
     <aside className={`${mobileOpen ? 'absolute inset-y-0 left-12 z-30 flex w-[min(22rem,calc(100vw-6.5rem))] shadow-2xl' : 'hidden'} min-h-0 shrink-0 flex-col border-r border-border bg-card sm:static sm:z-auto sm:flex sm:w-80 sm:shadow-none`} data-testid="infrastructure-sidebar">
@@ -698,32 +808,32 @@ function InfrastructureSidebar({
         </div>
         <p className="mt-1 text-[10px] text-muted-foreground">{selectedCard ? `${t('cockpit.cards.focused')}: ${selectedCard.externalKey}` : t('cockpit.cards.scopeAll')}</p>
       </div>
-      <ScrollArea className="min-h-0 flex-1" data-testid="cockpit-infrastructure">
+      {selectedResource ? <InfraResourcePanel resource={selectedResource} onBack={() => setSelectedResource(null)} /> : <ScrollArea className="min-h-0 flex-1" data-testid="cockpit-infrastructure">
         <div className="space-y-4 p-3">
           <section>
             <div className="mb-2 flex items-center justify-between"><h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t('exec.infra.apps')}</h3><span className="font-mono text-[10px] text-muted-foreground">{apps.length}</span></div>
             {apps.length === 0 ? <p className="rounded-md border border-dashed border-border/60 px-3 py-4 text-center text-xs italic text-muted-foreground">{selectedCard ? t('cockpit.infrastructure.emptyForCard') : t('exec.infra.none')}</p> : (
               <div className="space-y-2">{apps.map(app => {
                 const appCard = app.taskId ? cardById.get(app.taskId) : undefined;
-                return <div key={app.id} className="rounded-md border border-border/50 bg-muted/15 p-2.5" data-testid={`infra-app-${app.id}`}>
+                return <button type="button" onClick={() => setSelectedResource({ kind: 'app', id: app.id, name: app.name, port: app.port, taskId: app.taskId, status: app.status, dependsOn: app.dependsOn })} key={app.id} className="block w-full rounded-md border border-border/50 bg-muted/15 p-2.5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5" data-testid={`infra-app-${app.id}`}>
                   <div className="flex items-center gap-2"><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${app.status === 'stopped' ? 'bg-muted-foreground' : 'bg-emerald-400'}`} /><span className="min-w-0 flex-1 truncate font-mono text-xs font-semibold">{app.name}</span><span className="font-mono text-[10px] text-muted-foreground">:{app.port}</span></div>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     {appCard && <Badge variant="outline" className="border-primary/30 bg-primary/10 font-mono text-[9px] text-primary" data-testid={`badge-infra-card-${appCard.id}`}>{appCard.externalKey}</Badge>}
                     <Badge variant="outline" className="text-[9px]">{app.status === 'stopped' ? t('exec.infra.stopped') : t('exec.infra.running')}</Badge>
                     {app.dependsOn?.map(dependency => <span key={dependency} className="font-mono text-[9px] text-muted-foreground">→ {dependency}</span>)}
                   </div>
-                </div>;
+                </button>;
               })}</div>
             )}
           </section>
           <section>
             <div className="mb-2 flex items-center justify-between"><h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t('exec.infra.services')}</h3><span className="font-mono text-[10px] text-muted-foreground">{services.length}</span></div>
             {services.length === 0 ? <p className="rounded-md border border-dashed border-border/60 px-3 py-4 text-center text-xs italic text-muted-foreground">{selectedCard ? t('cockpit.infrastructure.emptyForCard') : t('exec.infra.none')}</p> : (
-              <div className="space-y-1.5">{services.map(service => <div key={service.id} className="flex items-center gap-2 rounded-md border border-border/40 bg-muted/15 px-3 py-2 text-xs" data-testid={`infra-service-${service.id}`}><span className={`h-1.5 w-1.5 rounded-full ${service.status === 'stopped' ? 'bg-muted-foreground' : 'bg-emerald-400'}`} /><span className="min-w-0 flex-1 truncate">{service.name}</span><span className="text-[9px] text-muted-foreground">{service.status === 'stopped' ? t('exec.infra.stopped') : t('exec.infra.running')}</span></div>)}</div>
+              <div className="space-y-1.5">{services.map(service => <button type="button" onClick={() => setSelectedResource({ kind: 'service', id: service.id, name: service.name, status: service.status })} key={service.id} className="flex w-full items-center gap-2 rounded-md border border-border/40 bg-muted/15 px-3 py-2 text-left text-xs transition-colors hover:border-primary/50 hover:bg-primary/5" data-testid={`infra-service-${service.id}`}><span className={`h-1.5 w-1.5 rounded-full ${service.status === 'stopped' ? 'bg-muted-foreground' : 'bg-emerald-400'}`} /><span className="min-w-0 flex-1 truncate">{service.name}</span><span className="text-[9px] text-muted-foreground">{service.status === 'stopped' ? t('exec.infra.stopped') : t('exec.infra.running')}</span></button>)}</div>
             )}
           </section>
         </div>
-      </ScrollArea>
+      </ScrollArea>}
     </aside>
   );
 }
