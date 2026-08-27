@@ -14,6 +14,7 @@ import {
 import { marked } from 'marked';
 import { LogLine, Stage, FileTouched, PullRequest, TestResult, Card, Workspace } from '../lib/api/types';
 import { api } from '../lib/api/mockClient';
+import { AllureReport } from '../components/allure-report';
 import { DocViewer } from '../components/doc-viewer';
 import { ExecStageView } from '../components/exec-stage-view';
 import { TestStageView } from '../components/test-stage-view';
@@ -433,68 +434,6 @@ function TimeDetailOverlay({ card }: { card: Card }) {
           <span className="text-sm font-mono font-bold">{elapsedStr}</span>
         </div>
       )}
-    </div>
-  );
-}
-
-function AllureOverlay({ tests }: { tests: TestResult[] }) {
-  const { t } = useI18n();
-  const total = tests.length;
-  const pass  = tests.filter(t => t.status === 'success').length;
-  const fail  = tests.filter(t => t.status === 'fail').length;
-  const skip  = tests.filter(t => t.status === 'skipped').length;
-  const run   = tests.filter(t => t.status === 'running').length;
-  const pct   = total > 0 ? Math.round((pass / total) * 100) : 0;
-
-  return (
-    <div className="p-5 max-w-3xl space-y-4">
-      <div className="grid grid-cols-5 gap-3">
-        {[
-          { label: t('test.status.passed'), val: pass, cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
-          { label: t('test.status.failed'), val: fail, cls: 'text-red-400 bg-red-500/10 border-red-500/20' },
-          { label: t('test.status.skipped'), val: skip, cls: 'text-muted-foreground bg-muted/30 border-border/40' },
-          { label: t('test.status.running'), val: run, cls: 'text-primary bg-primary/10 border-primary/20' },
-          { label: t('exec.tests.successRate'), val: pct, cls: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20', suffix: '%' },
-        ].map(({ label, val, cls, suffix }) => (
-          <div key={label} className={`text-center p-3 rounded-lg border ${cls}`}>
-            <div className="text-2xl font-bold">{val}{suffix}</div>
-            <div className="text-[10px] text-muted-foreground mt-0.5">{label}</div>
-          </div>
-        ))}
-      </div>
-
-      {(['unit', 'e2e'] as const).map(type => {
-        const typeTests = tests.filter(t => t.type === type);
-        if (typeTests.length === 0) return null;
-        return (
-          <div key={type} className="rounded-lg border border-border/40 overflow-hidden">
-            <div className="px-3 py-2 bg-muted/25 border-b border-border/40 text-xs font-bold">
-              {type === 'unit' ? t('plan.tests.unit') : t('plan.tests.e2e')}
-            </div>
-            <div className="divide-y divide-border/20">
-              {typeTests.map((t, i) => (
-                <div key={i} className={`flex items-center gap-2.5 px-3 py-2 ${t.status === 'fail' ? 'bg-red-500/5' : ''}`}>
-                  {t.status === 'success' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
-                  {t.status === 'fail'    && <XCircle      className="w-3.5 h-3.5 text-red-500 shrink-0" />}
-                  {t.status === 'skipped' && <SkipForward  className="w-3.5 h-3.5 text-muted-foreground/35 shrink-0" />}
-                  {t.status === 'running' && <Loader2      className="w-3.5 h-3.5 text-primary animate-spin shrink-0" />}
-                  <span className="text-[11px] flex-1 truncate">{t.name}</span>
-                  {t.repo && <span className="text-[9px] text-muted-foreground font-mono shrink-0">{t.repo}</span>}
-                  {t.durationMs != null && <span className="text-[10px] text-muted-foreground/40 font-mono shrink-0">{t.durationMs}ms</span>}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-
-      <button
-        disabled
-        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-border/40 text-sm text-muted-foreground cursor-not-allowed opacity-60"
-      >
-        <ExternalLink className="w-3.5 h-3.5" /> {t('exec.tests.fullReport')}
-        <span className="text-[9px] bg-muted/50 px-1.5 py-0.5 rounded ml-1">{t('exec.tests.soon')}</span>
-      </button>
     </div>
   );
 }
@@ -2122,7 +2061,7 @@ export default function CardExecution() {
                 <TimeDetailOverlay card={card} />
               )}
               {centralOverlay.kind === 'allure' && (
-                <AllureOverlay tests={card.repositoryOverview.tests} />
+                <AllureReport tests={card.repositoryOverview.tests} />
               )}
               {centralOverlay.kind === 'manage-repos' && workspace && (
                 <RepoManagerOverlay

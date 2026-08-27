@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  ClipboardList,
   CircleDot,
   ExternalLink,
   FileCode2,
@@ -34,6 +35,7 @@ import {
 import { dictionaries, useI18n } from '../lib/i18n';
 import { api } from '../lib/api/mockClient';
 import { Card, FileTouched, LogLine, PullRequest, RepoConfig, TestResult, Workspace } from '../lib/api/types';
+import { ContextualOverview, OverviewPanelKey } from '../components/contextual-overview';
 
 type NodeKind = 'overview' | 'branches' | 'branch' | 'prs' | 'pr';
 type SelectedNode = { repo: string; kind: NodeKind; id?: string };
@@ -456,7 +458,7 @@ type CockpitSection = 'overview' | 'chat' | 'repos' | 'infra';
 const EMPTY_CARDS: Card[] = [];
 
 function sectionFromQuery(tab: string | null, hasFocusedCard: boolean): CockpitSection {
-  if (tab === 'chat' || tab === 'repos' || tab === 'infra') return tab;
+  if (tab === 'overview' || tab === 'chat' || tab === 'repos' || tab === 'infra') return tab;
   return hasFocusedCard ? 'chat' : 'overview';
 }
 
@@ -829,6 +831,7 @@ export default function WorkspaceCockpit() {
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<CockpitSection>('overview');
+  const [activeOverviewPanel, setActiveOverviewPanel] = useState<OverviewPanelKey>('kpis');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [expandedRepos, setExpandedRepos] = useState<Record<string, boolean>>({});
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
@@ -962,10 +965,9 @@ export default function WorkspaceCockpit() {
   const toggleNode = (key: string) => setExpandedNodes(previous => ({ ...previous, [key]: !previous[key] }));
   const setCockpitSection = (section: CockpitSection) => {
     setActiveSection(section);
-    setMobileSidebarOpen(section !== 'overview');
+    setMobileSidebarOpen(true);
     const next = new URLSearchParams(searchParams);
-    if (section === 'overview') next.delete('tab');
-    else next.set('tab', section);
+    next.set('tab', section);
     if (next.toString() !== searchParams.toString()) setSearchParams(next);
   };
   const setCardScope = (cardId: string | null, section?: CockpitSection) => {
@@ -973,8 +975,7 @@ export default function WorkspaceCockpit() {
     next.delete('card');
     next.delete('focus');
     if (cardId) next.set('card', cardId);
-    if (section === 'overview') next.delete('tab');
-    else if (section) next.set('tab', section);
+    if (section) next.set('tab', section);
     setSearchParams(next);
   };
   const toggleCard = (cardId: string) => {
@@ -1008,6 +1009,18 @@ export default function WorkspaceCockpit() {
         </Button>
       </header>
 
+      <div className="flex min-h-10 shrink-0 items-center border-b border-border/50 bg-card/20 px-3 sm:px-5" data-testid="cockpit-global-home">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          data-testid="button-cockpit-home"
+        >
+          <Home className="h-3.5 w-3.5" />
+          <span>{t('cockpit.home')}</span>
+        </button>
+      </div>
+
       <div className="flex min-h-14 shrink-0 items-center gap-2 border-b border-border/50 bg-muted/10 px-3 py-2 sm:px-5" data-testid="cockpit-reader">
         <div className="flex shrink-0 items-center gap-2 px-2 py-1 text-xs font-medium" data-testid="button-open-card-reader">
           <Activity className="h-3.5 w-3.5 shrink-0 text-primary" />
@@ -1023,7 +1036,7 @@ export default function WorkspaceCockpit() {
 
         <aside className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-border bg-card py-3">
           {[
-            { key: 'overview' as const, icon: Home, label: t('cockpit.nav.overview') },
+            { key: 'overview' as const, icon: ClipboardList, label: t('cockpit.nav.overview') },
             { key: 'chat' as const, icon: MessageSquare, label: t('cockpit.nav.chat') },
             { key: 'repos' as const, icon: GitBranch, label: t('cockpit.nav.repos') },
             { key: 'infra' as const, icon: Server, label: t('cockpit.nav.infra') },
@@ -1035,6 +1048,24 @@ export default function WorkspaceCockpit() {
           ))}
         </aside>
 
+        {activeSection === 'overview' && (
+          <ContextualOverview
+            workspace={workspace}
+            cards={cardsToAggregate}
+            aggregates={aggregates}
+            selectedCard={selectedCard}
+            activePanel={activeOverviewPanel}
+            mobileOpen={mobileSidebarOpen}
+            onSelectPanel={panel => {
+              setActiveOverviewPanel(panel);
+              setMobileSidebarOpen(false);
+            }}
+            onClose={() => setMobileSidebarOpen(false)}
+          />
+        )}
+
+        {activeSection !== 'overview' && (
+          <>
         {activeSection === 'repos' && (
           <aside className={`${mobileSidebarOpen ? 'absolute inset-y-0 left-12 z-30 flex w-[min(18rem,calc(100vw-6.5rem))] shadow-2xl' : 'hidden'} min-h-0 shrink-0 flex-col border-r border-border bg-card sm:static sm:z-auto sm:flex sm:w-60 sm:shadow-none lg:w-72`} data-testid="repository-tree">
             <div className="border-b border-border/50 px-3 py-3">
@@ -1078,7 +1109,7 @@ export default function WorkspaceCockpit() {
         {activeSection === 'infra' && <InfrastructureSidebar workspace={workspace} cards={allCards} selectedCard={selectedCard} mobileOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} onSelectResource={resource => { setSelectedInfraResource(resource); setMobileSidebarOpen(false); }} />}
 
         <main className="flex min-w-0 flex-1 flex-col bg-background" data-testid="cockpit-central-panel">
-          {activeSection === 'infra' && selectedInfraResource ? <InfraResourcePanel resource={selectedInfraResource} workspaceId={workspace.id} onBack={() => { setSelectedInfraResource(null); setMobileSidebarOpen(true); }} /> : (activeSection === 'overview' || activeSection === 'chat' || activeSection === 'infra') && <WorkspaceOverviewPanel workspace={workspace} cards={allCards} aggregates={aggregates} selectedCard={selectedCard} />}
+          {activeSection === 'infra' && selectedInfraResource ? <InfraResourcePanel resource={selectedInfraResource} workspaceId={workspace.id} onBack={() => { setSelectedInfraResource(null); setMobileSidebarOpen(true); }} /> : (activeSection === 'chat' || activeSection === 'infra') && <WorkspaceOverviewPanel workspace={workspace} cards={cardsToAggregate} aggregates={aggregates} selectedCard={selectedCard} />}
           {activeSection === 'repos' && (selectedFile ? <DiffViewer file={selectedFile} onBack={() => setSelectedFile(null)} /> : (
             <>
               <div className="flex min-h-12 shrink-0 items-center gap-2 border-b border-border bg-card/20 px-4"><FolderGit2 className="h-4 w-4 text-primary" /><span className="font-mono text-xs font-semibold">{selectedRepo?.name || t('repo.none')}</span>{activeNode && activeNode.kind !== 'overview' && <><ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">{activeNode.kind === 'branch' ? selectedBranch?.name : activeNode.kind === 'pr' ? selectedPr?.sourceBranch : activeNode.kind === 'branches' ? t('cockpit.tree.branches') : t('cockpit.tree.pullRequests')}</span></>}<span className="ml-auto text-[10px] text-muted-foreground">{selectedCardIds.size > 0 ? t('cockpit.cards.filterActive', { count: selectedCardIds.size }) : t('cockpit.cards.allScope')}</span></div>
@@ -1086,6 +1117,8 @@ export default function WorkspaceCockpit() {
             </>
           ))}
         </main>
+          </>
+        )}
       </div>
     </div>
   );

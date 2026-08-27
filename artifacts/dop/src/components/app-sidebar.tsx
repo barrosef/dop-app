@@ -91,7 +91,9 @@ export function AppSidebar() {
   const activeTab = new URLSearchParams(location.search).get('tab');
   const workspaceParams = new URLSearchParams(location.search);
   workspaceParams.delete('tab');
-  const cockpitQuery = workspaceParams.toString();
+  const cockpitParams = new URLSearchParams(workspaceParams);
+  cockpitParams.set('tab', 'overview');
+  const cockpitQuery = cockpitParams.toString();
   const repositoriesParams = new URLSearchParams(workspaceParams);
   repositoriesParams.set('tab', 'repos');
 
