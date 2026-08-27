@@ -73,9 +73,12 @@ export interface TestResult {
   status: TestStatus;
   durationMs?: number;
 }
+
+export type CommitAttributionStatus = 'available' | 'unavailable';
 export interface RepositoryOverview {
-  repos: string[]; branches: string[]; commits: number;
+  repos: string[]; branches: string[]; commits?: number | null;
   commitsByRepo?: Record<string, number>;
+  commitsByRepoStatus?: CommitAttributionStatus;
   prs: PullRequest[]; files: FileTouched[]; tests: TestResult[];
   startedAt?: string; finishedAt?: string; elapsedSeconds?: number;
 }

@@ -233,6 +233,9 @@ importers:
       '@types/react-router-dom':
         specifier: ^5.3.3
         version: 5.3.3
+      '@workspace/api-zod':
+        specifier: workspace:*
+        version: link:../../lib/api-zod
       marked:
         specifier: ^18.0.4
         version: 18.0.4

@@ -2,6 +2,7 @@ import { DopApi } from './client';
 import { Workspace, Card, ChatMessage, LogLine } from './types';
 import { mockWorkspaces } from '../mocks/workspaces';
 import { mockCards } from '../mocks/demands';
+import { validateCard } from './validation';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -216,19 +217,19 @@ class MockDopApi implements DopApi {
 
   async listCards(workspaceId: string): Promise<Card[]> {
     await delay(300 + Math.random() * 500);
-    return this.cards.filter(d => d.workspaceId === workspaceId);
+    return this.cards.filter(d => d.workspaceId === workspaceId).map(validateCard);
   }
 
   async listAllCards(): Promise<Card[]> {
     await delay(400);
-    return this.cards;
+    return this.cards.map(validateCard);
   }
 
   async getCard(workspaceId: string, cardId: string): Promise<Card> {
     await delay(200 + Math.random() * 400);
     const demand = this.cards.find(d => d.id === cardId && d.workspaceId === workspaceId);
     if (!demand) throw new Error('Card not found');
-    return demand;
+    return validateCard(demand);
   }
 
   async sendChatMessage(cardId: string, text: string): Promise<ChatMessage> {

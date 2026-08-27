@@ -35,7 +35,7 @@ import { dictionaries, useI18n } from '../lib/i18n';
 import { api } from '../lib/api/mockClient';
 import { Card, FileTouched, LogLine, PullRequest, RepoConfig, TestResult, Workspace } from '../lib/api/types';
 import { ContextualOverview, OverviewPanelKey } from '../components/contextual-overview';
-
+import { getCommitCountForRepository } from '../lib/api/validation';
 type NodeKind = 'overview' | 'branches' | 'branch' | 'prs' | 'pr';
 type SelectedNode = { repo: string; kind: NodeKind; id?: string };
 type BranchItem = { name: string; category: 'new' | 'modified'; files: FileTouched[] };
@@ -49,7 +49,7 @@ type RepoAggregate = {
   prs: PullRequest[];
   files: FileTouched[];
   tests: TestResult[];
-  commits: number;
+  commits: number | null;
 };
 
 function parseBranch(raw: string) {
@@ -260,14 +260,20 @@ function OverviewPanel({
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
-          { label: t('cockpit.repo.commits'), value: repo.commits, icon: GitCommitHorizontal, className: 'text-foreground' },
+          {
+            label: t('cockpit.repo.commits'),
+            value: repo.commits === null ? t('cockpit.repo.commitsUnavailable') : repo.commits,
+            icon: GitCommitHorizontal,
+            className: 'text-foreground',
+            unavailable: repo.commits === null,
+          },
           { label: t('cockpit.repository.branches'), value: repo.branches.length, icon: GitBranch, className: 'text-emerald-400' },
           { label: t('cockpit.repository.openPrs'), value: openPrs, icon: GitPullRequest, className: 'text-primary' },
           { label: t('cockpit.repository.files'), value: repo.files.length, icon: FileText, className: 'text-blue-400' },
         ].map(metric => (
           <div key={metric.label} className="rounded-md border border-border/50 bg-muted/15 p-3" data-testid={`metric-${repo.name}-${metric.label}`}>
             <metric.icon className={`mb-2 h-3.5 w-3.5 ${metric.className}`} />
-            <p className="font-mono text-lg font-bold">{metric.value}</p>
+            <p className="font-mono text-lg font-bold" data-testid={metric.unavailable ? `text-commits-unavailable-${repo.name}` : undefined}>{metric.value}</p>
             <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{metric.label}</p>
           </div>
         ))}
@@ -877,7 +883,12 @@ export default function WorkspaceCockpit() {
         if (!byName[repoName]) byName[repoName] = { name: repoName, relatedCards: [], branches: [], prs: [], files: [], tests: [], commits: 0 };
         const repo = byName[repoName];
         if (!repo.relatedCards.some(related => related.id === card.id)) repo.relatedCards.push(card);
-        repo.commits += overview.commitsByRepo?.[repoName] ?? (overview.repos.length === 1 ? overview.commits : 0);
+        const commitCount = getCommitCountForRepository(overview, repoName);
+        if (commitCount === null) {
+          repo.commits = null;
+        } else if (repo.commits !== null) {
+          repo.commits += commitCount;
+        }
         repo.tests.push(...overview.tests.filter(test => !repo.tests.some(existing => existing.name === test.name && existing.repo === test.repo)));
       });
 

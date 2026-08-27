@@ -699,8 +699,8 @@ export const mockCards: Demand[] = [
         'api-pagamentos|feature/PAY-203-audit-log',
         'shared-contracts|feature/PAY-203-audit-events'
       ],
-      commits: 6,
-      commitsByRepo: { 'api-pagamentos': 4, 'shared-contracts': 2 },
+      commits: null,
+      commitsByRepoStatus: 'unavailable',
       prs: [],
       files: [
         { path: 'api-pagamentos/src/audit/auditService.ts',         kind: 'source', change: 'created'  },
