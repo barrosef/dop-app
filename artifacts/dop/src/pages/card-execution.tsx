@@ -1362,8 +1362,8 @@ export default function CardExecution() {
     : null;
 
   const branchesByRepo = groupBranchesByRepo(card.repositoryOverview.branches);
-  const infraServices  = workspace?.runtime?.infra ?? [];
-  const infraApps      = workspace?.runtime?.apps  ?? [];
+  const infraServices  = (workspace?.runtime?.infra ?? []).filter(service => !service.taskIds?.length || service.taskIds.includes(card.id));
+  const infraApps      = (workspace?.runtime?.apps ?? []).filter(app => app.taskId === card.id);
 
   const trackedFiles = card.repositoryOverview.files.filter(f => f.gitStatus !== 'untracked' && f.repo && f.branch);
   const untrackedFiles = card.repositoryOverview.files.filter(f => f.gitStatus === 'untracked');
@@ -1946,7 +1946,7 @@ export default function CardExecution() {
                 <div>
                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{t('exec.infra.apps')}</p>
                   {infraApps.map(app => (
-                    <div key={app.name} className="flex items-center justify-between p-2.5 rounded-md bg-muted/30 border border-border/40 mb-1.5">
+                    <div key={app.id} className="flex items-center justify-between p-2.5 rounded-md bg-muted/30 border border-border/40 mb-1.5">
                       <div className="flex items-center gap-2 min-w-0">
                         <Layers className={`w-3.5 h-3.5 shrink-0 ${
                           app.role === 'frontend' ? 'text-blue-400' : 'text-amber-400'
@@ -1972,14 +1972,14 @@ export default function CardExecution() {
                 <div>
                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{t('exec.infra.services')}</p>
                   {infraServices.map(svc => (
-                    <div key={svc} className="flex items-center justify-between p-2.5 rounded-md bg-muted/30 border border-border/40 mb-1.5">
+                    <div key={svc.id} className="flex items-center justify-between p-2.5 rounded-md bg-muted/30 border border-border/40 mb-1.5">
                       <div className="flex items-center gap-2">
-                        <Package className={`w-3.5 h-3.5 shrink-0 ${SERVICE_COLORS[svc] ?? 'text-muted-foreground'}`} />
-                        <span className="text-xs font-mono">{svc}</span>
+                        <Package className={`w-3.5 h-3.5 shrink-0 ${SERVICE_COLORS[svc.name] ?? 'text-muted-foreground'}`} />
+                        <span className="text-xs font-mono">{svc.name}</span>
                       </div>
                       <button
-                        onClick={() => { setInfraLogService(svc); setInfraLogs([]); }}
-                        data-testid={`button-infra-logs-${svc}`}
+                        onClick={() => { setInfraLogService(svc.name); setInfraLogs([]); }}
+                        data-testid={`button-infra-logs-${svc.name}`}
                         className="text-[10px] px-2 py-1 rounded border border-border/50 text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-primary/10 transition-colors flex items-center gap-1"
                       >
                          <Terminal className="w-3 h-3" /> {t('exec.logs.view')}

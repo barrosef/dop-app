@@ -14,7 +14,21 @@ export interface RepoConfig {
   baseBranch: string; prTargets: string[]; flowRules?: string;
 }
 export interface TaskManagerConfig { provider: 'jira' | 'clickup' | 'redmine' | 'custom'; baseUrl: string; project: string; }
-export interface RuntimeApp { name: string; role: 'frontend' | 'backend'; port: number; dependsOn?: string[]; }
+export interface RuntimeApp {
+  id: string;
+  name: string;
+  role: 'frontend' | 'backend';
+  port: number;
+  taskId?: string;
+  status?: 'running' | 'stopped';
+  dependsOn?: string[];
+}
+export interface RuntimeService {
+  id: string;
+  name: string;
+  taskIds?: string[];
+  status?: 'running' | 'stopped';
+}
 export interface ClaudeExtensions {
   mcps: { name: string; kind: string }[];
   plugins: string[]; skills: string[];
@@ -24,7 +38,7 @@ export interface Workspace {
   id: string; name: string; root: string; status: WorkspaceStatus;
   gitProvider?: GitProvider;
   repos: RepoConfig[]; taskManager: TaskManagerConfig;
-  runtime: { apps: RuntimeApp[]; infra: string[] };
+  runtime: { apps: RuntimeApp[]; infra: RuntimeService[] };
   claudeExtensions: ClaudeExtensions;
   rules: string[];
   context: string;

@@ -17,13 +17,19 @@ export const mockWorkspaces: Workspace[] = [
     ],
     taskManager: { provider: 'jira', baseUrl: 'https://org.atlassian.net', project: 'PORTAL' },
     cardTypes: ['Story', 'Bug', 'Epic'],
-    runtime: {
-      apps: [
-        { name: 'frontend', role: 'frontend', port: 3000, dependsOn: ['backend'] },
-        { name: 'backend',  role: 'backend',  port: 8080 }
-      ],
-      infra: ['mysql', 'redis', 'mongodb']
-    },
+      runtime: {
+        apps: [
+          { id: 'portal-frontend-d1', name: 'portal-frontend', role: 'frontend', port: 3000, taskId: 'd-1', status: 'running', dependsOn: ['portal-backend'] },
+          { id: 'portal-backend-d1', name: 'portal-backend', role: 'backend', port: 8080, taskId: 'd-1', status: 'running', dependsOn: ['mysql', 'redis'] },
+          { id: 'portal-backend-d3', name: 'portal-backend', role: 'backend', port: 8083, taskId: 'd-3', status: 'running', dependsOn: ['mysql', 'redis'] },
+          { id: 'portal-backend-d4', name: 'portal-backend', role: 'backend', port: 8084, taskId: 'd-4', status: 'running', dependsOn: ['mysql'] },
+        ],
+        infra: [
+          { id: 'portal-mysql', name: 'mysql', taskIds: ['d-1', 'd-3', 'd-4'], status: 'running' },
+          { id: 'portal-redis', name: 'redis', taskIds: ['d-1', 'd-3'], status: 'running' },
+          { id: 'portal-mongodb', name: 'mongodb', taskIds: ['d-1'], status: 'running' },
+        ]
+      },
     claudeExtensions: {
       mcps: [{ name: 'pg', kind: 'postgres' }, { name: 'fs', kind: 'filesystem' }],
       plugins: [], skills: [],
@@ -48,13 +54,20 @@ export const mockWorkspaces: Workspace[] = [
     ],
     taskManager: { provider: 'clickup', baseUrl: 'https://app.clickup.com', project: 'PAY' },
     cardTypes: ['Task', 'Subtask'],
-    runtime: {
-      apps: [
-        { name: 'api',    role: 'backend', port: 8081 },
-        { name: 'worker', role: 'backend', port: 8082, dependsOn: ['api'] }
-      ],
-      infra: ['postgres', 'rabbitmq', 'redis']
-    },
+      runtime: {
+        apps: [
+          { id: 'api-payments-d5', name: 'api-pagamentos', role: 'backend', port: 8081, taskId: 'd-5', status: 'running', dependsOn: ['postgres', 'rabbitmq'] },
+          { id: 'api-payments-d6', name: 'api-pagamentos', role: 'backend', port: 8083, taskId: 'd-6', status: 'running', dependsOn: ['postgres', 'redis'] },
+          { id: 'api-payments-d7', name: 'api-pagamentos', role: 'backend', port: 8084, taskId: 'd-7', status: 'running', dependsOn: ['postgres', 'rabbitmq'] },
+          { id: 'worker-billing-d5', name: 'worker-cobrancas', role: 'backend', port: 8082, taskId: 'd-5', status: 'running', dependsOn: ['api-pagamentos', 'rabbitmq'] },
+          { id: 'worker-billing-d8', name: 'worker-cobrancas', role: 'backend', port: 8085, taskId: 'd-8', status: 'stopped', dependsOn: ['api-pagamentos', 'redis'] },
+        ],
+        infra: [
+          { id: 'payments-postgres', name: 'postgres', taskIds: ['d-5', 'd-6', 'd-7', 'd-8'], status: 'running' },
+          { id: 'payments-rabbitmq', name: 'rabbitmq', taskIds: ['d-5', 'd-7'], status: 'running' },
+          { id: 'payments-redis', name: 'redis', taskIds: ['d-6', 'd-8'], status: 'running' },
+        ]
+      },
     claudeExtensions: {
       mcps: [{ name: 'pg', kind: 'postgres' }, { name: 'rmq', kind: 'rabbitmq' }],
       plugins: [], skills: [],
