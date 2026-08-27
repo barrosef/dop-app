@@ -25,6 +25,7 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
+  PlayCircle,
   Search,
   Send,
   Server,
@@ -78,12 +79,6 @@ function changeBadge(change: FileTouched['change'], t: Translator) {
   return change === 'created'
     ? { label: t('cockpit.file.created'), className: 'text-emerald-400 border-emerald-500/25 bg-emerald-500/10' }
     : { label: t('cockpit.file.modified'), className: 'text-amber-400 border-amber-500/25 bg-amber-500/10' };
-}
-
-function cardStatusIcon(status: Card['dopStatus']) {
-  if (status === 'new') return <CircleDot className="h-3 w-3" />;
-  if (status === 'doing') return <Activity className="h-3 w-3" />;
-  return <CheckCircle2 className="h-3 w-3" />;
 }
 
 function DiffViewer({ file, onBack }: { file: FileTouched; onBack: () => void }) {
@@ -406,6 +401,7 @@ function CardsPanel({
   onSearchChange,
   onToggleCard,
   onClear,
+  onOpenCard,
   onClose,
 }: {
   workspaceName: string;
@@ -415,6 +411,7 @@ function CardsPanel({
   onSearchChange: (value: string) => void;
   onToggleCard: (id: string) => void;
   onClear: () => void;
+  onOpenCard: (id: string) => void;
   onClose: () => void;
 }) {
   const { t } = useI18n();
@@ -445,22 +442,19 @@ function CardsPanel({
             const selected = selectedCardIds.has(card.id);
             const attention = card.stages.some(stage => stage.status === 'blocked' || (stage.key === 'val' && stage.status === 'running'));
             return (
-               <button
-                 key={card.id}
-                 type="button"
-                 onClick={() => onToggleCard(card.id)}
-                 aria-pressed={selected}
-                 className={`flex w-full items-center gap-2 rounded-md border px-2.5 py-2 text-left transition-colors ${selected ? 'border-primary/50 bg-primary/10' : 'border-border/50 bg-muted/10 hover:border-border hover:bg-muted/25'}`}
-                 data-testid={`button-select-card-${card.id}`}
-               >
-                 <span className="shrink-0 rounded border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">{card.externalKey}</span>
-                 <span className="min-w-0 flex-1 truncate text-xs font-medium">{card.title}</span>
-                 <Badge variant="outline" className={`inline-flex shrink-0 items-center gap-1 px-1.5 py-0 text-[9px] ${card.dopStatus === 'doing' ? 'border-amber-500/30 bg-amber-500/10 text-amber-400' : card.dopStatus === 'done' || card.dopStatus === 'delivered' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : ''}`}>
-                   {cardStatusIcon(card.dopStatus)}
-                   <span className="hidden sm:inline">{t(`card.status.${card.dopStatus}` as 'card.status.new' | 'card.status.doing' | 'card.status.done' | 'card.status.delivered')}</span>
-                 </Badge>
-                 {attention && <AlertCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />}
-               </button>
+              <div key={card.id} className={`rounded-md border p-2.5 transition-colors ${selected ? 'border-primary/50 bg-primary/10' : 'border-border/50 bg-muted/10 hover:border-border hover:bg-muted/25'}`} data-testid={`card-filter-${card.id}`}>
+                <button type="button" onClick={() => onToggleCard(card.id)} className="w-full text-left" data-testid={`button-select-card-${card.id}`}>
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <span className="rounded border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">{card.externalKey}</span>
+                    {attention && <AlertCircle className="h-3.5 w-3.5 text-destructive" />}
+                  </div>
+                  <p className="line-clamp-2 text-xs font-medium leading-tight">{card.title}</p>
+                </button>
+                <div className="mt-2 flex items-center justify-between">
+                  <Badge variant="outline" className={`px-1.5 py-0 text-[9px] ${card.dopStatus === 'doing' ? 'border-amber-500/30 bg-amber-500/10 text-amber-400' : ''}`}>{t(`card.status.${card.dopStatus}` as 'card.status.new' | 'card.status.doing' | 'card.status.done' | 'card.status.delivered')}</Badge>
+                  <button type="button" onClick={() => onOpenCard(card.id)} className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary" data-testid={`button-open-card-${card.id}`}><PlayCircle className="h-3 w-3" />{t('card.action.open')}</button>
+                </div>
+              </div>
             );
           })}
         </div>
@@ -474,16 +468,23 @@ function CardsPanel({
 
 type CockpitSection = 'overview' | 'chat' | 'repos' | 'infra';
 
+function sectionFromQuery(tab: string | null, hasFocusedCard: boolean): CockpitSection {
+  if (tab === 'chat' || tab === 'repos' || tab === 'infra') return tab;
+  return hasFocusedCard ? 'chat' : 'overview';
+}
+
 function WorkspaceOverviewPanel({
   workspace,
   cards,
   aggregates,
   selectedCard,
+  onFocusCard,
 }: {
   workspace: Workspace;
   cards: Card[];
   aggregates: RepoAggregate[];
   selectedCard?: Card;
+  onFocusCard: (id: string) => void;
 }) {
   const { t } = useI18n();
   const branchCount = aggregates.reduce((total, repo) => total + repo.branches.length, 0);
@@ -537,15 +538,17 @@ function WorkspaceOverviewPanel({
               {cards.length === 0 ? (
                 <p className="p-5 text-center text-xs italic text-muted-foreground">{t('common.empty')}</p>
               ) : cards.slice(0, 6).map(card => (
-                <div
+                <button
                   key={card.id}
-                  className={`flex items-center gap-3 px-4 py-3 ${selectedCard?.id === card.id ? 'bg-primary/10' : ''}`}
-                  data-testid={`overview-card-${card.id}`}
+                  type="button"
+                  onClick={() => onFocusCard(card.id)}
+                  className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-primary/5 ${selectedCard?.id === card.id ? 'bg-primary/10' : ''}`}
+                  data-testid={`button-overview-card-${card.id}`}
                 >
                   <span className="rounded border border-primary/25 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">{card.externalKey}</span>
                   <span className="min-w-0 flex-1 truncate text-xs font-medium">{card.title}</span>
                   <Badge variant="outline" className="shrink-0 text-[9px]">{t(`card.status.${card.dopStatus}` as 'card.status.new' | 'card.status.doing' | 'card.status.done' | 'card.status.delivered')}</Badge>
-                </div>
+                </button>
               ))}
             </div>
           </section>
@@ -712,6 +715,7 @@ export default function WorkspaceCockpit() {
   const { data: workspace, isLoading: workspaceLoading } = useWorkspace(id);
   const { data: cards, isLoading: cardsLoading } = useCards(id);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<CockpitSection>('overview');
   const [search, setSearch] = useState('');
   const [cardsPanelOpen, setCardsPanelOpen] = useState(false);
@@ -729,17 +733,21 @@ export default function WorkspaceCockpit() {
     setSelectedNode(previous => previous ?? (repoNames[0] ? { repo: repoNames[0], kind: 'overview' } : null));
     if (searchParams.get('tab') === 'repos') {
       setCardsPanelOpen(false);
-      setActiveSection('repos');
       setExpandedRepos(Object.fromEntries(repoNames.map(name => [name, true])));
     }
   }, [workspace, searchParams]);
 
   useEffect(() => {
     if (!cards) return;
-    const requestedCardId = searchParams.get('card');
-    const hasRequestedCard = !!requestedCardId && allCards.some(card => card.id === requestedCardId);
-    setSelectedCardIds(hasRequestedCard ? new Set([requestedCardId!]) : new Set());
-    if (hasRequestedCard && searchParams.get('tab') !== 'repos') setActiveSection('chat');
+    const requestedCardIds = [...new Set(searchParams.getAll('card'))];
+    const validCardIds = requestedCardIds.filter(cardId => allCards.some(card => card.id === cardId));
+    const requestedActiveCardId = searchParams.get('focus');
+    const nextActiveCardId = requestedActiveCardId && validCardIds.includes(requestedActiveCardId)
+      ? requestedActiveCardId
+      : validCardIds[0] ?? null;
+    setSelectedCardIds(new Set(validCardIds));
+    setActiveCardId(nextActiveCardId);
+    setActiveSection(sectionFromQuery(searchParams.get('tab'), Boolean(nextActiveCardId)));
   }, [allCards, cards, searchParams]);
 
   const filteredCards = useMemo(() => allCards.filter(card =>
@@ -762,7 +770,7 @@ export default function WorkspaceCockpit() {
         if (!byName[repoName]) byName[repoName] = { name: repoName, relatedCards: [], branches: [], prs: [], files: [], tests: [], commits: 0 };
         const repo = byName[repoName];
         if (!repo.relatedCards.some(related => related.id === card.id)) repo.relatedCards.push(card);
-        repo.commits += overview.commits;
+        repo.commits += overview.commitsByRepo?.[repoName] ?? (overview.repos.length === 1 ? overview.commits : 0);
         repo.tests.push(...overview.tests.filter(test => !repo.tests.some(existing => existing.name === test.name && existing.repo === test.repo)));
       });
 
@@ -808,7 +816,7 @@ export default function WorkspaceCockpit() {
   const selectedBranch = selectedRepo?.branches.find(branch => branch.name === selectedNode?.id);
   const selectedPr = selectedRepo?.prs.find(pr => pr.id === selectedNode?.id);
   const activeNode = selectedNode && selectedRepo ? selectedNode : selectedRepo ? { repo: selectedRepo.name, kind: 'overview' as const } : null;
-  const selectedCard = allCards.find(card => selectedCardIds.has(card.id));
+  const selectedCard = allCards.find(card => card.id === activeCardId && selectedCardIds.has(card.id));
 
   useEffect(() => {
     if (aggregates.length === 0) {
@@ -846,22 +854,38 @@ export default function WorkspaceCockpit() {
   const setCockpitSection = (section: CockpitSection) => {
     setActiveSection(section);
     const next = new URLSearchParams(searchParams);
-    if (section === 'repos') next.set('tab', 'repos');
-    else next.delete('tab');
+    if (section === 'overview') next.delete('tab');
+    else next.set('tab', section);
     if (next.toString() !== searchParams.toString()) setSearchParams(next);
   };
-  const setCardScope = (cardId: string | null) => {
+  const setCardScope = (cardIds: string[], focusedCardId: string | null, section?: CockpitSection) => {
     const next = new URLSearchParams(searchParams);
-    if (cardId) next.set('card', cardId);
-    else next.delete('card');
-    if (cardId) next.delete('tab');
+    next.delete('card');
+    cardIds.forEach(cardId => next.append('card', cardId));
+    next.delete('focus');
+    if (focusedCardId) next.set('focus', focusedCardId);
+    if (section === 'overview') next.delete('tab');
+    else if (section) next.set('tab', section);
     setSearchParams(next);
   };
+  const focusCard = (cardId: string) => {
+    setCardScope([cardId], cardId, 'chat');
+    setSelectedFile(null);
+    setActiveSection('chat');
+    setCardsPanelOpen(false);
+  };
   const toggleCard = (cardId: string) => {
-    setCardScope(selectedCard?.id === cardId ? null : cardId);
+    const nextSelection = new Set(selectedCardIds);
+    if (nextSelection.has(cardId)) nextSelection.delete(cardId);
+    else nextSelection.add(cardId);
+    const nextCardIds = Array.from(nextSelection);
+    const nextFocusedCardId = activeCardId && nextSelection.has(activeCardId)
+      ? activeCardId
+      : nextCardIds[0] ?? null;
+    setCardScope(nextCardIds, nextFocusedCardId);
     setSelectedFile(null);
   };
-  const clearCards = () => setCardScope(null);
+  const clearCards = () => setCardScope([], null);
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-background" data-testid="workspace-cockpit">
@@ -889,42 +913,21 @@ export default function WorkspaceCockpit() {
         </Button>
       </header>
 
-      <div className="flex min-h-14 shrink-0 items-center gap-2 border-b border-border/50 bg-muted/10 px-3 py-2 sm:px-5" data-testid="cockpit-reader">
-        <div className="flex shrink-0 items-center gap-2">
-          <Activity className="h-3.5 w-3.5 text-primary" />
-          <span className="text-xs font-medium">{t('cockpit.cards.reader')}</span>
-        </div>
-        <span className="h-5 border-l border-border/70" />
-        <div className="min-w-0 flex-1 overflow-x-auto" data-testid="task-reader-cards">
-          <div className="flex min-w-max gap-1.5">
-            {filteredCards.length === 0 ? (
-              <span className="py-1 text-[11px] text-muted-foreground">{t('common.empty')}</span>
-            ) : filteredCards.map(card => {
-              const selected = selectedCardIds.has(card.id);
-              return (
-                <button
-                  key={card.id}
-                  type="button"
-                  onClick={() => toggleCard(card.id)}
-                  aria-pressed={selected}
-                  className={`flex max-w-[17rem] items-center gap-2 rounded-md border px-2.5 py-1.5 text-left transition-colors ${selected ? 'border-primary/60 bg-primary/15 ring-1 ring-primary/20' : 'border-border/60 bg-card/60 hover:border-primary/40 hover:bg-primary/5'}`}
-                  data-testid={`reader-card-${card.id}`}
-                >
-                  <span className="shrink-0 rounded border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">{card.externalKey}</span>
-                  <span className="max-w-36 truncate text-[11px] font-medium">{card.title}</span>
-                  <Badge variant="outline" className={`inline-flex shrink-0 items-center gap-1 px-1.5 py-0 text-[9px] ${card.dopStatus === 'doing' ? 'border-amber-500/30 bg-amber-500/10 text-amber-400' : card.dopStatus === 'done' || card.dopStatus === 'delivered' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : ''}`}>
-                    {cardStatusIcon(card.dopStatus)}
-                    <span className="hidden md:inline">{t(`card.status.${card.dopStatus}` as 'card.status.new' | 'card.status.doing' | 'card.status.done' | 'card.status.delivered')}</span>
-                  </Badge>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <button type="button" onClick={() => { setCardsPanelOpen(true); setMobileTreeOpen(false); }} className="hidden shrink-0 rounded-md border border-border/60 p-1.5 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-foreground sm:inline-flex" aria-label={t('cockpit.cards.openPanel')} title={t('cockpit.cards.openPanel')} data-testid="button-open-card-reader">
-          <Search className="h-3.5 w-3.5" />
+      <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-muted/10 px-3 py-2 sm:px-5" data-testid="cockpit-reader">
+        <button type="button" onClick={() => { setCardsPanelOpen(true); setMobileTreeOpen(false); }} className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left text-xs font-medium transition-colors hover:bg-primary/10 hover:text-primary" data-testid="button-open-card-reader">
+          <Activity className="h-3.5 w-3.5 shrink-0 text-primary" />
+          <span>{t('cockpit.cards.reader')}</span>
         </button>
-        {selectedCard && <button type="button" onClick={clearCards} className="shrink-0 text-[10px] text-muted-foreground hover:text-primary" data-testid="button-clear-card-filter">{t('cockpit.repo.clearSelection')}</button>}
+        <span className="h-4 border-l border-border/70" />
+        {selectedCard ? (
+          <button type="button" onClick={() => setCockpitSection('chat')} className="flex min-w-0 items-center gap-2 rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs hover:bg-primary/15" data-testid="button-focused-card">
+            <span className="font-mono font-semibold text-primary">{selectedCard.externalKey}</span>
+            <span className="max-w-48 truncate text-muted-foreground">{selectedCard.title}</span>
+          </button>
+        ) : (
+          <span className="truncate text-[11px] text-muted-foreground">{t('cockpit.cards.readerHint')}</span>
+        )}
+        {selectedCard && <button type="button" onClick={clearCards} className="ml-auto text-[10px] text-muted-foreground hover:text-primary" data-testid="button-clear-card-filter">{t('cockpit.repo.clearSelection')}</button>}
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -940,6 +943,7 @@ export default function WorkspaceCockpit() {
               onSearchChange={setSearch}
               onToggleCard={toggleCard}
               onClear={clearCards}
+              onOpenCard={focusCard}
               onClose={() => setCardsPanelOpen(false)}
             />
           </div>
@@ -969,7 +973,7 @@ export default function WorkspaceCockpit() {
                   <button type="button" onClick={() => setMobileTreeOpen(false)} aria-label={t('cockpit.tree.close')} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground sm:hidden" data-testid="button-close-repository-tree"><X className="h-3.5 w-3.5" /></button>
                 </div>
               </div>
-              <p className="mt-1 text-[10px] text-muted-foreground">{selectedCard ? t('cockpit.cards.scopeCards', { count: 1 }) : t('cockpit.cards.scopeAll')}</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">{selectedCardIds.size > 0 ? t('cockpit.cards.scopeCards', { count: selectedCardIds.size }) : t('cockpit.cards.scopeAll')}</p>
             </div>
             <ScrollArea className="min-h-0 flex-1">
               <div className="space-y-1 p-2">
@@ -1000,12 +1004,12 @@ export default function WorkspaceCockpit() {
         )}
 
         <main className="flex min-w-0 flex-1 flex-col bg-background" data-testid="cockpit-central-panel">
-          {activeSection === 'overview' && <WorkspaceOverviewPanel workspace={workspace} cards={allCards} aggregates={aggregates} selectedCard={selectedCard} />}
+          {activeSection === 'overview' && <WorkspaceOverviewPanel workspace={workspace} cards={allCards} aggregates={aggregates} selectedCard={selectedCard} onFocusCard={focusCard} />}
           {activeSection === 'chat' && <CockpitChat workspaceId={id} selectedCard={selectedCard} onOpenReader={() => setCardsPanelOpen(true)} />}
           {activeSection === 'infra' && <InfrastructurePanel workspace={workspace} />}
           {activeSection === 'repos' && (selectedFile ? <DiffViewer file={selectedFile} onBack={() => setSelectedFile(null)} /> : (
             <>
-              <div className="flex min-h-12 shrink-0 items-center gap-2 border-b border-border bg-card/20 px-4"><FolderGit2 className="h-4 w-4 text-primary" /><span className="font-mono text-xs font-semibold">{selectedRepo?.name || t('repo.none')}</span>{activeNode && activeNode.kind !== 'overview' && <><ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">{activeNode.kind === 'branch' ? selectedBranch?.name : activeNode.kind === 'pr' ? selectedPr?.sourceBranch : activeNode.kind === 'branches' ? t('cockpit.tree.branches') : t('cockpit.tree.pullRequests')}</span></>}<span className="ml-auto text-[10px] text-muted-foreground">{selectedCard ? t('cockpit.cards.filterActive', { count: 1 }) : t('cockpit.cards.allScope')}</span></div>
+              <div className="flex min-h-12 shrink-0 items-center gap-2 border-b border-border bg-card/20 px-4"><FolderGit2 className="h-4 w-4 text-primary" /><span className="font-mono text-xs font-semibold">{selectedRepo?.name || t('repo.none')}</span>{activeNode && activeNode.kind !== 'overview' && <><ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">{activeNode.kind === 'branch' ? selectedBranch?.name : activeNode.kind === 'pr' ? selectedPr?.sourceBranch : activeNode.kind === 'branches' ? t('cockpit.tree.branches') : t('cockpit.tree.pullRequests')}</span></>}<span className="ml-auto text-[10px] text-muted-foreground">{selectedCardIds.size > 0 ? t('cockpit.cards.filterActive', { count: selectedCardIds.size }) : t('cockpit.cards.allScope')}</span></div>
               <ScrollArea className="min-h-0 flex-1">{!selectedRepo ? <div className="p-8 text-center text-sm text-muted-foreground">{t('repo.none')}</div> : activeNode?.kind === 'overview' ? <OverviewPanel repo={selectedRepo} onFileClick={setSelectedFile} /> : activeNode?.kind === 'branches' || activeNode?.kind === 'branch' ? <BranchPanel repo={selectedRepo} branch={selectedBranch} onFileClick={setSelectedFile} /> : <PrPanel repo={selectedRepo} pr={selectedPr} onPrClick={pr => selectNode({ repo: selectedRepo.name, kind: 'pr', id: pr.id })} onFileClick={setSelectedFile} />}</ScrollArea>
             </>
           ))}

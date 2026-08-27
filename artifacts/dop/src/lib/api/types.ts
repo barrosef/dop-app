@@ -61,6 +61,7 @@ export interface TestResult {
 }
 export interface RepositoryOverview {
   repos: string[]; branches: string[]; commits: number;
+  commitsByRepo?: Record<string, number>;
   prs: PullRequest[]; files: FileTouched[]; tests: TestResult[];
   startedAt?: string; finishedAt?: string; elapsedSeconds?: number;
 }

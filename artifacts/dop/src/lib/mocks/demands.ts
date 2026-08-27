@@ -510,6 +510,7 @@ export const mockCards: Demand[] = [
         'portal-backend|feature/PORTAL-104-sec-deps'
       ],
       commits: 7,
+      commitsByRepo: { 'portal-frontend': 2, 'portal-backend': 5 },
       prs: [
         {
           id: 'pr-10', repo: 'portal-frontend',
@@ -614,6 +615,7 @@ export const mockCards: Demand[] = [
         'worker-cobrancas|feature/PAY-201-reconcile-worker'
       ],
       commits: 14,
+      commitsByRepo: { 'api-pagamentos': 9, 'worker-cobrancas': 5 },
       prs: [
         { id: 'pr-1', repo: 'api-pagamentos',   sourceBranch: 'feature/PAY-201-reconcile-refactor', targetBranch: 'develop', url: '#', merged: false, hasConflict: false,
           reviewers: [
@@ -698,6 +700,7 @@ export const mockCards: Demand[] = [
         'shared-contracts|feature/PAY-203-audit-events'
       ],
       commits: 6,
+      commitsByRepo: { 'api-pagamentos': 4, 'shared-contracts': 2 },
       prs: [],
       files: [
         { path: 'api-pagamentos/src/audit/auditService.ts',         kind: 'source', change: 'created'  },

@@ -88,7 +88,12 @@ export function AppSidebar() {
   }, []);
 
   const open = sidebarOpen && !isMobile;
-  const selectedCardId = new URLSearchParams(location.search).get('card');
+  const activeTab = new URLSearchParams(location.search).get('tab');
+  const workspaceParams = new URLSearchParams(location.search);
+  workspaceParams.delete('tab');
+  const cockpitQuery = workspaceParams.toString();
+  const repositoriesParams = new URLSearchParams(workspaceParams);
+  repositoriesParams.set('tab', 'repos');
 
   return (
     <div
@@ -139,14 +144,14 @@ export function AppSidebar() {
             <NavItem
               icon={TerminalSquare}
               label={t('sidebar.cockpit')}
-              to={`/workspaces/${wsId}`}
+              to={`/workspaces/${wsId}${cockpitQuery ? `?${cockpitQuery}` : ''}`}
               open={open}
-              active={at(`/workspaces/${wsId}`, true) && !location.search}
+              active={at(`/workspaces/${wsId}`, true) && activeTab !== 'repos'}
             />
             <NavItem
               icon={Folders}
               label={t('sidebar.repositories')}
-              to={`/workspaces/${wsId}?tab=repos${selectedCardId ? `&card=${encodeURIComponent(selectedCardId)}` : ''}`}
+              to={`/workspaces/${wsId}?${repositoriesParams.toString()}`}
               open={open}
               active={location.search.includes('tab=repos')}
             />
