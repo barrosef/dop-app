@@ -777,12 +777,14 @@ function InfrastructureSidebar({
   selectedCard,
   mobileOpen,
   onClose,
+  onSelectResource,
 }: {
   workspace: Workspace;
   cards: Card[];
   selectedCard?: Card;
   mobileOpen: boolean;
   onClose: () => void;
+  onSelectResource: (resource: InfraResource) => void;
 }) {
   const { t } = useI18n();
   const cardById = new Map(cards.map(card => [card.id, card]));
@@ -792,11 +794,6 @@ function InfrastructureSidebar({
   const services = selectedCard
     ? workspace.runtime.infra.filter(service => !service.taskIds?.length || service.taskIds.includes(selectedCard.id))
     : workspace.runtime.infra;
-  const [selectedResource, setSelectedResource] = useState<InfraResource | null>(null);
-
-  useEffect(() => {
-    setSelectedResource(null);
-  }, [selectedCard?.id]);
 
   return (
     <aside className={`${mobileOpen ? 'absolute inset-y-0 left-12 z-30 flex w-[min(22rem,calc(100vw-6.5rem))] shadow-2xl' : 'hidden'} min-h-0 shrink-0 flex-col border-r border-border bg-card sm:static sm:z-auto sm:flex sm:w-80 sm:shadow-none`} data-testid="infrastructure-sidebar">
@@ -808,14 +805,14 @@ function InfrastructureSidebar({
         </div>
         <p className="mt-1 text-[10px] text-muted-foreground">{selectedCard ? `${t('cockpit.cards.focused')}: ${selectedCard.externalKey}` : t('cockpit.cards.scopeAll')}</p>
       </div>
-      {selectedResource ? <InfraResourcePanel resource={selectedResource} onBack={() => setSelectedResource(null)} /> : <ScrollArea className="min-h-0 flex-1" data-testid="cockpit-infrastructure">
+      <ScrollArea className="min-h-0 flex-1" data-testid="cockpit-infrastructure">
         <div className="space-y-4 p-3">
           <section>
             <div className="mb-2 flex items-center justify-between"><h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t('exec.infra.apps')}</h3><span className="font-mono text-[10px] text-muted-foreground">{apps.length}</span></div>
             {apps.length === 0 ? <p className="rounded-md border border-dashed border-border/60 px-3 py-4 text-center text-xs italic text-muted-foreground">{selectedCard ? t('cockpit.infrastructure.emptyForCard') : t('exec.infra.none')}</p> : (
               <div className="space-y-2">{apps.map(app => {
                 const appCard = app.taskId ? cardById.get(app.taskId) : undefined;
-                return <button type="button" onClick={() => setSelectedResource({ kind: 'app', id: app.id, name: app.name, port: app.port, taskId: app.taskId, status: app.status, dependsOn: app.dependsOn })} key={app.id} className="block w-full rounded-md border border-border/50 bg-muted/15 p-2.5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5" data-testid={`infra-app-${app.id}`}>
+                return <button type="button" onClick={() => onSelectResource({ kind: 'app', id: app.id, name: app.name, port: app.port, taskId: app.taskId, status: app.status, dependsOn: app.dependsOn })} key={app.id} className="block w-full rounded-md border border-border/50 bg-muted/15 p-2.5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5" data-testid={`infra-app-${app.id}`}>
                   <div className="flex items-center gap-2"><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${app.status === 'stopped' ? 'bg-muted-foreground' : 'bg-emerald-400'}`} /><span className="min-w-0 flex-1 truncate font-mono text-xs font-semibold">{app.name}</span><span className="font-mono text-[10px] text-muted-foreground">:{app.port}</span></div>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     {appCard && <Badge variant="outline" className="border-primary/30 bg-primary/10 font-mono text-[9px] text-primary" data-testid={`badge-infra-card-${appCard.id}`}>{appCard.externalKey}</Badge>}
@@ -829,11 +826,11 @@ function InfrastructureSidebar({
           <section>
             <div className="mb-2 flex items-center justify-between"><h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t('exec.infra.services')}</h3><span className="font-mono text-[10px] text-muted-foreground">{services.length}</span></div>
             {services.length === 0 ? <p className="rounded-md border border-dashed border-border/60 px-3 py-4 text-center text-xs italic text-muted-foreground">{selectedCard ? t('cockpit.infrastructure.emptyForCard') : t('exec.infra.none')}</p> : (
-              <div className="space-y-1.5">{services.map(service => <button type="button" onClick={() => setSelectedResource({ kind: 'service', id: service.id, name: service.name, status: service.status })} key={service.id} className="flex w-full items-center gap-2 rounded-md border border-border/40 bg-muted/15 px-3 py-2 text-left text-xs transition-colors hover:border-primary/50 hover:bg-primary/5" data-testid={`infra-service-${service.id}`}><span className={`h-1.5 w-1.5 rounded-full ${service.status === 'stopped' ? 'bg-muted-foreground' : 'bg-emerald-400'}`} /><span className="min-w-0 flex-1 truncate">{service.name}</span><span className="text-[9px] text-muted-foreground">{service.status === 'stopped' ? t('exec.infra.stopped') : t('exec.infra.running')}</span></button>)}</div>
+              <div className="space-y-1.5">{services.map(service => <button type="button" onClick={() => onSelectResource({ kind: 'service', id: service.id, name: service.name, status: service.status })} key={service.id} className="flex w-full items-center gap-2 rounded-md border border-border/40 bg-muted/15 px-3 py-2 text-left text-xs transition-colors hover:border-primary/50 hover:bg-primary/5" data-testid={`infra-service-${service.id}`}><span className={`h-1.5 w-1.5 rounded-full ${service.status === 'stopped' ? 'bg-muted-foreground' : 'bg-emerald-400'}`} /><span className="min-w-0 flex-1 truncate">{service.name}</span><span className="text-[9px] text-muted-foreground">{service.status === 'stopped' ? t('exec.infra.stopped') : t('exec.infra.running')}</span></button>)}</div>
             )}
           </section>
         </div>
-      </ScrollArea>}
+      </ScrollArea>
     </aside>
   );
 }
@@ -858,6 +855,7 @@ export default function WorkspaceCockpit() {
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileTouched | null>(null);
+  const [selectedInfraResource, setSelectedInfraResource] = useState<InfraResource | null>(null);
   const allCards = cards ?? EMPTY_CARDS;
 
   useEffect(() => {
@@ -959,6 +957,10 @@ export default function WorkspaceCockpit() {
     }
     if (selectedFile && !aggregates.some(repo => repo.name === selectedFile.repo)) setSelectedFile(null);
   }, [aggregates, selectedFile, selectedNode]);
+
+  useEffect(() => {
+    setSelectedInfraResource(null);
+  }, [activeCardId]);
 
   if (workspaceLoading) {
     return <div className="flex h-full items-center justify-center text-muted-foreground"><Loader2 className="mr-3 h-5 w-5 animate-spin" />{t('common.loading')}</div>;
@@ -1094,10 +1096,10 @@ export default function WorkspaceCockpit() {
           </aside>
         )}
         {activeSection === 'chat' && <CockpitChat workspaceId={id} selectedCard={selectedCard} onOpenReader={() => { setMobileSidebarOpen(false); document.querySelector<HTMLElement>('[data-testid="cockpit-reader"]')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }} mobileOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />}
-        {activeSection === 'infra' && <InfrastructureSidebar workspace={workspace} cards={allCards} selectedCard={selectedCard} mobileOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />}
+        {activeSection === 'infra' && <InfrastructureSidebar workspace={workspace} cards={allCards} selectedCard={selectedCard} mobileOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} onSelectResource={resource => { setSelectedInfraResource(resource); setMobileSidebarOpen(false); }} />}
 
         <main className="flex min-w-0 flex-1 flex-col bg-background" data-testid="cockpit-central-panel">
-          {(activeSection === 'overview' || activeSection === 'chat' || activeSection === 'infra') && <WorkspaceOverviewPanel workspace={workspace} cards={allCards} aggregates={aggregates} selectedCard={selectedCard} />}
+          {activeSection === 'infra' && selectedInfraResource ? <InfraResourcePanel resource={selectedInfraResource} onBack={() => { setSelectedInfraResource(null); setMobileSidebarOpen(true); }} /> : (activeSection === 'overview' || activeSection === 'chat' || activeSection === 'infra') && <WorkspaceOverviewPanel workspace={workspace} cards={allCards} aggregates={aggregates} selectedCard={selectedCard} />}
           {activeSection === 'repos' && (selectedFile ? <DiffViewer file={selectedFile} onBack={() => setSelectedFile(null)} /> : (
             <>
               <div className="flex min-h-12 shrink-0 items-center gap-2 border-b border-border bg-card/20 px-4"><FolderGit2 className="h-4 w-4 text-primary" /><span className="font-mono text-xs font-semibold">{selectedRepo?.name || t('repo.none')}</span>{activeNode && activeNode.kind !== 'overview' && <><ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">{activeNode.kind === 'branch' ? selectedBranch?.name : activeNode.kind === 'pr' ? selectedPr?.sourceBranch : activeNode.kind === 'branches' ? t('cockpit.tree.branches') : t('cockpit.tree.pullRequests')}</span></>}<span className="ml-auto text-[10px] text-muted-foreground">{selectedCardIds.size > 0 ? t('cockpit.cards.filterActive', { count: selectedCardIds.size }) : t('cockpit.cards.allScope')}</span></div>
