@@ -25,7 +25,6 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
-  PlayCircle,
   Search,
   Send,
   Server,
@@ -79,6 +78,12 @@ function changeBadge(change: FileTouched['change'], t: Translator) {
   return change === 'created'
     ? { label: t('cockpit.file.created'), className: 'text-emerald-400 border-emerald-500/25 bg-emerald-500/10' }
     : { label: t('cockpit.file.modified'), className: 'text-amber-400 border-amber-500/25 bg-amber-500/10' };
+}
+
+function cardStatusIcon(status: Card['dopStatus']) {
+  if (status === 'new') return <CircleDot className="h-3 w-3" />;
+  if (status === 'doing') return <Activity className="h-3 w-3" />;
+  return <CheckCircle2 className="h-3 w-3" />;
 }
 
 function DiffViewer({ file, onBack }: { file: FileTouched; onBack: () => void }) {
@@ -401,7 +406,6 @@ function CardsPanel({
   onSearchChange,
   onToggleCard,
   onClear,
-  onOpenCard,
   onClose,
 }: {
   workspaceName: string;
@@ -411,7 +415,6 @@ function CardsPanel({
   onSearchChange: (value: string) => void;
   onToggleCard: (id: string) => void;
   onClear: () => void;
-  onOpenCard: (id: string) => void;
   onClose: () => void;
 }) {
   const { t } = useI18n();
@@ -442,19 +445,22 @@ function CardsPanel({
             const selected = selectedCardIds.has(card.id);
             const attention = card.stages.some(stage => stage.status === 'blocked' || (stage.key === 'val' && stage.status === 'running'));
             return (
-              <div key={card.id} className={`rounded-md border p-2.5 transition-colors ${selected ? 'border-primary/50 bg-primary/10' : 'border-border/50 bg-muted/10 hover:border-border hover:bg-muted/25'}`} data-testid={`card-filter-${card.id}`}>
-                <button type="button" onClick={() => onToggleCard(card.id)} className="w-full text-left" data-testid={`button-select-card-${card.id}`}>
-                  <div className="mb-1.5 flex items-center justify-between gap-2">
-                    <span className="rounded border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">{card.externalKey}</span>
-                    {attention && <AlertCircle className="h-3.5 w-3.5 text-destructive" />}
-                  </div>
-                  <p className="line-clamp-2 text-xs font-medium leading-tight">{card.title}</p>
-                </button>
-                <div className="mt-2 flex items-center justify-between">
-                  <Badge variant="outline" className={`px-1.5 py-0 text-[9px] ${card.dopStatus === 'doing' ? 'border-amber-500/30 bg-amber-500/10 text-amber-400' : ''}`}>{t(`card.status.${card.dopStatus}` as 'card.status.new' | 'card.status.doing' | 'card.status.done' | 'card.status.delivered')}</Badge>
-                  <button type="button" onClick={() => onOpenCard(card.id)} className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary" data-testid={`button-open-card-${card.id}`}><PlayCircle className="h-3 w-3" />{t('card.action.open')}</button>
-                </div>
-              </div>
+               <button
+                 key={card.id}
+                 type="button"
+                 onClick={() => onToggleCard(card.id)}
+                 aria-pressed={selected}
+                 className={`flex w-full items-center gap-2 rounded-md border px-2.5 py-2 text-left transition-colors ${selected ? 'border-primary/50 bg-primary/10' : 'border-border/50 bg-muted/10 hover:border-border hover:bg-muted/25'}`}
+                 data-testid={`button-select-card-${card.id}`}
+               >
+                 <span className="shrink-0 rounded border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">{card.externalKey}</span>
+                 <span className="min-w-0 flex-1 truncate text-xs font-medium">{card.title}</span>
+                 <Badge variant="outline" className={`inline-flex shrink-0 items-center gap-1 px-1.5 py-0 text-[9px] ${card.dopStatus === 'doing' ? 'border-amber-500/30 bg-amber-500/10 text-amber-400' : card.dopStatus === 'done' || card.dopStatus === 'delivered' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : ''}`}>
+                   {cardStatusIcon(card.dopStatus)}
+                   <span className="hidden sm:inline">{t(`card.status.${card.dopStatus}` as 'card.status.new' | 'card.status.doing' | 'card.status.done' | 'card.status.delivered')}</span>
+                 </Badge>
+                 {attention && <AlertCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />}
+               </button>
             );
           })}
         </div>
@@ -473,13 +479,11 @@ function WorkspaceOverviewPanel({
   cards,
   aggregates,
   selectedCard,
-  onFocusCard,
 }: {
   workspace: Workspace;
   cards: Card[];
   aggregates: RepoAggregate[];
   selectedCard?: Card;
-  onFocusCard: (id: string) => void;
 }) {
   const { t } = useI18n();
   const branchCount = aggregates.reduce((total, repo) => total + repo.branches.length, 0);
@@ -533,17 +537,15 @@ function WorkspaceOverviewPanel({
               {cards.length === 0 ? (
                 <p className="p-5 text-center text-xs italic text-muted-foreground">{t('common.empty')}</p>
               ) : cards.slice(0, 6).map(card => (
-                <button
+                <div
                   key={card.id}
-                  type="button"
-                  onClick={() => onFocusCard(card.id)}
-                  className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-primary/5 ${selectedCard?.id === card.id ? 'bg-primary/10' : ''}`}
-                  data-testid={`button-overview-card-${card.id}`}
+                  className={`flex items-center gap-3 px-4 py-3 ${selectedCard?.id === card.id ? 'bg-primary/10' : ''}`}
+                  data-testid={`overview-card-${card.id}`}
                 >
                   <span className="rounded border border-primary/25 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">{card.externalKey}</span>
                   <span className="min-w-0 flex-1 truncate text-xs font-medium">{card.title}</span>
                   <Badge variant="outline" className="shrink-0 text-[9px]">{t(`card.status.${card.dopStatus}` as 'card.status.new' | 'card.status.doing' | 'card.status.done' | 'card.status.delivered')}</Badge>
-                </button>
+                </div>
               ))}
             </div>
           </section>
@@ -855,12 +857,6 @@ export default function WorkspaceCockpit() {
     if (cardId) next.delete('tab');
     setSearchParams(next);
   };
-  const focusCard = (cardId: string) => {
-    setCardScope(selectedCard?.id === cardId ? null : cardId);
-    setSelectedFile(null);
-    setActiveSection('chat');
-    setCardsPanelOpen(false);
-  };
   const toggleCard = (cardId: string) => {
     setCardScope(selectedCard?.id === cardId ? null : cardId);
     setSelectedFile(null);
@@ -923,7 +919,6 @@ export default function WorkspaceCockpit() {
               onSearchChange={setSearch}
               onToggleCard={toggleCard}
               onClear={clearCards}
-              onOpenCard={focusCard}
               onClose={() => setCardsPanelOpen(false)}
             />
           </div>
@@ -984,7 +979,7 @@ export default function WorkspaceCockpit() {
         )}
 
         <main className="flex min-w-0 flex-1 flex-col bg-background" data-testid="cockpit-central-panel">
-          {activeSection === 'overview' && <WorkspaceOverviewPanel workspace={workspace} cards={allCards} aggregates={aggregates} selectedCard={selectedCard} onFocusCard={focusCard} />}
+          {activeSection === 'overview' && <WorkspaceOverviewPanel workspace={workspace} cards={allCards} aggregates={aggregates} selectedCard={selectedCard} />}
           {activeSection === 'chat' && <CockpitChat workspaceId={id} selectedCard={selectedCard} onOpenReader={() => setCardsPanelOpen(true)} />}
           {activeSection === 'infra' && <InfrastructurePanel workspace={workspace} />}
           {activeSection === 'repos' && (selectedFile ? <DiffViewer file={selectedFile} onBack={() => setSelectedFile(null)} /> : (
