@@ -889,21 +889,42 @@ export default function WorkspaceCockpit() {
         </Button>
       </header>
 
-      <div className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-muted/10 px-3 py-2 sm:px-5" data-testid="cockpit-reader">
-        <button type="button" onClick={() => { setCardsPanelOpen(true); setMobileTreeOpen(false); }} className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left text-xs font-medium transition-colors hover:bg-primary/10 hover:text-primary" data-testid="button-open-card-reader">
-          <Activity className="h-3.5 w-3.5 shrink-0 text-primary" />
-          <span>{t('cockpit.cards.reader')}</span>
+      <div className="flex min-h-14 shrink-0 items-center gap-2 border-b border-border/50 bg-muted/10 px-3 py-2 sm:px-5" data-testid="cockpit-reader">
+        <div className="flex shrink-0 items-center gap-2">
+          <Activity className="h-3.5 w-3.5 text-primary" />
+          <span className="text-xs font-medium">{t('cockpit.cards.reader')}</span>
+        </div>
+        <span className="h-5 border-l border-border/70" />
+        <div className="min-w-0 flex-1 overflow-x-auto" data-testid="task-reader-cards">
+          <div className="flex min-w-max gap-1.5">
+            {filteredCards.length === 0 ? (
+              <span className="py-1 text-[11px] text-muted-foreground">{t('common.empty')}</span>
+            ) : filteredCards.map(card => {
+              const selected = selectedCardIds.has(card.id);
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => toggleCard(card.id)}
+                  aria-pressed={selected}
+                  className={`flex max-w-[17rem] items-center gap-2 rounded-md border px-2.5 py-1.5 text-left transition-colors ${selected ? 'border-primary/60 bg-primary/15 ring-1 ring-primary/20' : 'border-border/60 bg-card/60 hover:border-primary/40 hover:bg-primary/5'}`}
+                  data-testid={`reader-card-${card.id}`}
+                >
+                  <span className="shrink-0 rounded border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">{card.externalKey}</span>
+                  <span className="max-w-36 truncate text-[11px] font-medium">{card.title}</span>
+                  <Badge variant="outline" className={`inline-flex shrink-0 items-center gap-1 px-1.5 py-0 text-[9px] ${card.dopStatus === 'doing' ? 'border-amber-500/30 bg-amber-500/10 text-amber-400' : card.dopStatus === 'done' || card.dopStatus === 'delivered' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : ''}`}>
+                    {cardStatusIcon(card.dopStatus)}
+                    <span className="hidden md:inline">{t(`card.status.${card.dopStatus}` as 'card.status.new' | 'card.status.doing' | 'card.status.done' | 'card.status.delivered')}</span>
+                  </Badge>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <button type="button" onClick={() => { setCardsPanelOpen(true); setMobileTreeOpen(false); }} className="hidden shrink-0 rounded-md border border-border/60 p-1.5 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-foreground sm:inline-flex" aria-label={t('cockpit.cards.openPanel')} title={t('cockpit.cards.openPanel')} data-testid="button-open-card-reader">
+          <Search className="h-3.5 w-3.5" />
         </button>
-        <span className="h-4 border-l border-border/70" />
-        {selectedCard ? (
-          <button type="button" onClick={() => setActiveSection('chat')} className="flex min-w-0 items-center gap-2 rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs hover:bg-primary/15" data-testid="button-focused-card">
-            <span className="font-mono font-semibold text-primary">{selectedCard.externalKey}</span>
-            <span className="max-w-48 truncate text-muted-foreground">{selectedCard.title}</span>
-          </button>
-        ) : (
-          <span className="truncate text-[11px] text-muted-foreground">{t('cockpit.cards.readerHint')}</span>
-        )}
-        {selectedCard && <button type="button" onClick={clearCards} className="ml-auto text-[10px] text-muted-foreground hover:text-primary" data-testid="button-clear-card-filter">{t('cockpit.repo.clearSelection')}</button>}
+        {selectedCard && <button type="button" onClick={clearCards} className="shrink-0 text-[10px] text-muted-foreground hover:text-primary" data-testid="button-clear-card-filter">{t('cockpit.repo.clearSelection')}</button>}
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
