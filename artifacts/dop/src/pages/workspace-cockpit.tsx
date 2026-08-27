@@ -4,6 +4,7 @@ import { useCard, useCards, useSendChatMessage, useWorkspace } from '../hooks/us
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { ScrollArea } from '../components/ui/scroll-area';
+import { InfraTerminal } from '../components/infra-terminal';
 import {
   Activity,
   AlertCircle,
@@ -679,16 +680,16 @@ type InfraResource = {
 
 function InfraResourcePanel({
   resource,
+  workspaceId,
   onBack,
 }: {
   resource: InfraResource;
+  workspaceId: string;
   onBack: () => void;
 }) {
   const { t } = useI18n();
   const [tab, setTab] = useState<'logs' | 'terminal'>('logs');
   const [logs, setLogs] = useState<LogLine[]>([]);
-  const [command, setCommand] = useState('');
-  const [terminalLines, setTerminalLines] = useState<string[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -704,18 +705,6 @@ function InfraResourcePanel({
     void consumeLogs();
     return () => { active = false; };
   }, [resource.id, resource.name]);
-
-  const runCommand = (event: React.FormEvent) => {
-    event.preventDefault();
-    const value = command.trim();
-    if (!value) return;
-    setTerminalLines(previous => [
-      ...previous,
-      `$ ${value}`,
-      `[mock] ${t('cockpit.infrastructure.commandCompleted', { resource: resource.name })}`,
-    ]);
-    setCommand('');
-  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="infra-resource-panel">
@@ -755,17 +744,7 @@ function InfraResourcePanel({
           </ScrollArea>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col bg-[#0a0d12]" data-testid="infra-terminal-panel">
-          <ScrollArea className="min-h-0 flex-1 px-3 py-2">
-            {terminalLines.length === 0 ? <p className="py-6 text-center font-mono text-[10px] italic text-muted-foreground">{t('cockpit.infrastructure.terminalHint')}</p> : <div className="space-y-1 font-mono text-[10px] leading-relaxed">{terminalLines.map((line, index) => <p key={`${line}-${index}`} className={line.startsWith('$') ? 'text-primary' : 'text-foreground/75'}>{line}</p>)}</div>}
-          </ScrollArea>
-          <p className="border-t border-border/40 px-3 py-2 text-[9px] text-muted-foreground">{t('cockpit.infrastructure.mockNote')}</p>
-          <form onSubmit={runCommand} className="flex gap-1.5 border-t border-border/40 p-2">
-            <span className="flex items-center px-1 font-mono text-xs text-primary">›</span>
-            <input value={command} onChange={event => setCommand(event.target.value)} placeholder={t('cockpit.infrastructure.terminalPlaceholder')} className="min-w-0 flex-1 rounded border border-border/60 bg-muted/30 px-2 py-1.5 font-mono text-[10px] outline-none focus:border-primary/50" data-testid="input-infra-terminal" />
-            <button type="submit" className="rounded bg-primary px-2.5 py-1.5 text-[10px] font-medium text-primary-foreground hover:bg-primary/90" data-testid="button-infra-terminal-run">{t('cockpit.infrastructure.run')}</button>
-          </form>
-        </div>
+        <InfraTerminal workspaceId={workspaceId} resourceId={resource.id} resourceName={resource.name} />
       )}
     </div>
   );
@@ -1099,7 +1078,7 @@ export default function WorkspaceCockpit() {
         {activeSection === 'infra' && <InfrastructureSidebar workspace={workspace} cards={allCards} selectedCard={selectedCard} mobileOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} onSelectResource={resource => { setSelectedInfraResource(resource); setMobileSidebarOpen(false); }} />}
 
         <main className="flex min-w-0 flex-1 flex-col bg-background" data-testid="cockpit-central-panel">
-          {activeSection === 'infra' && selectedInfraResource ? <InfraResourcePanel resource={selectedInfraResource} onBack={() => { setSelectedInfraResource(null); setMobileSidebarOpen(true); }} /> : (activeSection === 'overview' || activeSection === 'chat' || activeSection === 'infra') && <WorkspaceOverviewPanel workspace={workspace} cards={allCards} aggregates={aggregates} selectedCard={selectedCard} />}
+          {activeSection === 'infra' && selectedInfraResource ? <InfraResourcePanel resource={selectedInfraResource} workspaceId={workspace.id} onBack={() => { setSelectedInfraResource(null); setMobileSidebarOpen(true); }} /> : (activeSection === 'overview' || activeSection === 'chat' || activeSection === 'infra') && <WorkspaceOverviewPanel workspace={workspace} cards={allCards} aggregates={aggregates} selectedCard={selectedCard} />}
           {activeSection === 'repos' && (selectedFile ? <DiffViewer file={selectedFile} onBack={() => setSelectedFile(null)} /> : (
             <>
               <div className="flex min-h-12 shrink-0 items-center gap-2 border-b border-border bg-card/20 px-4"><FolderGit2 className="h-4 w-4 text-primary" /><span className="font-mono text-xs font-semibold">{selectedRepo?.name || t('repo.none')}</span>{activeNode && activeNode.kind !== 'overview' && <><ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">{activeNode.kind === 'branch' ? selectedBranch?.name : activeNode.kind === 'pr' ? selectedPr?.sourceBranch : activeNode.kind === 'branches' ? t('cockpit.tree.branches') : t('cockpit.tree.pullRequests')}</span></>}<span className="ml-auto text-[10px] text-muted-foreground">{selectedCardIds.size > 0 ? t('cockpit.cards.filterActive', { count: selectedCardIds.size }) : t('cockpit.cards.allScope')}</span></div>
