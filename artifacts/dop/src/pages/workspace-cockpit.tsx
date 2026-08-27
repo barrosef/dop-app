@@ -23,7 +23,6 @@ import {
   GitPullRequest,
   Layers3,
   Loader2,
-  Home,
   MessageSquare,
   Send,
   Server,
@@ -457,9 +456,9 @@ function TaskReader({
 type CockpitSection = 'overview' | 'chat' | 'repos' | 'infra';
 const EMPTY_CARDS: Card[] = [];
 
-function sectionFromQuery(tab: string | null, hasFocusedCard: boolean): CockpitSection {
+function sectionFromQuery(tab: string | null): CockpitSection {
   if (tab === 'overview' || tab === 'chat' || tab === 'repos' || tab === 'infra') return tab;
-  return hasFocusedCard ? 'chat' : 'overview';
+  return 'overview';
 }
 
 function WorkspaceOverviewPanel({
@@ -858,7 +857,7 @@ export default function WorkspaceCockpit() {
       : null;
     setSelectedCardIds(validCardId ? new Set([validCardId]) : new Set());
     setActiveCardId(validCardId);
-    setActiveSection(sectionFromQuery(searchParams.get('tab'), Boolean(validCardId)));
+    setActiveSection(sectionFromQuery(searchParams.get('tab')));
   }, [allCards, cards, searchParams]);
 
   const cardsToAggregate = useMemo(() =>
@@ -980,7 +979,7 @@ export default function WorkspaceCockpit() {
   };
   const toggleCard = (cardId: string) => {
     const nextCardId = activeCardId === cardId ? null : cardId;
-    setCardScope(nextCardId, nextCardId ? 'chat' : undefined);
+    setCardScope(nextCardId);
     setSelectedFile(null);
     setMobileSidebarOpen(Boolean(nextCardId));
   };
@@ -1008,18 +1007,6 @@ export default function WorkspaceCockpit() {
           <Settings className="mr-1.5 h-3.5 w-3.5" /> <span className="hidden sm:inline">{t('cockpit.repo.configure')}</span>
         </Button>
       </header>
-
-      <div className="flex min-h-10 shrink-0 items-center border-b border-border/50 bg-card/20 px-3 sm:px-5" data-testid="cockpit-global-home">
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          data-testid="button-cockpit-home"
-        >
-          <Home className="h-3.5 w-3.5" />
-          <span>{t('cockpit.home')}</span>
-        </button>
-      </div>
 
       <div className="flex min-h-14 shrink-0 items-center gap-2 border-b border-border/50 bg-muted/10 px-3 py-2 sm:px-5" data-testid="cockpit-reader">
         <div className="flex shrink-0 items-center gap-2 px-2 py-1 text-xs font-medium" data-testid="button-open-card-reader">
