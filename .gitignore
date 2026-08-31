@@ -52,3 +52,8 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Ambiente local do Vite (endereços e chaves públicas por máquina).
+# `.env.example` fica versionado; o `.env.local` de cada um, não.
+.env.local
+.env.*.local

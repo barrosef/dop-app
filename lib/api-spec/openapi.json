@@ -1,0 +1,5569 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "DOP — BFF",
+    "description": "Borda da plataforma DOP. REST+SSE para o cockpit, gRPC para CLI e agentes. Todo estado vive no dop-core.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Healthz",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Healthz Healthz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Me",
+        "description": "Quem sou eu, na conta ativa.",
+        "operationId": "me_api_v1_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts": {
+      "get": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "List Accounts",
+        "description": "Contas do usuário — alimenta o seletor de conta ativa do cockpit.",
+        "operationId": "list_accounts_api_v1_accounts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AccountSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Accounts Api V1 Accounts Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Create Account",
+        "description": "Cria uma organização.\n\nO REST não tem onde o cliente carregar a chave de idempotência, então o\ncaso de uso gera uma. No gRPC o cliente pode mandar a sua.",
+        "operationId": "create_account_api_v1_accounts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewAccount"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/current/members": {
+      "get": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "List Members",
+        "description": "Membros da conta ativa — exige conta selecionada E papel de gestão.",
+        "operationId": "list_members_api_v1_accounts_current_members_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MemberSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Members Api V1 Accounts Current Members Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invites": {
+      "post": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Create Invite",
+        "description": "Convida alguém para a conta ativa.",
+        "operationId": "create_invite_api_v1_invites_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewInvite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tree": {
+      "get": {
+        "tags": [
+          "hierarquia"
+        ],
+        "summary": "Get Tree",
+        "description": "Árvore da conta ativa — o que a barra lateral do cockpit desenha.",
+        "operationId": "get_tree_api_v1_tree_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TreeNode"
+                  },
+                  "type": "array",
+                  "title": "Response Get Tree Api V1 Tree Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces": {
+      "get": {
+        "tags": [
+          "hierarquia"
+        ],
+        "summary": "List Workspaces",
+        "operationId": "list_workspaces_api_v1_workspaces_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkspaceSummary"
+                  },
+                  "title": "Response List Workspaces Api V1 Workspaces Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "hierarquia"
+        ],
+        "summary": "Create Workspace",
+        "operationId": "create_workspace_api_v1_workspaces_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewWorkspace"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "tags": [
+          "hierarquia"
+        ],
+        "summary": "List Projects",
+        "operationId": "list_projects_api_v1_projects_get",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Workspace Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectSummary"
+                  },
+                  "title": "Response List Projects Api V1 Projects Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "hierarquia"
+        ],
+        "summary": "Create Project",
+        "operationId": "create_project_api_v1_projects_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewProject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}": {
+      "get": {
+        "tags": [
+          "hierarquia"
+        ],
+        "summary": "Get Project",
+        "operationId": "get_project_api_v1_projects__project_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/task-manager": {
+      "put": {
+        "tags": [
+          "hierarquia"
+        ],
+        "summary": "Bind Task Manager",
+        "operationId": "bind_task_manager_api_v1_projects__project_id__task_manager_put",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskManagerBinding"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resources": {
+      "get": {
+        "tags": [
+          "recursos"
+        ],
+        "summary": "List Resources",
+        "operationId": "list_resources_api_v1_resources_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResourceSummary"
+                  },
+                  "title": "Response List Resources Api V1 Resources Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "recursos"
+        ],
+        "summary": "Create Resource",
+        "operationId": "create_resource_api_v1_resources_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewResource"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resources/{resource_id}": {
+      "get": {
+        "tags": [
+          "recursos"
+        ],
+        "summary": "Get Resource",
+        "operationId": "get_resource_api_v1_resources__resource_id__get",
+        "parameters": [
+          {
+            "name": "resource_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resource Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resources/{resource_id}/credential": {
+      "put": {
+        "tags": [
+          "recursos"
+        ],
+        "summary": "Set Credential",
+        "description": "O corpo carrega o segredo; a resposta, jamais.",
+        "operationId": "set_credential_api_v1_resources__resource_id__credential_put",
+        "parameters": [
+          {
+            "name": "resource_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resource Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewCredential"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/grants": {
+      "post": {
+        "tags": [
+          "recursos"
+        ],
+        "summary": "Grant Resource",
+        "operationId": "grant_resource_api_v1_grants_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewGrant"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/grants/{grant_id}": {
+      "delete": {
+        "tags": [
+          "recursos"
+        ],
+        "summary": "Revoke Grant",
+        "operationId": "revoke_grant_api_v1_grants__grant_id__delete",
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/flows": {
+      "get": {
+        "tags": [
+          "fluxo"
+        ],
+        "summary": "List Flows",
+        "operationId": "list_flows_api_v1_flows_get",
+        "parameters": [
+          {
+            "name": "owner_scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Owner Scope"
+            }
+          },
+          {
+            "name": "owner_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Owner Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Flow"
+                  },
+                  "title": "Response List Flows Api V1 Flows Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "fluxo"
+        ],
+        "summary": "Create Flow",
+        "operationId": "create_flow_api_v1_flows_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewFlow"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Flow"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/flows/effective": {
+      "get": {
+        "tags": [
+          "fluxo"
+        ],
+        "summary": "Resolve Flow",
+        "description": "O fluxo efetivo de um nível E o rastro de procedência, estruturado.",
+        "operationId": "resolve_flow_api_v1_flows_effective_get",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scope"
+            }
+          },
+          {
+            "name": "scope_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Scope Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffectiveFlow"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/flows/validate": {
+      "post": {
+        "tags": [
+          "fluxo"
+        ],
+        "summary": "Validate Flow",
+        "description": "Ensaio: devolve o relatório, não um erro — a tela marca as etapas.",
+        "operationId": "validate_flow_api_v1_flows_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewFlow"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/flows/{flow_id}": {
+      "get": {
+        "tags": [
+          "fluxo"
+        ],
+        "summary": "Get Flow",
+        "operationId": "get_flow_api_v1_flows__flow_id__get",
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Flow"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "fluxo"
+        ],
+        "summary": "Update Flow",
+        "description": "Alterar gera versão nova no núcleo; demandas em andamento não mudam.",
+        "operationId": "update_flow_api_v1_flows__flow_id__put",
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewFlow"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Flow"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/flows/{flow_id}/promotion": {
+      "post": {
+        "tags": [
+          "fluxo"
+        ],
+        "summary": "Promote Flow",
+        "operationId": "promote_flow_api_v1_flows__flow_id__promotion_post",
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromotionTarget"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Flow"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demands": {
+      "get": {
+        "tags": [
+          "demanda"
+        ],
+        "summary": "List Demands",
+        "operationId": "list_demands_api_v1_demands_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "page_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Page Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemandPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "demanda"
+        ],
+        "summary": "Start Demand",
+        "description": "Inicia a demanda a partir do card do provedor — resolve e congela o fluxo.",
+        "operationId": "start_demand_api_v1_demands_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewDemand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Demand"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demands/{demand_id}": {
+      "get": {
+        "tags": [
+          "demanda"
+        ],
+        "summary": "Get Demand",
+        "operationId": "get_demand_api_v1_demands__demand_id__get",
+        "parameters": [
+          {
+            "name": "demand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Demand Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Demand"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demands/{demand_id}/cockpit": {
+      "get": {
+        "tags": [
+          "demanda"
+        ],
+        "summary": "Get Cockpit",
+        "description": "A tela da demanda inteira: etapas, threads e achados numa resposta.",
+        "operationId": "get_cockpit_api_v1_demands__demand_id__cockpit_get",
+        "parameters": [
+          {
+            "name": "demand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Demand Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemandCockpit"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demands/{demand_id}/stages/{stage_key}/advance": {
+      "post": {
+        "tags": [
+          "demanda"
+        ],
+        "summary": "Advance Stage",
+        "operationId": "advance_stage_api_v1_demands__demand_id__stages__stage_key__advance_post",
+        "parameters": [
+          {
+            "name": "demand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Demand Id"
+            }
+          },
+          {
+            "name": "stage_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Stage Key"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StageTransition"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demands/{demand_id}/stages/{stage_key}/gate": {
+      "post": {
+        "tags": [
+          "demanda"
+        ],
+        "summary": "Decide Gate",
+        "description": "Decisão do portão humano — aprovar conclui, reprovar bloqueia.",
+        "operationId": "decide_gate_api_v1_demands__demand_id__stages__stage_key__gate_post",
+        "parameters": [
+          {
+            "name": "demand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Demand Id"
+            }
+          },
+          {
+            "name": "stage_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Stage Key"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GateDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demands/{demand_id}/threads": {
+      "get": {
+        "tags": [
+          "demanda"
+        ],
+        "summary": "List Threads",
+        "operationId": "list_threads_api_v1_demands__demand_id__threads_get",
+        "parameters": [
+          {
+            "name": "demand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Demand Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Thread"
+                  },
+                  "title": "Response List Threads Api V1 Demands  Demand Id  Threads Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "demanda"
+        ],
+        "summary": "Create Thread",
+        "operationId": "create_thread_api_v1_demands__demand_id__threads_post",
+        "parameters": [
+          {
+            "name": "demand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Demand Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewThread"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Thread"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demands/{demand_id}/findings": {
+      "post": {
+        "tags": [
+          "demanda"
+        ],
+        "summary": "Publish Finding",
+        "operationId": "publish_finding_api_v1_demands__demand_id__findings_post",
+        "parameters": [
+          {
+            "name": "demand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Demand Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewFinding"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Finding"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/threads/{thread_id}/messages": {
+      "post": {
+        "tags": [
+          "demanda"
+        ],
+        "summary": "Post Message",
+        "operationId": "post_message_api_v1_threads__thread_id__messages_post",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewMessage"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/delivery/board": {
+      "get": {
+        "tags": [
+          "entrega"
+        ],
+        "summary": "Get Board",
+        "description": "PRs e diretrizes do projeto numa resposta — a tela de entrega.",
+        "operationId": "get_board_api_v1_delivery_board_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryBoard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pull-requests": {
+      "get": {
+        "tags": [
+          "entrega"
+        ],
+        "summary": "List Pull Requests",
+        "operationId": "list_pull_requests_api_v1_pull_requests_get",
+        "parameters": [
+          {
+            "name": "demand_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Demand Id"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PullRequest"
+                  },
+                  "title": "Response List Pull Requests Api V1 Pull Requests Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repos/{repo_id}/merge-queue": {
+      "get": {
+        "tags": [
+          "entrega"
+        ],
+        "summary": "Get Merge Queue",
+        "description": "A fila de UM repositório — é o repositório que serializa (ADR-0008).",
+        "operationId": "get_merge_queue_api_v1_repos__repo_id__merge_queue_get",
+        "parameters": [
+          {
+            "name": "repo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Repo Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MergeQueueEntry"
+                  },
+                  "title": "Response Get Merge Queue Api V1 Repos  Repo Id  Merge Queue Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "entrega"
+        ],
+        "summary": "Enqueue Merge",
+        "description": "Pede entrada na fila do repositório.\n\nRecusa por falta de verde sai como 412 — o mesmo que o FAILED_PRECONDITION\ndo núcleo vira em qualquer outra rota (`app/platform/errors.py`) — mas com o\ncorpo carregando `missing` item por item, em vez de uma frase só. É essa\nlista que diz ao dev o que providenciar para conseguir entrar (ADR-0007).",
+        "operationId": "enqueue_merge_api_v1_repos__repo_id__merge_queue_post",
+        "parameters": [
+          {
+            "name": "repo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Repo Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewMergeEntry"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "entrou na fila",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "412": {
+            "description": "recusada por falta de verde, com a lista do que falta"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/directives": {
+      "get": {
+        "tags": [
+          "entrega"
+        ],
+        "summary": "List Directives",
+        "operationId": "list_directives_api_v1_directives_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Directive"
+                  },
+                  "title": "Response List Directives Api V1 Directives Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/directives/{directive_id}/decision": {
+      "post": {
+        "tags": [
+          "entrega"
+        ],
+        "summary": "Decide Directive",
+        "description": "A decisão de coordenação é do dev; o techlead recomenda (ADR-0015).",
+        "operationId": "decide_directive_api_v1_directives__directive_id__decision_post",
+        "parameters": [
+          {
+            "name": "directive_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Directive Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectiveDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Directive"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demands/{demand_id}/context-package": {
+      "get": {
+        "tags": [
+          "conhecimento"
+        ],
+        "summary": "Get Context Package",
+        "description": "A bagagem de bordo do agente para esta demanda (ADR-0009 §3).\n\n`dropped` é o campo que importa nesta resposta: **`null` significa que o\nnúcleo não informou o descarte** (hoje o contrato `dop.v1` não o carrega),\ne não \"nada foi descartado\". Quando vier preenchido, `dropped.truncated`\ndiz em um campo só se o contexto coube inteiro — a tela precisa poder\navisar que não coube (ADR-0012).",
+        "operationId": "get_context_package_api_v1_demands__demand_id__context_package_get",
+        "parameters": [
+          {
+            "name": "demand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Demand Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextPackageSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/rules": {
+      "get": {
+        "tags": [
+          "conhecimento"
+        ],
+        "summary": "List Rules",
+        "description": "As regras que valem para o projeto, com a herança já resolvida.",
+        "operationId": "list_rules_api_v1_knowledge_rules_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response List Rules Api V1 Knowledge Rules Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/memory": {
+      "get": {
+        "tags": [
+          "conhecimento"
+        ],
+        "summary": "Search Memory",
+        "description": "Busca na memória. `project_id` vazio busca a memória da CONTA.\n\nCada resultado vem com o artefato e o seu score PAREADOS — `score: null`\nquando o núcleo não pontuou (busca lexical), que é diferente de zero.",
+        "operationId": "search_memory_api_v1_knowledge_memory_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemoryHit"
+                  },
+                  "title": "Response Search Memory Api V1 Knowledge Memory Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/index": {
+      "get": {
+        "tags": [
+          "conhecimento"
+        ],
+        "summary": "Read Index",
+        "description": "O mapa do repositório. Sem índice é 404 — e 404 é a resposta útil.",
+        "operationId": "read_index_api_v1_knowledge_index_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "repo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Repo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/artifacts": {
+      "post": {
+        "tags": [
+          "conhecimento"
+        ],
+        "summary": "Put Artifact",
+        "description": "Grava conhecimento. `project_id` vazio grava no escopo da conta.\n\nO conteúdo vai em `content_base64` porque no núcleo ele é `bytes`.",
+        "operationId": "put_artifact_api_v1_knowledge_artifacts_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewArtifact"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cost/routing": {
+      "get": {
+        "tags": [
+          "custo"
+        ],
+        "summary": "Route Model",
+        "description": "Qual modelo e qual effort para este tipo de trabalho — e POR QUÊ.\n\n`reason` vem inteiro, com a proveniência da política na frente\n(\"ADR-0011 §3 (rascunho — calibrar com telemetria, P-7): …\"). Não é ruído:\né o que permite auditar a escolha e recalibrar a tabela. Cliente que\ntruncar essa string está jogando fora a única parte auditável da resposta.\n\nÉ `GET` porque a decisão é PURA — mesma entrada, mesma saída, sem efeito.",
+        "operationId": "route_model_api_v1_cost_routing_get",
+        "parameters": [
+          {
+            "name": "task_kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Task Kind"
+            }
+          },
+          {
+            "name": "demand_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Demand Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingDecision"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cost/budget": {
+      "get": {
+        "tags": [
+          "custo"
+        ],
+        "summary": "Get Budget",
+        "description": "Orçamento do escopo. Vazio = a conta ativa.\n\n`remaining: null` significa escopo SEM TETO — não \"acabou o dinheiro\".\nValores em micros (10⁻⁶ da moeda), inteiros, com a moeda ao lado.",
+        "operationId": "get_budget_api_v1_cost_budget_get",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Scope"
+            }
+          },
+          {
+            "name": "scope_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Scope Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "custo"
+        ],
+        "summary": "Set Budget",
+        "description": "Define o teto (owner/admin — orçamento é governança).\n\n`PUT` porque grava valor ABSOLUTO: repetir a chamada grava o mesmo teto, e\né por isso que esta escrita não carrega `Idempotency-Key`.",
+        "operationId": "set_budget_api_v1_cost_budget_put",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewBudget"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cost/usage": {
+      "post": {
+        "tags": [
+          "custo"
+        ],
+        "summary": "Record Usage",
+        "description": "Registra consumo de modelo.\n\n**Orçamento estourado responde 200, não 4xx.** O corte da ADR-0011 §2 é\nsuave: a demanda pausa e pergunta, e o consumo continua sendo medido. A\nresposta traz `budget_exceeded`, o `notice` pronto para a caixa de atenção\ne os orçamentos estourados com os números da decisão.",
+        "operationId": "record_usage_api_v1_cost_usage_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewUsage"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordUsageOutcome"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cost/summary": {
+      "get": {
+        "tags": [
+          "custo"
+        ],
+        "summary": "Summarize Cost",
+        "description": "Total do mês corrente, taxa de acerto de cache e os últimos consumos.",
+        "operationId": "summarize_cost_api_v1_cost_summary_get",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Scope"
+            }
+          },
+          {
+            "name": "scope_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Scope Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sandboxes": {
+      "post": {
+        "tags": [
+          "execução"
+        ],
+        "summary": "Provision Sandbox",
+        "description": "Provisiona o sandbox da demanda.\n\n**`min_tier` é OBRIGATÓRIO** — `hardware`, `kernel_emulated` ou\n`namespace`. Omiti-lo é 422, e é 422 de propósito: a plataforma não escolhe\no isolamento de um código que não escreveu, e um default escolheria para\nbaixo. Se o substrato não oferecer o nível pedido, o núcleo RECUSA com\nmensagem — nunca entrega um nível menor em silêncio.\n\nO `tier` da resposta é o que o substrato ENTREGOU, não o que foi pedido.",
+        "operationId": "provision_sandbox_api_v1_sandboxes_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewSandbox"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SandboxSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sandboxes/{sandbox_id}": {
+      "get": {
+        "tags": [
+          "execução"
+        ],
+        "summary": "Describe Sandbox",
+        "description": "O sandbox como ele está, com o estado corrente de cada endpoint.",
+        "operationId": "describe_sandbox_api_v1_sandboxes__sandbox_id__get",
+        "parameters": [
+          {
+            "name": "sandbox_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sandbox Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SandboxSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "execução"
+        ],
+        "summary": "Destroy Sandbox",
+        "description": "**IRREVERSÍVEL: apaga a execução E o workspace da demanda.**\n\nNão é o inverso de `/suspend`. O que se perde aqui é o worktree das\nbranches, o build já feito e tudo que o agente tinha no disco — e sandbox\ndestruído NÃO retoma: o único caminho passa a ser provisionar outro, do\nzero. Para economizar recurso sem perder o trabalho, use `/suspend`.\n\nDevolve 200 com `{\"destroyed\": true}` em vez de 204: um ato sem volta\nmerece uma confirmação que o cliente possa mostrar, não um silêncio que ele\nprecise deduzir.",
+        "operationId": "destroy_sandbox_api_v1_sandboxes__sandbox_id__delete",
+        "parameters": [
+          {
+            "name": "sandbox_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sandbox Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DestroyResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sandboxes/{sandbox_id}/suspend": {
+      "post": {
+        "tags": [
+          "execução"
+        ],
+        "summary": "Suspend Sandbox",
+        "description": "Suspende: mata a execução e PRESERVA o workspace. É a economia.",
+        "operationId": "suspend_sandbox_api_v1_sandboxes__sandbox_id__suspend_post",
+        "parameters": [
+          {
+            "name": "sandbox_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sandbox Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SandboxSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sandboxes/{sandbox_id}/resume": {
+      "post": {
+        "tags": [
+          "execução"
+        ],
+        "summary": "Resume Sandbox",
+        "description": "Retoma sobre o workspace existente. Sandbox destruído não retoma.",
+        "operationId": "resume_sandbox_api_v1_sandboxes__sandbox_id__resume_post",
+        "parameters": [
+          {
+            "name": "sandbox_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sandbox Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SandboxSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demands/{demand_id}/threads/{thread_id}/turns": {
+      "post": {
+        "tags": [
+          "runtime"
+        ],
+        "summary": "Run Turn",
+        "description": "Executa um turno do agente nesta thread.\n\n**Responde 200 mesmo quando o orçamento estoura.** O corte da ADR-0011 §2 é\nsuave: a demanda pausa e vira item da caixa de atenção, e o turno que já\nrodou vem inteiro — a resposta foi publicada na thread e o achado também.\n`paused` e `notice` trazem o que o humano precisa para decidir.\n\n**O acompanhamento ao vivo não sai por aqui.** As mensagens publicadas são\neventos (ADR-0006) e chegam pelo SSE que já existe\n(`GET /api/v1/stream/demands/{demand_id}`). Esta rota devolve o resultado\nconsolidado; um segundo caminho de streaming seria uma segunda fonte da\nverdade para a mesma timeline.\n\n**`Idempotency-Key` é obrigatória**, e a borda NÃO gera uma. Turno de\nagente gasta dinheiro: uma chave inventada aqui transformaria retry de rede\nem consumo em dobro sem ninguém pedir. É o cliente quem sabe se está\nretentando ou perguntando de novo.\n\nProvedor indisponível, credencial recusada e conta sem integração de agente\nchegam do núcleo com o status certo, pelo tradutor de sempre — não há\ntratamento especial aqui, e não deve haver.",
+        "operationId": "run_turn_api_v1_demands__demand_id__threads__thread_id__turns_post",
+        "parameters": [
+          {
+            "name": "demand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Demand Id"
+            }
+          },
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunTurn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TurnOutcome"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attention": {
+      "get": {
+        "tags": [
+          "atenção"
+        ],
+        "summary": "List Attention",
+        "description": "A caixa da conta ativa: a fila, os grupos por demanda e o badge.\n\nNão existe rota de \"marcar como lido\" nem de \"descartar\", e a ausência é a\ndecisão: a caixa é projeção, item nasce e morre de evento, e item que some\nsem o problema resolvido é mentira confortável. Ver o caso de uso.",
+        "operationId": "list_attention_api_v1_attention_get",
+        "parameters": [
+          {
+            "name": "include_resolved",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Resolved"
+            }
+          },
+          {
+            "name": "demand_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Demand Id"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttentionBox"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stream/attention": {
+      "get": {
+        "tags": [
+          "atenção"
+        ],
+        "summary": "Stream Attention",
+        "description": "A caixa ao vivo — o que abriu e o que fechou.\n\nO caso de uso é chamado AQUI, fora do gerador, de propósito: é essa chamada\nque dispara o `@account_scoped`. Recusa sem conta ativa sai como 400 de\nverdade, com corpo JSON, e não como um 200 que morre no primeiro quadro.",
+        "operationId": "stream_attention_api_v1_stream_attention_get",
+        "parameters": [
+          {
+            "name": "since_event_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Since Event Id"
+            }
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stream/events": {
+      "get": {
+        "tags": [
+          "streaming"
+        ],
+        "summary": "Stream Account Events",
+        "description": "Eventos da conta ativa — timeline e caixa de atenção do cockpit.\n\nO caso de uso é chamado AQUI, fora do gerador, de propósito: é essa chamada\nque dispara `@account_scoped`. Recusa sem conta ativa sai como 400 de\nverdade, com corpo JSON, e não como um 200 que morre no primeiro quadro.",
+        "operationId": "stream_account_events_api_v1_stream_events_get",
+        "parameters": [
+          {
+            "name": "aggregate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Aggregate"
+            }
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Types"
+            }
+          },
+          {
+            "name": "since_event_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Since Event Id"
+            }
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stream/demands/{demand_id}": {
+      "get": {
+        "tags": [
+          "streaming"
+        ],
+        "summary": "Stream Demand",
+        "description": "Eventos de uma demanda — o que faz o chat e a timeline dela viverem.\n\nSem cursor: `dop.v1.WatchDemandRequest` não tem `since_event_id`, então este\nstream não aceita `Last-Event-ID` — e, coerentemente, não emite `id:`.\nFingir retomada aqui daria ao cockpit a impressão de que nada se perdeu numa\nreconexão. Quem reconecta relê o dossiê da demanda.",
+        "operationId": "stream_demand_api_v1_stream_demands__demand_id__get",
+        "parameters": [
+          {
+            "name": "demand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Demand Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stream/sandboxes/{sandbox_id}/logs": {
+      "get": {
+        "tags": [
+          "streaming"
+        ],
+        "summary": "Stream Sandbox Logs",
+        "description": "Cauda de log de um sandbox. Também sem cursor, pela mesma razão.",
+        "operationId": "stream_sandbox_logs_api_v1_stream_sandboxes__sandbox_id__logs_get",
+        "parameters": [
+          {
+            "name": "sandbox_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sandbox Id"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Service"
+            }
+          },
+          {
+            "name": "test_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Test Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccountSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "handle": {
+            "type": "string",
+            "title": "Handle"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "handle",
+          "display_name",
+          "kind",
+          "role"
+        ],
+        "title": "AccountSummary"
+      },
+      "AgentCard": {
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "title": "Purpose",
+            "default": ""
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tools"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": ""
+          },
+          "effort": {
+            "type": "string",
+            "title": "Effort",
+            "default": ""
+          },
+          "budget_micros": {
+            "type": "integer",
+            "title": "Budget Micros",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "AgentCard"
+      },
+      "Artifact": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": ""
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          },
+          "object_ref": {
+            "type": "string",
+            "title": "Object Ref",
+            "default": ""
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "Artifact"
+      },
+      "ArtifactSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id",
+            "default": ""
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 1
+          },
+          "object_ref": {
+            "type": "string",
+            "title": "Object Ref",
+            "default": ""
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body",
+            "default": ""
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name"
+        ],
+        "title": "ArtifactSummary"
+      },
+      "AttentionBox": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AttentionItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/AttentionGroup"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
+          "open_total": {
+            "type": "integer",
+            "title": "Open Total",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "AttentionBox"
+      },
+      "AttentionGroup": {
+        "properties": {
+          "demand_id": {
+            "type": "string",
+            "title": "Demand Id",
+            "default": ""
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AttentionItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "title": "AttentionGroup",
+        "description": "Os itens de uma demanda, na ordem em que o núcleo os deu."
+      },
+      "AttentionItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "default": ""
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": ""
+          },
+          "target_kind": {
+            "type": "string",
+            "title": "Target Kind",
+            "default": ""
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id",
+            "default": ""
+          },
+          "demand_id": {
+            "type": "string",
+            "title": "Demand Id",
+            "default": ""
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "default": ""
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority",
+            "default": 0
+          },
+          "opened_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opened At"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          }
+        },
+        "type": "object",
+        "title": "AttentionItem",
+        "description": "Uma pendência que exige DECISÃO HUMANA.\n\nO que não exige decisão não entra: status e progresso ficam no cockpit.\nCaixa barulhenta vira ruído e é ignorada (risco R-1 da spec)."
+      },
+      "BudgetView": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "scope_id": {
+            "type": "string",
+            "title": "Scope Id",
+            "default": ""
+          },
+          "limit": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "spent": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "scope",
+          "limit",
+          "spent"
+        ],
+        "title": "BudgetView"
+      },
+      "ContextPackageSummary": {
+        "properties": {
+          "demand_id": {
+            "type": "string",
+            "title": "Demand Id"
+          },
+          "rules": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Rules"
+          },
+          "index": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactSummary"
+            },
+            "type": "array",
+            "title": "Index"
+          },
+          "memories": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactSummary"
+            },
+            "type": "array",
+            "title": "Memories"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/FindingSummary"
+            },
+            "type": "array",
+            "title": "Findings"
+          },
+          "estimated_tokens": {
+            "type": "integer",
+            "title": "Estimated Tokens",
+            "default": 0
+          },
+          "dropped": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DroppedCounts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "demand_id"
+        ],
+        "title": "ContextPackageSummary"
+      },
+      "CostSummary": {
+        "properties": {
+          "total": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "cache_hit_ratio": {
+            "type": "number",
+            "title": "Cache Hit Ratio",
+            "default": 0
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/UsageEventSummary"
+            },
+            "type": "array",
+            "title": "Recent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total"
+        ],
+        "title": "CostSummary"
+      },
+      "DeliveryBoard": {
+        "properties": {
+          "pull_requests": {
+            "items": {
+              "$ref": "#/components/schemas/PullRequest"
+            },
+            "type": "array",
+            "title": "Pull Requests"
+          },
+          "directives": {
+            "items": {
+              "$ref": "#/components/schemas/Directive"
+            },
+            "type": "array",
+            "title": "Directives"
+          }
+        },
+        "type": "object",
+        "title": "DeliveryBoard"
+      },
+      "Demand": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id",
+            "default": ""
+          },
+          "external_key": {
+            "type": "string",
+            "title": "External Key",
+            "default": ""
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          },
+          "card_type": {
+            "type": "string",
+            "title": "Card Type",
+            "default": ""
+          },
+          "provider_status": {
+            "type": "string",
+            "title": "Provider Status",
+            "default": ""
+          },
+          "dop_status": {
+            "type": "string",
+            "title": "Dop Status",
+            "default": ""
+          },
+          "flow_id": {
+            "type": "string",
+            "title": "Flow Id",
+            "default": ""
+          },
+          "flow_version": {
+            "type": "integer",
+            "title": "Flow Version",
+            "default": 0
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/Stage"
+            },
+            "type": "array",
+            "title": "Stages"
+          },
+          "current_stage_key": {
+            "type": "string",
+            "title": "Current Stage Key",
+            "default": ""
+          },
+          "blocked": {
+            "type": "boolean",
+            "title": "Blocked",
+            "default": false
+          },
+          "awaiting_decision": {
+            "type": "boolean",
+            "title": "Awaiting Decision",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "Demand"
+      },
+      "DemandCockpit": {
+        "properties": {
+          "demand": {
+            "$ref": "#/components/schemas/Demand"
+          },
+          "threads": {
+            "items": {
+              "$ref": "#/components/schemas/Thread"
+            },
+            "type": "array",
+            "title": "Threads"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "type": "array",
+            "title": "Findings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "demand"
+        ],
+        "title": "DemandCockpit"
+      },
+      "DemandPage": {
+        "properties": {
+          "demands": {
+            "items": {
+              "$ref": "#/components/schemas/Demand"
+            },
+            "type": "array",
+            "title": "Demands"
+          },
+          "next_page_token": {
+            "type": "string",
+            "title": "Next Page Token",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "DemandPage"
+      },
+      "DestroyResult": {
+        "properties": {
+          "destroyed": {
+            "type": "boolean",
+            "title": "Destroyed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "destroyed"
+        ],
+        "title": "DestroyResult",
+        "description": "Confirmação de um ato irreversível.\n\nExiste como modelo (e não como `None`) porque destruir apaga a execução E o\nworkspace: um 204 mudo obrigaria o cliente a deduzir o que aconteceu, e o\nque aconteceu não tem volta."
+      },
+      "Directive": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id",
+            "default": ""
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": ""
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "decided_by_id": {
+            "type": "string",
+            "title": "Decided By Id",
+            "default": ""
+          },
+          "decided_by_name": {
+            "type": "string",
+            "title": "Decided By Name",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "Directive"
+      },
+      "DirectiveDecision": {
+        "properties": {
+          "decision": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Decision"
+          }
+        },
+        "type": "object",
+        "title": "DirectiveDecision",
+        "description": "A decisão é payload livre: o formato de cada tipo de diretriz é do\ntechlead (ADR-0015), e tipar aqui congelaria o que ainda está sendo\ndescoberto."
+      },
+      "DroppedCounts": {
+        "properties": {
+          "rules": {
+            "type": "integer",
+            "title": "Rules",
+            "default": 0
+          },
+          "findings": {
+            "type": "integer",
+            "title": "Findings",
+            "default": 0
+          },
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "default": 0
+          },
+          "memories": {
+            "type": "integer",
+            "title": "Memories",
+            "default": 0
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "DroppedCounts",
+        "description": "O que FICOU DE FORA do pacote, por camada (ADR-0012).\n\n`truncated` é derivado — é o único campo que a tela precisa consultar para\ndizer \"o contexto foi truncado\". Deriva aqui, e não em cada cliente, porque\ntrês clientes derivando a mesma coisa é como dois deles erram."
+      },
+      "EffectiveFlow": {
+        "properties": {
+          "flow": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Flow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "type": "object",
+        "title": "EffectiveFlow"
+      },
+      "EndpointSummary": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "default": ""
+          },
+          "port": {
+            "type": "integer",
+            "title": "Port",
+            "default": 0
+          },
+          "state": {
+            "type": "string",
+            "title": "State",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "EndpointSummary"
+      },
+      "Finding": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id",
+            "default": ""
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "Finding"
+      },
+      "FindingRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "default": ""
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "FindingRef"
+      },
+      "FindingSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id",
+            "default": ""
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "FindingSummary"
+      },
+      "Flow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "default": ""
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 0
+          },
+          "owner_scope": {
+            "type": "string",
+            "title": "Owner Scope",
+            "default": ""
+          },
+          "owner_id": {
+            "type": "string",
+            "title": "Owner Id",
+            "default": ""
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/StageSpec"
+            },
+            "type": "array",
+            "title": "Stages"
+          }
+        },
+        "type": "object",
+        "title": "Flow"
+      },
+      "GateDecision": {
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "title": "Approved"
+          },
+          "comment": {
+            "type": "string",
+            "title": "Comment",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "approved"
+        ],
+        "title": "GateDecision"
+      },
+      "GrantSpec": {
+        "properties": {
+          "resource_id": {
+            "type": "string",
+            "title": "Resource Id"
+          },
+          "level": {
+            "type": "string",
+            "title": "Level",
+            "default": "use"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource_id"
+        ],
+        "title": "GrantSpec"
+      },
+      "GrantSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "resource_id": {
+            "type": "string",
+            "title": "Resource Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "level": {
+            "type": "string",
+            "title": "Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "resource_id",
+          "user_id",
+          "level"
+        ],
+        "title": "GrantSummary"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InviteSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "role",
+          "status"
+        ],
+        "title": "InviteSummary"
+      },
+      "MeResponse": {
+        "properties": {
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "providers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Providers"
+          },
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject",
+          "user_id",
+          "email",
+          "name",
+          "providers",
+          "account_id",
+          "role"
+        ],
+        "title": "MeResponse"
+      },
+      "MemberSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "role"
+        ],
+        "title": "MemberSummary"
+      },
+      "MemoryHit": {
+        "properties": {
+          "artifact": {
+            "$ref": "#/components/schemas/ArtifactSummary"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifact"
+        ],
+        "title": "MemoryHit"
+      },
+      "MergeQueueEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "repo_id": {
+            "type": "string",
+            "title": "Repo Id",
+            "default": ""
+          },
+          "demand_id": {
+            "type": "string",
+            "title": "Demand Id",
+            "default": ""
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position",
+            "default": 0
+          },
+          "state": {
+            "type": "string",
+            "title": "State",
+            "default": ""
+          },
+          "overlapping_files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Overlapping Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "MergeQueueEntry"
+      },
+      "Message": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id",
+            "default": ""
+          },
+          "author_kind": {
+            "type": "string",
+            "title": "Author Kind",
+            "default": ""
+          },
+          "author_id": {
+            "type": "string",
+            "title": "Author Id",
+            "default": ""
+          },
+          "author_name": {
+            "type": "string",
+            "title": "Author Name",
+            "default": ""
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "default": ""
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "Message"
+      },
+      "Money": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": ""
+          },
+          "amount_micros": {
+            "type": "integer",
+            "title": "Amount Micros",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "Money",
+        "description": "Valor monetário: inteiro em micros (10⁻⁶ da moeda) MAIS a moeda.\n\nOs dois juntos, sempre. Um número sem moeda é um número que alguém vai\nsomar com outra moeda um dia, e ninguém vai notar até a fatura."
+      },
+      "NewAccount": {
+        "properties": {
+          "handle": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Handle"
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Display Name"
+          },
+          "legal_id": {
+            "type": "string",
+            "title": "Legal Id",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "handle",
+          "display_name"
+        ],
+        "title": "NewAccount"
+      },
+      "NewArtifact": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "pattern": "^(rule|index|memory)$",
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id",
+            "default": ""
+          },
+          "content_base64": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Content Base64"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "name",
+          "content_base64"
+        ],
+        "title": "NewArtifact",
+        "description": "Escrita na base de conhecimento — o lado de volta do ciclo (ADR-0009 §4).\n\nO conteúdo chega em base64 porque no contrato do núcleo ele é `bytes`:\nartefato de conhecimento é markdown, JSON ou mapa gerado, em UTF-8 ou não, e\nfingir que é `str` transcodificaria em silêncio o que não for."
+      },
+      "NewBudget": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "pattern": "^(account|demand)$",
+            "title": "Scope",
+            "default": "account"
+          },
+          "scope_id": {
+            "type": "string",
+            "title": "Scope Id",
+            "default": ""
+          },
+          "limit_micros": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Limit Micros",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "NewBudget"
+      },
+      "NewCredential": {
+        "properties": {
+          "secret_base64": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Secret Base64"
+          }
+        },
+        "type": "object",
+        "required": [
+          "secret_base64"
+        ],
+        "title": "NewCredential",
+        "description": "O segredo chega em base64 — bytes no contrato do núcleo.\n\nModelo separado de propósito: assim o valor nunca encosta no modelo que a\nborda devolve, e não há como alguém acidentalmente serializá-lo de volta."
+      },
+      "NewDemand": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Project Id"
+          },
+          "external_key": {
+            "type": "string",
+            "minLength": 1,
+            "title": "External Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "external_key"
+        ],
+        "title": "NewDemand"
+      },
+      "NewFinding": {
+        "properties": {
+          "thread_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Thread Id"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Title"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "thread_id",
+          "title"
+        ],
+        "title": "NewFinding"
+      },
+      "NewFlow": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "owner_scope": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Owner Scope"
+          },
+          "owner_id": {
+            "type": "string",
+            "title": "Owner Id",
+            "default": ""
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/StageSpec"
+            },
+            "type": "array",
+            "title": "Stages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "owner_scope"
+        ],
+        "title": "NewFlow",
+        "description": "O fluxo entra inteiro — a v1 não tem edição por etapa (ADR-0014 §2)."
+      },
+      "NewGrant": {
+        "properties": {
+          "resource_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Resource Id"
+          },
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "User Id"
+          },
+          "level": {
+            "type": "string",
+            "pattern": "^(use|manage)$",
+            "title": "Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource_id",
+          "user_id",
+          "level"
+        ],
+        "title": "NewGrant"
+      },
+      "NewInvite": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Email"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "default": "developer"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/GrantSpec"
+            },
+            "type": "array",
+            "title": "Grants"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "NewInvite"
+      },
+      "NewMergeEntry": {
+        "properties": {
+          "demand_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Demand Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "demand_id"
+        ],
+        "title": "NewMergeEntry"
+      },
+      "NewMessage": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "NewMessage"
+      },
+      "NewProject": {
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Workspace Id"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "name"
+        ],
+        "title": "NewProject"
+      },
+      "NewResource": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "name"
+        ],
+        "title": "NewResource"
+      },
+      "NewSandbox": {
+        "properties": {
+          "demand_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Demand Id"
+          },
+          "min_tier": {
+            "type": "string",
+            "pattern": "^(hardware|kernel_emulated|namespace)$",
+            "title": "Min Tier"
+          }
+        },
+        "type": "object",
+        "required": [
+          "demand_id",
+          "min_tier"
+        ],
+        "title": "NewSandbox",
+        "description": "Pedido de provisionamento.\n\n`min_tier` NÃO tem default, e é isso que faz a regra valer: um campo\nopcional com valor padrão seria a presunção voltando pela porta dos fundos.\nSem ele, a validação recusa aqui mesmo — 422 no REST, INVALID_ARGUMENT no\ngRPC — e o núcleo nem chega a ser chamado."
+      },
+      "NewThread": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Key"
+          },
+          "card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentCard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "title": "NewThread"
+      },
+      "NewUsage": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Model"
+          },
+          "demand_id": {
+            "type": "string",
+            "title": "Demand Id",
+            "default": ""
+          },
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id",
+            "default": ""
+          },
+          "input_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Input Tokens",
+            "default": 0
+          },
+          "output_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Output Tokens",
+            "default": 0
+          },
+          "cache_read_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Cache Read Tokens",
+            "default": 0
+          },
+          "cache_creation_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Cache Creation Tokens",
+            "default": 0
+          },
+          "cost_micros": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Cost Micros",
+            "default": 0
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "model"
+        ],
+        "title": "NewUsage",
+        "description": "Consumo de modelo a registrar.\n\n`cost_micros` vem de quem chamou o modelo porque é lá que se sabe o preço\nda chamada; a conta não é recalculada na borda."
+      },
+      "NewWorkspace": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Key"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "key"
+        ],
+        "title": "NewWorkspace"
+      },
+      "ProjectSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "rules": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Rules"
+          },
+          "task_manager": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskManagerBinding"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workspace_id",
+          "name"
+        ],
+        "title": "ProjectSummary"
+      },
+      "PromotionTarget": {
+        "properties": {
+          "target_scope": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Target Scope"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_scope"
+        ],
+        "title": "PromotionTarget",
+        "description": "Nível para onde o fluxo sobe (demanda → projeto → workspace → conta)."
+      },
+      "Provenance": {
+        "properties": {
+          "contributors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Contributors"
+          },
+          "origins": {
+            "items": {
+              "$ref": "#/components/schemas/StageOrigin"
+            },
+            "type": "array",
+            "title": "Origins"
+          },
+          "sentence": {
+            "type": "string",
+            "title": "Sentence",
+            "default": ""
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "Provenance",
+        "description": "O rastro da cadeia, estruturado — ver o docstring do módulo."
+      },
+      "PullRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "demand_id": {
+            "type": "string",
+            "title": "Demand Id",
+            "default": ""
+          },
+          "repo": {
+            "type": "string",
+            "title": "Repo",
+            "default": ""
+          },
+          "source_branch": {
+            "type": "string",
+            "title": "Source Branch",
+            "default": ""
+          },
+          "target_branch": {
+            "type": "string",
+            "title": "Target Branch",
+            "default": ""
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "default": ""
+          },
+          "merged": {
+            "type": "boolean",
+            "title": "Merged",
+            "default": false
+          },
+          "has_conflict": {
+            "type": "boolean",
+            "title": "Has Conflict",
+            "default": false
+          },
+          "reviewers": {
+            "items": {
+              "$ref": "#/components/schemas/Reviewer"
+            },
+            "type": "array",
+            "title": "Reviewers"
+          },
+          "pending_reviews": {
+            "type": "integer",
+            "title": "Pending Reviews",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "PullRequest"
+      },
+      "RecordUsageOutcome": {
+        "properties": {
+          "recorded": {
+            "type": "boolean",
+            "title": "Recorded"
+          },
+          "budget_exceeded": {
+            "type": "boolean",
+            "title": "Budget Exceeded",
+            "default": false
+          },
+          "notice": {
+            "type": "string",
+            "title": "Notice",
+            "default": ""
+          },
+          "budgets": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetView"
+            },
+            "type": "array",
+            "title": "Budgets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recorded"
+        ],
+        "title": "RecordUsageOutcome"
+      },
+      "ResourceSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 1
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "credential_ref": {
+            "type": "string",
+            "title": "Credential Ref",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name"
+        ],
+        "title": "ResourceSummary"
+      },
+      "Reviewer": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          },
+          "initials": {
+            "type": "string",
+            "title": "Initials",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "Reviewer"
+      },
+      "RoutingDecision": {
+        "properties": {
+          "task_kind": {
+            "type": "string",
+            "title": "Task Kind"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "effort": {
+            "type": "string",
+            "title": "Effort"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_kind",
+          "model",
+          "effort",
+          "reason"
+        ],
+        "title": "RoutingDecision"
+      },
+      "RoutingView": {
+        "properties": {
+          "task_kind": {
+            "type": "string",
+            "title": "Task Kind",
+            "default": ""
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": ""
+          },
+          "effort": {
+            "type": "string",
+            "title": "Effort",
+            "default": ""
+          },
+          "effort_applied": {
+            "type": "string",
+            "title": "Effort Applied",
+            "default": ""
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "default": ""
+          },
+          "from_agent_card": {
+            "type": "boolean",
+            "title": "From Agent Card",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "RoutingView",
+        "description": "A decisão do núcleo, com a justificativa INTEIRA (ADR-0011 §3)."
+      },
+      "RunTurn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text"
+          },
+          "task_kind": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Task Kind",
+            "default": "implementation"
+          },
+          "resource_id": {
+            "type": "string",
+            "title": "Resource Id",
+            "default": ""
+          },
+          "operator_note": {
+            "type": "string",
+            "title": "Operator Note",
+            "default": ""
+          },
+          "max_output_tokens": {
+            "type": "integer",
+            "maximum": 64000,
+            "minimum": 256,
+            "title": "Max Output Tokens",
+            "default": 8192
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "RunTurn",
+        "description": "Um turno a executar numa thread."
+      },
+      "SandboxSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "demand_id": {
+            "type": "string",
+            "title": "Demand Id",
+            "default": ""
+          },
+          "state": {
+            "type": "string",
+            "title": "State",
+            "default": ""
+          },
+          "tier": {
+            "type": "string",
+            "title": "Tier",
+            "default": ""
+          },
+          "namespace": {
+            "type": "string",
+            "title": "Namespace",
+            "default": ""
+          },
+          "endpoints": {
+            "items": {
+              "$ref": "#/components/schemas/EndpointSummary"
+            },
+            "type": "array",
+            "title": "Endpoints"
+          },
+          "last_active_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Active At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "SandboxSummary"
+      },
+      "Stage": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": ""
+          },
+          "gate": {
+            "type": "string",
+            "title": "Gate",
+            "default": ""
+          },
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            },
+            "type": "array",
+            "title": "Artifacts"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "awaiting_decision": {
+            "type": "boolean",
+            "title": "Awaiting Decision",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "title": "Stage"
+      },
+      "StageOrigin": {
+        "properties": {
+          "stage_key": {
+            "type": "string",
+            "title": "Stage Key"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stage_key",
+          "scope"
+        ],
+        "title": "StageOrigin"
+      },
+      "StageSpec": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "generic"
+          },
+          "artifacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Artifacts"
+          },
+          "gate": {
+            "type": "string",
+            "title": "Gate",
+            "default": "none"
+          },
+          "subtypes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Subtypes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "title": "StageSpec"
+      },
+      "StageTransition": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "pattern": "^(pending|running|blocked|done)$",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StageTransition",
+        "description": "Para onde a etapa vai. O vocabulário é fechado e validado AQUI, no caso\nde uso: assim a recusa de um status inventado vale nos dois transportes —\n422 no REST, INVALID_ARGUMENT no gRPC — sem checagem repetida no adaptador."
+      },
+      "TaskManagerBinding": {
+        "properties": {
+          "integration_id": {
+            "type": "string",
+            "title": "Integration Id"
+          },
+          "external_space_id": {
+            "type": "string",
+            "title": "External Space Id",
+            "default": ""
+          },
+          "external_project_id": {
+            "type": "string",
+            "title": "External Project Id",
+            "default": ""
+          },
+          "card_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Card Types"
+          }
+        },
+        "type": "object",
+        "required": [
+          "integration_id"
+        ],
+        "title": "TaskManagerBinding",
+        "description": "Vínculo do projeto com o quadro do provedor.\n\n`external_space_id` é o espaço DELE, nunca a nossa palavra workspace.\n`card_types` vem do provedor e é dinâmico — a plataforma não impõe\nvocabulário de card."
+      },
+      "Thread": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "default": ""
+          },
+          "blocked": {
+            "type": "boolean",
+            "title": "Blocked",
+            "default": false
+          },
+          "card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentCard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "Thread"
+      },
+      "TreeNode": {
+        "properties": {
+          "workspace": {
+            "$ref": "#/components/schemas/WorkspaceSummary"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectSummary"
+            },
+            "type": "array",
+            "title": "Projects"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workspace"
+        ],
+        "title": "TreeNode"
+      },
+      "TurnOutcome": {
+        "properties": {
+          "demand_id": {
+            "type": "string",
+            "title": "Demand Id"
+          },
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "default": ""
+          },
+          "routing": {
+            "$ref": "#/components/schemas/RoutingView"
+          },
+          "reply": {
+            "type": "string",
+            "title": "Reply",
+            "default": ""
+          },
+          "message_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Message Ids"
+          },
+          "concluded": {
+            "type": "boolean",
+            "title": "Concluded",
+            "default": false
+          },
+          "finding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FindingRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "usage": {
+            "$ref": "#/components/schemas/TurnUsage"
+          },
+          "context_truncated": {
+            "type": "boolean",
+            "title": "Context Truncated",
+            "default": false
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused",
+            "default": false
+          },
+          "notice": {
+            "type": "string",
+            "title": "Notice",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "demand_id",
+          "thread_id"
+        ],
+        "title": "TurnOutcome"
+      },
+      "TurnUsage": {
+        "properties": {
+          "input_tokens": {
+            "type": "integer",
+            "title": "Input Tokens",
+            "default": 0
+          },
+          "output_tokens": {
+            "type": "integer",
+            "title": "Output Tokens",
+            "default": 0
+          },
+          "cache_read_tokens": {
+            "type": "integer",
+            "title": "Cache Read Tokens",
+            "default": 0
+          },
+          "cache_creation_tokens": {
+            "type": "integer",
+            "title": "Cache Creation Tokens",
+            "default": 0
+          },
+          "cost": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "cache_creation_known": {
+            "type": "boolean",
+            "title": "Cache Creation Known",
+            "default": true
+          },
+          "cost_known": {
+            "type": "boolean",
+            "title": "Cost Known",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "TurnUsage",
+        "description": "As quatro parcelas, DISJUNTAS, mais o custo em micros inteiros."
+      },
+      "UsageEventSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "default": ""
+          },
+          "demand_id": {
+            "type": "string",
+            "title": "Demand Id",
+            "default": ""
+          },
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id",
+            "default": ""
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": ""
+          },
+          "input_tokens": {
+            "type": "integer",
+            "title": "Input Tokens",
+            "default": 0
+          },
+          "output_tokens": {
+            "type": "integer",
+            "title": "Output Tokens",
+            "default": 0
+          },
+          "cache_read_tokens": {
+            "type": "integer",
+            "title": "Cache Read Tokens",
+            "default": 0
+          },
+          "cache_creation_tokens": {
+            "type": "integer",
+            "title": "Cache Creation Tokens",
+            "default": 0
+          },
+          "cost": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "title": "UsageEventSummary"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ValidationReport": {
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "title": "Valid"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "valid"
+        ],
+        "title": "ValidationReport",
+        "description": "Relatório, não erro: a tela marca as etapas problemáticas com a lista."
+      },
+      "WorkspaceSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "key"
+        ],
+        "title": "WorkspaceSummary"
+      }
+    }
+  }
+}

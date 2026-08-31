@@ -8,6 +8,18 @@ export type BodyType<T> = T;
 
 export type AuthTokenGetter = () => Promise<string | null> | string | null;
 
+/**
+ * Fornecedor de cabeçalhos extras, avaliado a cada requisição.
+ *
+ * Existe por causa do `x-account-id`: o BFF resolve papel e concessões pela
+ * CONTA ATIVA, que é escolhida na interface e muda sem recarregar a página. Um
+ * cabeçalho fixado na configuração ficaria velho na primeira troca de conta —
+ * e uma requisição com a conta errada não dá erro, dá o dado de outra pessoa.
+ */
+export type HeadersProvider = () =>
+  | Promise<Record<string, string>>
+  | Record<string, string>;
+
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
@@ -17,6 +29,7 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _headersProvider: HeadersProvider | null = null;
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -42,6 +55,16 @@ export function setBaseUrl(url: string | null): void {
  */
 export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
+}
+
+/**
+ * Registra o fornecedor de cabeçalhos extras (ver `HeadersProvider`).
+ *
+ * Cabeçalho que a chamada já trouxe explicitamente vence o fornecedor — quem
+ * escreveu a chamada sabia o que queria. Passe `null` para limpar.
+ */
+export function setHeadersProvider(provider: HeadersProvider | null): void {
+  _headersProvider = provider;
 }
 
 function isRequest(input: RequestInfo | URL): input is Request {
@@ -347,6 +370,17 @@ export async function customFetch<T = unknown>(
 
   if (responseType === "json" && !headers.has("accept")) {
     headers.set("accept", DEFAULT_JSON_ACCEPT);
+  }
+
+  // Cabeçalhos do fornecedor (hoje: `x-account-id`). Aplicados ANTES do token
+  // e só onde a chamada não definiu nada — explícito vence configuração.
+  if (_headersProvider) {
+    const extras = await _headersProvider();
+    for (const [key, value] of Object.entries(extras)) {
+      if (value !== "" && !headers.has(key)) {
+        headers.set(key, value);
+      }
+    }
   }
 
   // Attach bearer token when an auth getter is configured and no

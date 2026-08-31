@@ -31,7 +31,10 @@ type OverviewAggregate = {
   prs: PullRequest[];
   files: FileTouched[];
   tests: TestResult[];
-  commits: number;
+  // `null` = a contagem não está disponível (o provedor não respondeu), e é
+  // diferente de zero commits. O tipo de quem monta o agregado
+  // (`workspace-cockpit.tsx`) já dizia isso; aqui faltava concordar.
+  commits: number | null;
 };
 
 type ContextualOverviewProps = {

@@ -1,11 +1,12 @@
 import { Router, type IRouter } from "express";
-import { HealthCheckResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
+// Sonda de processo, e só isso. O contrato de saúde da plataforma é o
+// `/healthz` do BFF (dop-api) — este aqui existe apenas para o supervisor do
+// artefato saber que o processo local subiu.
 router.get("/healthz", (_req, res) => {
-  const data = HealthCheckResponse.parse({ status: "ok" });
-  res.json(data);
+  res.json({ status: "ok" });
 });
 
 export default router;
