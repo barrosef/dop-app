@@ -10,17 +10,17 @@ import { DocViewer } from './doc-viewer';
 marked.setOptions({ breaks: true, gfm: true });
 
 const UNIT_ITEM_TEMPLATE =
-`\n### \`NomeDaFuncao\`
-- **Arrange**: descrição do estado inicial / mocks necessários
-- **Act**: ação executada (chamada de função ou método)
-- **Assert**: resultado ou efeito colateral esperado
+`\n### \`FunctionName\`
+- **Arrange**: a description of the initial state / the mocks needed
+- **Act**: the action executed (a function or method call)
+- **Assert**: the expected result or side effect
 `;
 
 const E2E_ITEM_TEMPLATE =
-`\n### Cenário: título do cenário
-- **Dado que** estado inicial do sistema / contexto
-- **Quando** ação realizada pelo usuário
-- **Então** resultado observável esperado na UI ou API
+`\n### Scenario: the scenario's title
+- **Given that** the system's initial state / the context
+- **When** the action is performed by the user
+- **Then** the observable result expected in the UI or the API
 `;
 
 interface TestPlanSectionProps {
@@ -209,8 +209,8 @@ export function PlanStageView({
       {/* Tab bar */}
       <div className="flex border-b border-border/40">
         {([
-          { key: 'plan'  as PlanTab, Icon: FileText,    label: t('plan.tab.impl') || 'Plano de Implementação' },
-          { key: 'tests' as PlanTab, Icon: FlaskConical, label: t('plan.tab.tests') || 'Plano de Testes'        },
+          { key: 'plan'  as PlanTab, Icon: FileText,    label: t('plan.tab.impl') || 'Implementation plan' },
+          { key: 'tests' as PlanTab, Icon: FlaskConical, label: t('plan.tab.tests') || 'Test plan'              },
         ]).map(({ key, Icon, label }) => (
           <button
             key={key}
@@ -226,7 +226,7 @@ export function PlanStageView({
         ))}
       </div>
 
-      {/* ── Plano de Implementação ── */}
+      {/* ── The implementation plan ── */}
       {tab === 'plan' && (
         document ? (
           <DocViewer
@@ -237,16 +237,16 @@ export function PlanStageView({
         ) : (
           <div className="flex items-center gap-2 text-sm text-muted-foreground italic py-4">
             <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
-            Claude está gerando o plano de implementação...
+            {t('plan.generating') || 'Claude is generating the implementation plan…'}
           </div>
         )
       )}
 
-      {/* ── Plano de Testes ── */}
+      {/* ── The test plan ── */}
       {tab === 'tests' && (
         <div className="space-y-3">
           <TestPlanSection
-            title={t('plan.tests.unit') || "Testes Unitários (AAA)"}
+            title={t('plan.tests.unit') || "Unit tests (AAA)"}
             icon={<FlaskConical className="w-3.5 h-3.5 text-purple-400 shrink-0" />}
             content={testPlan.unit}
             itemTemplate={UNIT_ITEM_TEMPLATE}
@@ -254,7 +254,7 @@ export function PlanStageView({
             onChatRequest={() => onTestPlanChatRequest('unit')}
           />
           <TestPlanSection
-            title={t('plan.tests.e2e') || "Testes E2E"}
+            title={t('plan.tests.e2e') || "E2E tests"}
             icon={<span className="text-sm leading-none shrink-0">🌐</span>}
             content={testPlan.e2e}
             itemTemplate={E2E_ITEM_TEMPLATE}

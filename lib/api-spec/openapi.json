@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "DOP — BFF",
-    "description": "Borda da plataforma DOP. REST+SSE para o cockpit, gRPC para CLI e agentes. Todo estado vive no dop-core.",
+    "title": "DOP \u2014 BFF",
+    "description": "The DOP platform's edge. REST+SSE for the cockpit, gRPC for the CLI and the agents. All state lives in dop-core.",
     "version": "0.1.0"
   },
   "paths": {
@@ -35,7 +35,7 @@
           "identity"
         ],
         "summary": "Me",
-        "description": "Quem sou eu, na conta ativa.",
+        "description": "Who I am, in the active account.",
         "operationId": "me_api_v1_me_get",
         "responses": {
           "200": {
@@ -57,7 +57,7 @@
           "identity"
         ],
         "summary": "List Accounts",
-        "description": "Contas do usuário — alimenta o seletor de conta ativa do cockpit.",
+        "description": "The user's accounts \u2014 it feeds the cockpit's active-account selector.",
         "operationId": "list_accounts_api_v1_accounts_get",
         "responses": {
           "200": {
@@ -81,7 +81,7 @@
           "identity"
         ],
         "summary": "Create Account",
-        "description": "Cria uma organização.\n\nO REST não tem onde o cliente carregar a chave de idempotência, então o\ncaso de uso gera uma. No gRPC o cliente pode mandar a sua.",
+        "description": "Creates an organization.\n\nREST has nowhere for the client to carry the idempotency key, so the use\ncase generates one. In gRPC the client may send its own.",
         "operationId": "create_account_api_v1_accounts_post",
         "requestBody": {
           "content": {
@@ -123,7 +123,7 @@
           "identity"
         ],
         "summary": "List Members",
-        "description": "Membros da conta ativa — exige conta selecionada E papel de gestão.",
+        "description": "The active account's members \u2014 it requires a selected account AND a management role.",
         "operationId": "list_members_api_v1_accounts_current_members_get",
         "responses": {
           "200": {
@@ -149,7 +149,7 @@
           "identity"
         ],
         "summary": "Create Invite",
-        "description": "Convida alguém para a conta ativa.",
+        "description": "Invites somebody to the active account.",
         "operationId": "create_invite_api_v1_invites_post",
         "requestBody": {
           "content": {
@@ -188,10 +188,10 @@
     "/api/v1/tree": {
       "get": {
         "tags": [
-          "hierarquia"
+          "hierarchy"
         ],
         "summary": "Get Tree",
-        "description": "Árvore da conta ativa — o que a barra lateral do cockpit desenha.",
+        "description": "The active account's tree \u2014 what the cockpit's sidebar draws.",
         "operationId": "get_tree_api_v1_tree_get",
         "responses": {
           "200": {
@@ -214,7 +214,7 @@
     "/api/v1/workspaces": {
       "get": {
         "tags": [
-          "hierarquia"
+          "hierarchy"
         ],
         "summary": "List Workspaces",
         "operationId": "list_workspaces_api_v1_workspaces_get",
@@ -237,7 +237,7 @@
       },
       "post": {
         "tags": [
-          "hierarquia"
+          "hierarchy"
         ],
         "summary": "Create Workspace",
         "operationId": "create_workspace_api_v1_workspaces_post",
@@ -290,7 +290,7 @@
     "/api/v1/projects": {
       "get": {
         "tags": [
-          "hierarquia"
+          "hierarchy"
         ],
         "summary": "List Projects",
         "operationId": "list_projects_api_v1_projects_get",
@@ -335,7 +335,7 @@
       },
       "post": {
         "tags": [
-          "hierarquia"
+          "hierarchy"
         ],
         "summary": "Create Project",
         "operationId": "create_project_api_v1_projects_post",
@@ -388,7 +388,7 @@
     "/api/v1/projects/{project_id}": {
       "get": {
         "tags": [
-          "hierarquia"
+          "hierarchy"
         ],
         "summary": "Get Project",
         "operationId": "get_project_api_v1_projects__project_id__get",
@@ -430,7 +430,7 @@
     "/api/v1/projects/{project_id}/task-manager": {
       "put": {
         "tags": [
-          "hierarquia"
+          "hierarchy"
         ],
         "summary": "Bind Task Manager",
         "operationId": "bind_task_manager_api_v1_projects__project_id__task_manager_put",
@@ -482,7 +482,7 @@
     "/api/v1/resources": {
       "get": {
         "tags": [
-          "recursos"
+          "resources"
         ],
         "summary": "List Resources",
         "operationId": "list_resources_api_v1_resources_get",
@@ -527,7 +527,7 @@
       },
       "post": {
         "tags": [
-          "recursos"
+          "resources"
         ],
         "summary": "Create Resource",
         "operationId": "create_resource_api_v1_resources_post",
@@ -580,7 +580,7 @@
     "/api/v1/resources/{resource_id}": {
       "get": {
         "tags": [
-          "recursos"
+          "resources"
         ],
         "summary": "Get Resource",
         "operationId": "get_resource_api_v1_resources__resource_id__get",
@@ -622,10 +622,10 @@
     "/api/v1/resources/{resource_id}/credential": {
       "put": {
         "tags": [
-          "recursos"
+          "resources"
         ],
         "summary": "Set Credential",
-        "description": "O corpo carrega o segredo; a resposta, jamais.",
+        "description": "The body carries the secret; the response, never.",
         "operationId": "set_credential_api_v1_resources__resource_id__credential_put",
         "parameters": [
           {
@@ -675,7 +675,7 @@
     "/api/v1/grants": {
       "post": {
         "tags": [
-          "recursos"
+          "resources"
         ],
         "summary": "Grant Resource",
         "operationId": "grant_resource_api_v1_grants_post",
@@ -716,7 +716,7 @@
     "/api/v1/grants/{grant_id}": {
       "delete": {
         "tags": [
-          "recursos"
+          "resources"
         ],
         "summary": "Revoke Grant",
         "operationId": "revoke_grant_api_v1_grants__grant_id__delete",
@@ -751,7 +751,7 @@
     "/api/v1/flows": {
       "get": {
         "tags": [
-          "fluxo"
+          "workflow"
         ],
         "summary": "List Flows",
         "operationId": "list_flows_api_v1_flows_get",
@@ -806,7 +806,7 @@
       },
       "post": {
         "tags": [
-          "fluxo"
+          "workflow"
         ],
         "summary": "Create Flow",
         "operationId": "create_flow_api_v1_flows_post",
@@ -859,10 +859,10 @@
     "/api/v1/flows/effective": {
       "get": {
         "tags": [
-          "fluxo"
+          "workflow"
         ],
         "summary": "Resolve Flow",
-        "description": "O fluxo efetivo de um nível E o rastro de procedência, estruturado.",
+        "description": "A level's effective flow AND the provenance trail, structured.",
         "operationId": "resolve_flow_api_v1_flows_effective_get",
         "parameters": [
           {
@@ -912,10 +912,10 @@
     "/api/v1/flows/validate": {
       "post": {
         "tags": [
-          "fluxo"
+          "workflow"
         ],
         "summary": "Validate Flow",
-        "description": "Ensaio: devolve o relatório, não um erro — a tela marca as etapas.",
+        "description": "A dry run: it returns the report, not an error \u2014 the screen marks the stages.",
         "operationId": "validate_flow_api_v1_flows_validate_post",
         "requestBody": {
           "content": {
@@ -954,7 +954,7 @@
     "/api/v1/flows/{flow_id}": {
       "get": {
         "tags": [
-          "fluxo"
+          "workflow"
         ],
         "summary": "Get Flow",
         "operationId": "get_flow_api_v1_flows__flow_id__get",
@@ -994,10 +994,10 @@
       },
       "put": {
         "tags": [
-          "fluxo"
+          "workflow"
         ],
         "summary": "Update Flow",
-        "description": "Alterar gera versão nova no núcleo; demandas em andamento não mudam.",
+        "description": "Changing it produces a new version in the core; demands under way do not change.",
         "operationId": "update_flow_api_v1_flows__flow_id__put",
         "parameters": [
           {
@@ -1047,7 +1047,7 @@
     "/api/v1/flows/{flow_id}/promotion": {
       "post": {
         "tags": [
-          "fluxo"
+          "workflow"
         ],
         "summary": "Promote Flow",
         "operationId": "promote_flow_api_v1_flows__flow_id__promotion_post",
@@ -1099,7 +1099,7 @@
     "/api/v1/demands": {
       "get": {
         "tags": [
-          "demanda"
+          "demand"
         ],
         "summary": "List Demands",
         "operationId": "list_demands_api_v1_demands_get",
@@ -1160,10 +1160,10 @@
       },
       "post": {
         "tags": [
-          "demanda"
+          "demand"
         ],
         "summary": "Start Demand",
-        "description": "Inicia a demanda a partir do card do provedor — resolve e congela o fluxo.",
+        "description": "Inicia a demanda a partir do card do provedor \u2014 resolve e congela o fluxo.",
         "operationId": "start_demand_api_v1_demands_post",
         "parameters": [
           {
@@ -1214,7 +1214,7 @@
     "/api/v1/demands/{demand_id}": {
       "get": {
         "tags": [
-          "demanda"
+          "demand"
         ],
         "summary": "Get Demand",
         "operationId": "get_demand_api_v1_demands__demand_id__get",
@@ -1256,10 +1256,10 @@
     "/api/v1/demands/{demand_id}/cockpit": {
       "get": {
         "tags": [
-          "demanda"
+          "demand"
         ],
         "summary": "Get Cockpit",
-        "description": "A tela da demanda inteira: etapas, threads e achados numa resposta.",
+        "description": "The demand's whole screen: stages, threads and findings in one response.",
         "operationId": "get_cockpit_api_v1_demands__demand_id__cockpit_get",
         "parameters": [
           {
@@ -1299,7 +1299,7 @@
     "/api/v1/demands/{demand_id}/stages/{stage_key}/advance": {
       "post": {
         "tags": [
-          "demanda"
+          "demand"
         ],
         "summary": "Advance Stage",
         "operationId": "advance_stage_api_v1_demands__demand_id__stages__stage_key__advance_post",
@@ -1370,10 +1370,10 @@
     "/api/v1/demands/{demand_id}/stages/{stage_key}/gate": {
       "post": {
         "tags": [
-          "demanda"
+          "demand"
         ],
         "summary": "Decide Gate",
-        "description": "Decisão do portão humano — aprovar conclui, reprovar bloqueia.",
+        "description": "The human gate's decision \u2014 approving finishes it, rejecting blocks it.",
         "operationId": "decide_gate_api_v1_demands__demand_id__stages__stage_key__gate_post",
         "parameters": [
           {
@@ -1442,7 +1442,7 @@
     "/api/v1/demands/{demand_id}/threads": {
       "get": {
         "tags": [
-          "demanda"
+          "demand"
         ],
         "summary": "List Threads",
         "operationId": "list_threads_api_v1_demands__demand_id__threads_get",
@@ -1486,7 +1486,7 @@
       },
       "post": {
         "tags": [
-          "demanda"
+          "demand"
         ],
         "summary": "Create Thread",
         "operationId": "create_thread_api_v1_demands__demand_id__threads_post",
@@ -1548,7 +1548,7 @@
     "/api/v1/demands/{demand_id}/findings": {
       "post": {
         "tags": [
-          "demanda"
+          "demand"
         ],
         "summary": "Publish Finding",
         "operationId": "publish_finding_api_v1_demands__demand_id__findings_post",
@@ -1610,7 +1610,7 @@
     "/api/v1/threads/{thread_id}/messages": {
       "post": {
         "tags": [
-          "demanda"
+          "demand"
         ],
         "summary": "Post Message",
         "operationId": "post_message_api_v1_threads__thread_id__messages_post",
@@ -1672,10 +1672,10 @@
     "/api/v1/delivery/board": {
       "get": {
         "tags": [
-          "entrega"
+          "delivery"
         ],
         "summary": "Get Board",
-        "description": "PRs e diretrizes do projeto numa resposta — a tela de entrega.",
+        "description": "The project's PRs and directives in one response \u2014 the delivery screen.",
         "operationId": "get_board_api_v1_delivery_board_get",
         "parameters": [
           {
@@ -1715,7 +1715,7 @@
     "/api/v1/pull-requests": {
       "get": {
         "tags": [
-          "entrega"
+          "delivery"
         ],
         "summary": "List Pull Requests",
         "operationId": "list_pull_requests_api_v1_pull_requests_get",
@@ -1772,10 +1772,10 @@
     "/api/v1/repos/{repo_id}/merge-queue": {
       "get": {
         "tags": [
-          "entrega"
+          "delivery"
         ],
         "summary": "Get Merge Queue",
-        "description": "A fila de UM repositório — é o repositório que serializa (ADR-0008).",
+        "description": "ONE repository's queue \u2014 it is the repository that serializes (ADR-0008).",
         "operationId": "get_merge_queue_api_v1_repos__repo_id__merge_queue_get",
         "parameters": [
           {
@@ -1817,10 +1817,10 @@
       },
       "post": {
         "tags": [
-          "entrega"
+          "delivery"
         ],
         "summary": "Enqueue Merge",
-        "description": "Pede entrada na fila do repositório.\n\nRecusa por falta de verde sai como 412 — o mesmo que o FAILED_PRECONDITION\ndo núcleo vira em qualquer outra rota (`app/platform/errors.py`) — mas com o\ncorpo carregando `missing` item por item, em vez de uma frase só. É essa\nlista que diz ao dev o que providenciar para conseguir entrar (ADR-0007).",
+        "description": "Asks to enter the repository's queue.\n\nA refusal for want of green comes out as a 412 \u2014 the same thing the core's\nFAILED_PRECONDITION becomes on any other route (`app/platform/errors.py`) \u2014\nbut with the body carrying `missing` item by item, instead of a single\nsentence. It is that list that tells the dev what to arrange in order to get\nin (ADR-0007).",
         "operationId": "enqueue_merge_api_v1_repos__repo_id__merge_queue_post",
         "parameters": [
           {
@@ -1855,7 +1855,7 @@
         },
         "responses": {
           "201": {
-            "description": "entrou na fila",
+            "description": "it entered the queue",
             "content": {
               "application/json": {
                 "schema": {}
@@ -1863,7 +1863,7 @@
             }
           },
           "412": {
-            "description": "recusada por falta de verde, com a lista do que falta"
+            "description": "refused for want of green, with the list of what is missing"
           },
           "422": {
             "description": "Validation Error",
@@ -1881,7 +1881,7 @@
     "/api/v1/directives": {
       "get": {
         "tags": [
-          "entrega"
+          "delivery"
         ],
         "summary": "List Directives",
         "operationId": "list_directives_api_v1_directives_get",
@@ -1927,10 +1927,10 @@
     "/api/v1/directives/{directive_id}/decision": {
       "post": {
         "tags": [
-          "entrega"
+          "delivery"
         ],
         "summary": "Decide Directive",
-        "description": "A decisão de coordenação é do dev; o techlead recomenda (ADR-0015).",
+        "description": "The coordination decision is the dev's; the techlead recommends (ADR-0015).",
         "operationId": "decide_directive_api_v1_directives__directive_id__decision_post",
         "parameters": [
           {
@@ -1990,10 +1990,10 @@
     "/api/v1/demands/{demand_id}/context-package": {
       "get": {
         "tags": [
-          "conhecimento"
+          "knowledge"
         ],
         "summary": "Get Context Package",
-        "description": "A bagagem de bordo do agente para esta demanda (ADR-0009 §3).\n\n`dropped` é o campo que importa nesta resposta: **`null` significa que o\nnúcleo não informou o descarte** (hoje o contrato `dop.v1` não o carrega),\ne não \"nada foi descartado\". Quando vier preenchido, `dropped.truncated`\ndiz em um campo só se o contexto coube inteiro — a tela precisa poder\navisar que não coube (ADR-0012).",
+        "description": "The agent's carry-on luggage for this demand (ADR-0009 \u00a73).\n\n`dropped` is the field that matters in this response: **`null` means the core\ndid not report the drops** (today the `dop.v1` contract does not carry them),\nand not \"nothing was dropped\". When it comes filled in, `dropped.truncated`\nsays in a single field whether the context fitted whole \u2014 the screen has to be\nable to warn that it did not (ADR-0012).",
         "operationId": "get_context_package_api_v1_demands__demand_id__context_package_get",
         "parameters": [
           {
@@ -2033,10 +2033,10 @@
     "/api/v1/knowledge/rules": {
       "get": {
         "tags": [
-          "conhecimento"
+          "knowledge"
         ],
         "summary": "List Rules",
-        "description": "As regras que valem para o projeto, com a herança já resolvida.",
+        "description": "The rules that hold for the project, with the inheritance already resolved.",
         "operationId": "list_rules_api_v1_knowledge_rules_get",
         "parameters": [
           {
@@ -2081,10 +2081,10 @@
     "/api/v1/knowledge/memory": {
       "get": {
         "tags": [
-          "conhecimento"
+          "knowledge"
         ],
         "summary": "Search Memory",
-        "description": "Busca na memória. `project_id` vazio busca a memória da CONTA.\n\nCada resultado vem com o artefato e o seu score PAREADOS — `score: null`\nquando o núcleo não pontuou (busca lexical), que é diferente de zero.",
+        "description": "Searches the memory. An empty `project_id` searches the ACCOUNT's memory.\n\nEach result comes with the artifact and its score PAIRED \u2014 `score: null` when\nthe core did not score it (a lexical search), which is different from zero.",
         "operationId": "search_memory_api_v1_knowledge_memory_get",
         "parameters": [
           {
@@ -2149,10 +2149,10 @@
     "/api/v1/knowledge/index": {
       "get": {
         "tags": [
-          "conhecimento"
+          "knowledge"
         ],
         "summary": "Read Index",
-        "description": "O mapa do repositório. Sem índice é 404 — e 404 é a resposta útil.",
+        "description": "The repository's map. With no index it is a 404 \u2014 and a 404 is the useful answer.",
         "operationId": "read_index_api_v1_knowledge_index_get",
         "parameters": [
           {
@@ -2203,10 +2203,10 @@
     "/api/v1/knowledge/artifacts": {
       "post": {
         "tags": [
-          "conhecimento"
+          "knowledge"
         ],
         "summary": "Put Artifact",
-        "description": "Grava conhecimento. `project_id` vazio grava no escopo da conta.\n\nO conteúdo vai em `content_base64` porque no núcleo ele é `bytes`.",
+        "description": "Writes knowledge. An empty `project_id` writes into the account's scope.\n\nThe content goes in `content_base64` because in the core it is `bytes`.",
         "operationId": "put_artifact_api_v1_knowledge_artifacts_post",
         "parameters": [
           {
@@ -2257,10 +2257,10 @@
     "/api/v1/cost/routing": {
       "get": {
         "tags": [
-          "custo"
+          "cost"
         ],
         "summary": "Route Model",
-        "description": "Qual modelo e qual effort para este tipo de trabalho — e POR QUÊ.\n\n`reason` vem inteiro, com a proveniência da política na frente\n(\"ADR-0011 §3 (rascunho — calibrar com telemetria, P-7): …\"). Não é ruído:\né o que permite auditar a escolha e recalibrar a tabela. Cliente que\ntruncar essa string está jogando fora a única parte auditável da resposta.\n\nÉ `GET` porque a decisão é PURA — mesma entrada, mesma saída, sem efeito.",
+        "description": "Which model and which effort for this kind of work \u2014 and WHY.\n\n`reason` comes whole, with the policy's provenance up front (\"ADR-0011 \u00a73\n(draft \u2014 calibrate with telemetry, P-7): \u2026\"). It is not noise: it is what\nmakes auditing the choice and recalibrating the table possible. A client that\ntruncates that string is throwing away the only auditable part of the answer.\n\nIt is a `GET` because the decision is PURE \u2014 the same input, the same output,\nno effect.",
         "operationId": "route_model_api_v1_cost_routing_get",
         "parameters": [
           {
@@ -2311,10 +2311,10 @@
     "/api/v1/cost/budget": {
       "get": {
         "tags": [
-          "custo"
+          "cost"
         ],
         "summary": "Get Budget",
-        "description": "Orçamento do escopo. Vazio = a conta ativa.\n\n`remaining: null` significa escopo SEM TETO — não \"acabou o dinheiro\".\nValores em micros (10⁻⁶ da moeda), inteiros, com a moeda ao lado.",
+        "description": "The scope's budget. Empty = the active account.\n\n`remaining: null` means a scope with NO CEILING \u2014 not \"the money ran out\".\nValues in micros (10\u207b\u2076 of the currency), integers, with the currency\nalongside.",
         "operationId": "get_budget_api_v1_cost_budget_get",
         "parameters": [
           {
@@ -2363,10 +2363,10 @@
       },
       "put": {
         "tags": [
-          "custo"
+          "cost"
         ],
         "summary": "Set Budget",
-        "description": "Define o teto (owner/admin — orçamento é governança).\n\n`PUT` porque grava valor ABSOLUTO: repetir a chamada grava o mesmo teto, e\né por isso que esta escrita não carrega `Idempotency-Key`.",
+        "description": "Sets the ceiling (owner/admin \u2014 a budget is governance).\n\nA `PUT` because it writes an ABSOLUTE value: repeating the call writes the\nsame ceiling, and that is why this write carries no `Idempotency-Key`.",
         "operationId": "set_budget_api_v1_cost_budget_put",
         "requestBody": {
           "required": true,
@@ -2405,10 +2405,10 @@
     "/api/v1/cost/usage": {
       "post": {
         "tags": [
-          "custo"
+          "cost"
         ],
         "summary": "Record Usage",
-        "description": "Registra consumo de modelo.\n\n**Orçamento estourado responde 200, não 4xx.** O corte da ADR-0011 §2 é\nsuave: a demanda pausa e pergunta, e o consumo continua sendo medido. A\nresposta traz `budget_exceeded`, o `notice` pronto para a caixa de atenção\ne os orçamentos estourados com os números da decisão.",
+        "description": "Records model consumption.\n\n**A blown budget answers 200, not a 4xx.** ADR-0011 \u00a72's cut is soft: the\ndemand pauses and asks, and consumption keeps being measured. The response\nbrings `budget_exceeded`, the `notice` ready for the attention box and the\nblown budgets with the decision's numbers.",
         "operationId": "record_usage_api_v1_cost_usage_post",
         "parameters": [
           {
@@ -2459,10 +2459,10 @@
     "/api/v1/cost/summary": {
       "get": {
         "tags": [
-          "custo"
+          "cost"
         ],
         "summary": "Summarize Cost",
-        "description": "Total do mês corrente, taxa de acerto de cache e os últimos consumos.",
+        "description": "The current month's total, the cache hit ratio and the latest consumption.",
         "operationId": "summarize_cost_api_v1_cost_summary_get",
         "parameters": [
           {
@@ -2513,10 +2513,10 @@
     "/api/v1/sandboxes": {
       "post": {
         "tags": [
-          "execução"
+          "execution"
         ],
         "summary": "Provision Sandbox",
-        "description": "Provisiona o sandbox da demanda.\n\n**`min_tier` é OBRIGATÓRIO** — `hardware`, `kernel_emulated` ou\n`namespace`. Omiti-lo é 422, e é 422 de propósito: a plataforma não escolhe\no isolamento de um código que não escreveu, e um default escolheria para\nbaixo. Se o substrato não oferecer o nível pedido, o núcleo RECUSA com\nmensagem — nunca entrega um nível menor em silêncio.\n\nO `tier` da resposta é o que o substrato ENTREGOU, não o que foi pedido.",
+        "description": "Provisions the demand's sandbox.\n\n**`min_tier` is MANDATORY** \u2014 `hardware`, `kernel_emulated` or `namespace`.\nOmitting it is a 422, and it is a 422 on purpose: the platform does not\nchoose the isolation of code it did not write, and a default would choose\ndownwards. If the substrate does not offer the requested level, the core\nREFUSES with a message \u2014 it never silently delivers a lower one.\n\nThe response's `tier` is what the substrate DELIVERED, not what was asked\nfor.",
         "operationId": "provision_sandbox_api_v1_sandboxes_post",
         "parameters": [
           {
@@ -2567,10 +2567,10 @@
     "/api/v1/sandboxes/{sandbox_id}": {
       "get": {
         "tags": [
-          "execução"
+          "execution"
         ],
         "summary": "Describe Sandbox",
-        "description": "O sandbox como ele está, com o estado corrente de cada endpoint.",
+        "description": "The sandbox as it is, with each endpoint's current state.",
         "operationId": "describe_sandbox_api_v1_sandboxes__sandbox_id__get",
         "parameters": [
           {
@@ -2608,10 +2608,10 @@
       },
       "delete": {
         "tags": [
-          "execução"
+          "execution"
         ],
         "summary": "Destroy Sandbox",
-        "description": "**IRREVERSÍVEL: apaga a execução E o workspace da demanda.**\n\nNão é o inverso de `/suspend`. O que se perde aqui é o worktree das\nbranches, o build já feito e tudo que o agente tinha no disco — e sandbox\ndestruído NÃO retoma: o único caminho passa a ser provisionar outro, do\nzero. Para economizar recurso sem perder o trabalho, use `/suspend`.\n\nDevolve 200 com `{\"destroyed\": true}` em vez de 204: um ato sem volta\nmerece uma confirmação que o cliente possa mostrar, não um silêncio que ele\nprecise deduzir.",
+        "description": "**IRREVERSIBLE: it erases the execution AND the demand's workspace.**\n\nIt is not the inverse of `/suspend`. What is lost here is the branches'\nworktree, the build already done and everything the agent had on disk \u2014 and a\ndestroyed sandbox does NOT resume: the only way forward becomes provisioning\nanother, from scratch. To save resources without losing the work, use\n`/suspend`.\n\nIt returns 200 with `{\"destroyed\": true}` rather than a 204: an act with no\nway back deserves a confirmation the client can show, not a silence it has to\ndeduce.",
         "operationId": "destroy_sandbox_api_v1_sandboxes__sandbox_id__delete",
         "parameters": [
           {
@@ -2651,10 +2651,10 @@
     "/api/v1/sandboxes/{sandbox_id}/suspend": {
       "post": {
         "tags": [
-          "execução"
+          "execution"
         ],
         "summary": "Suspend Sandbox",
-        "description": "Suspende: mata a execução e PRESERVA o workspace. É a economia.",
+        "description": "Suspends: it kills the execution and PRESERVES the workspace. It is the saving.",
         "operationId": "suspend_sandbox_api_v1_sandboxes__sandbox_id__suspend_post",
         "parameters": [
           {
@@ -2694,10 +2694,10 @@
     "/api/v1/sandboxes/{sandbox_id}/resume": {
       "post": {
         "tags": [
-          "execução"
+          "execution"
         ],
         "summary": "Resume Sandbox",
-        "description": "Retoma sobre o workspace existente. Sandbox destruído não retoma.",
+        "description": "Resumes on top of the existing workspace. A destroyed sandbox does not resume.",
         "operationId": "resume_sandbox_api_v1_sandboxes__sandbox_id__resume_post",
         "parameters": [
           {
@@ -2740,7 +2740,7 @@
           "runtime"
         ],
         "summary": "Run Turn",
-        "description": "Executa um turno do agente nesta thread.\n\n**Responde 200 mesmo quando o orçamento estoura.** O corte da ADR-0011 §2 é\nsuave: a demanda pausa e vira item da caixa de atenção, e o turno que já\nrodou vem inteiro — a resposta foi publicada na thread e o achado também.\n`paused` e `notice` trazem o que o humano precisa para decidir.\n\n**O acompanhamento ao vivo não sai por aqui.** As mensagens publicadas são\neventos (ADR-0006) e chegam pelo SSE que já existe\n(`GET /api/v1/stream/demands/{demand_id}`). Esta rota devolve o resultado\nconsolidado; um segundo caminho de streaming seria uma segunda fonte da\nverdade para a mesma timeline.\n\n**`Idempotency-Key` é obrigatória**, e a borda NÃO gera uma. Turno de\nagente gasta dinheiro: uma chave inventada aqui transformaria retry de rede\nem consumo em dobro sem ninguém pedir. É o cliente quem sabe se está\nretentando ou perguntando de novo.\n\nProvedor indisponível, credencial recusada e conta sem integração de agente\nchegam do núcleo com o status certo, pelo tradutor de sempre — não há\ntratamento especial aqui, e não deve haver.",
+        "description": "Runs one agent turn on this thread.\n\n**It answers 200 even when the budget is blown.** ADR-0011 \u00a72's cut is soft:\nthe demand pauses and becomes an item in the attention box, and the turn that\nalready ran comes back whole \u2014 the reply was published on the thread and so\nwas the finding. `paused` and `notice` bring what the human needs to decide.\n\n**Live following does not come out through here.** The published messages\nare events (ADR-0006) and arrive through the SSE that already exists\n(`GET /api/v1/stream/demands/{demand_id}`). This route returns the\nconsolidated result; a second streaming path would be a second source of\ntruth for the same timeline.\n\n**`Idempotency-Key` is mandatory**, and the edge does NOT generate one. An\nagent turn spends money: a key invented here would turn a network retry into\ndouble consumption with nobody asking. It is the client that knows whether\nit is retrying or asking again.\n\nAn unavailable provider, a refused credential and an account with no agent\nintegration arrive from the core with the right status, through the usual\ntranslator \u2014 there is no special handling here, and there must not be.",
         "operationId": "run_turn_api_v1_demands__demand_id__threads__thread_id__turns_post",
         "parameters": [
           {
@@ -2809,10 +2809,10 @@
     "/api/v1/attention": {
       "get": {
         "tags": [
-          "atenção"
+          "attention"
         ],
         "summary": "List Attention",
-        "description": "A caixa da conta ativa: a fila, os grupos por demanda e o badge.\n\nNão existe rota de \"marcar como lido\" nem de \"descartar\", e a ausência é a\ndecisão: a caixa é projeção, item nasce e morre de evento, e item que some\nsem o problema resolvido é mentira confortável. Ver o caso de uso.",
+        "description": "The active account's box: the queue, the groups per demand and the badge.\n\nThere is no \"mark as read\" route and no \"dismiss\" route, and the absence is\nthe decision: the box is a projection, an item is born of and dies of an\nevent, and an item that disappears with the problem unsolved is a comfortable\nlie. See the use case.",
         "operationId": "list_attention_api_v1_attention_get",
         "parameters": [
           {
@@ -2873,10 +2873,10 @@
     "/api/v1/stream/attention": {
       "get": {
         "tags": [
-          "atenção"
+          "attention"
         ],
         "summary": "Stream Attention",
-        "description": "A caixa ao vivo — o que abriu e o que fechou.\n\nO caso de uso é chamado AQUI, fora do gerador, de propósito: é essa chamada\nque dispara o `@account_scoped`. Recusa sem conta ativa sai como 400 de\nverdade, com corpo JSON, e não como um 200 que morre no primeiro quadro.",
+        "description": "The box live \u2014 what opened and what closed.\n\nThe use case is called HERE, outside the generator, on purpose: it is that\ncall that fires `@account_scoped`. A refusal with no active account comes out\nas a real 400, with a JSON body, and not as a 200 that dies at the first\nframe.",
         "operationId": "stream_attention_api_v1_stream_attention_get",
         "parameters": [
           {
@@ -2928,7 +2928,7 @@
           "streaming"
         ],
         "summary": "Stream Account Events",
-        "description": "Eventos da conta ativa — timeline e caixa de atenção do cockpit.\n\nO caso de uso é chamado AQUI, fora do gerador, de propósito: é essa chamada\nque dispara `@account_scoped`. Recusa sem conta ativa sai como 400 de\nverdade, com corpo JSON, e não como um 200 que morre no primeiro quadro.",
+        "description": "The active account's events \u2014 the cockpit's timeline and attention box.\n\nThe use case is called HERE, outside the generator, on purpose: it is that\ncall that fires `@account_scoped`. A refusal with no active account comes out\nas a real 400, with a JSON body, and not as a 200 that dies at the first\nframe.",
         "operationId": "stream_account_events_api_v1_stream_events_get",
         "parameters": [
           {
@@ -3018,7 +3018,7 @@
           "streaming"
         ],
         "summary": "Stream Demand",
-        "description": "Eventos de uma demanda — o que faz o chat e a timeline dela viverem.\n\nSem cursor: `dop.v1.WatchDemandRequest` não tem `since_event_id`, então este\nstream não aceita `Last-Event-ID` — e, coerentemente, não emite `id:`.\nFingir retomada aqui daria ao cockpit a impressão de que nada se perdeu numa\nreconexão. Quem reconecta relê o dossiê da demanda.",
+        "description": "One demand's events \u2014 what makes its chat and its timeline live.\n\nNo cursor: `dop.v1.WatchDemandRequest` has no `since_event_id`, so this\nstream does not accept `Last-Event-ID` \u2014 and, consistently, emits no `id:`.\nPretending to resume here would give the cockpit the impression that nothing\nwas lost in a reconnection. Whoever reconnects rereads the demand's dossier.",
         "operationId": "stream_demand_api_v1_stream_demands__demand_id__get",
         "parameters": [
           {
@@ -3059,7 +3059,7 @@
           "streaming"
         ],
         "summary": "Stream Sandbox Logs",
-        "description": "Cauda de log de um sandbox. Também sem cursor, pela mesma razão.",
+        "description": "A sandbox's log tail. Also with no cursor, for the same reason.",
         "operationId": "stream_sandbox_logs_api_v1_stream_sandboxes__sandbox_id__logs_get",
         "parameters": [
           {
@@ -3321,7 +3321,7 @@
         },
         "type": "object",
         "title": "AttentionGroup",
-        "description": "Os itens de uma demanda, na ordem em que o núcleo os deu."
+        "description": "One demand's items, in the order the core gave them."
       },
       "AttentionItem": {
         "properties": {
@@ -3392,7 +3392,7 @@
         },
         "type": "object",
         "title": "AttentionItem",
-        "description": "Uma pendência que exige DECISÃO HUMANA.\n\nO que não exige decisão não entra: status e progresso ficam no cockpit.\nCaixa barulhenta vira ruído e é ignorada (risco R-1 da spec)."
+        "description": "A pending item that requires a HUMAN DECISION.\n\nWhat does not require a decision does not go in: status and progress stay in\nthe cockpit. A noisy box becomes noise and is ignored (the spec's risk R-1)."
       },
       "BudgetView": {
         "properties": {
@@ -3494,7 +3494,7 @@
           "cache_hit_ratio": {
             "type": "number",
             "title": "Cache Hit Ratio",
-            "default": 0
+            "default": 0.0
           },
           "recent": {
             "items": {
@@ -3661,7 +3661,7 @@
           "destroyed"
         ],
         "title": "DestroyResult",
-        "description": "Confirmação de um ato irreversível.\n\nExiste como modelo (e não como `None`) porque destruir apaga a execução E o\nworkspace: um 204 mudo obrigaria o cliente a deduzir o que aconteceu, e o\nque aconteceu não tem volta."
+        "description": "The confirmation of an irreversible act.\n\nIt exists as a model (and not as `None`) because destroying erases the\nexecution AND the workspace: a mute 204 would force the client to deduce what\nhappened, and what happened has no way back."
       },
       "Directive": {
         "properties": {
@@ -3711,7 +3711,7 @@
         },
         "type": "object",
         "title": "DirectiveDecision",
-        "description": "A decisão é payload livre: o formato de cada tipo de diretriz é do\ntechlead (ADR-0015), e tipar aqui congelaria o que ainda está sendo\ndescoberto."
+        "description": "The decision is a free payload: each directive kind's shape is the\ntechlead's (ADR-0015), and typing it here would freeze what is still being\ndiscovered."
       },
       "DroppedCounts": {
         "properties": {
@@ -3743,7 +3743,7 @@
         },
         "type": "object",
         "title": "DroppedCounts",
-        "description": "O que FICOU DE FORA do pacote, por camada (ADR-0012).\n\n`truncated` é derivado — é o único campo que a tela precisa consultar para\ndizer \"o contexto foi truncado\". Deriva aqui, e não em cada cliente, porque\ntrês clientes derivando a mesma coisa é como dois deles erram."
+        "description": "What was LEFT OUT of the package, per layer (ADR-0012).\n\n`truncated` is derived \u2014 it is the only field the screen has to consult to\nsay \"the context was truncated\". It is derived here, and not in each client,\nbecause three clients deriving the same thing is how two of them get it\nwrong."
       },
       "EffectiveFlow": {
         "properties": {
@@ -4209,7 +4209,7 @@
         },
         "type": "object",
         "title": "Money",
-        "description": "Valor monetário: inteiro em micros (10⁻⁶ da moeda) MAIS a moeda.\n\nOs dois juntos, sempre. Um número sem moeda é um número que alguém vai\nsomar com outra moeda um dia, e ninguém vai notar até a fatura."
+        "description": "A monetary value: an integer in micros (10\u207b\u2076 of the currency) PLUS the currency.\n\nThe two together, always. A number with no currency is a number somebody will\nadd to another currency one day, and nobody will notice until the invoice."
       },
       "NewAccount": {
         "properties": {
@@ -4271,7 +4271,7 @@
           "content_base64"
         ],
         "title": "NewArtifact",
-        "description": "Escrita na base de conhecimento — o lado de volta do ciclo (ADR-0009 §4).\n\nO conteúdo chega em base64 porque no contrato do núcleo ele é `bytes`:\nartefato de conhecimento é markdown, JSON ou mapa gerado, em UTF-8 ou não, e\nfingir que é `str` transcodificaria em silêncio o que não for."
+        "description": "A write into the knowledge base \u2014 the cycle's way back (ADR-0009 \u00a74).\n\nThe content arrives in base64 because in the core's contract it is `bytes`:\na knowledge artifact is markdown, JSON or a generated map, in UTF-8 or not,\nand pretending it is a `str` would silently transcode whatever is not."
       },
       "NewBudget": {
         "properties": {
@@ -4288,7 +4288,7 @@
           },
           "limit_micros": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Limit Micros",
             "default": 0
           }
@@ -4309,7 +4309,7 @@
           "secret_base64"
         ],
         "title": "NewCredential",
-        "description": "O segredo chega em base64 — bytes no contrato do núcleo.\n\nModelo separado de propósito: assim o valor nunca encosta no modelo que a\nborda devolve, e não há como alguém acidentalmente serializá-lo de volta."
+        "description": "The secret arrives in base64 \u2014 bytes in the core's contract.\n\nA separate model on purpose: that way the value never touches the model the\nedge returns, and there is no way for anybody to accidentally serialize it\nback."
       },
       "NewDemand": {
         "properties": {
@@ -4392,7 +4392,7 @@
           "owner_scope"
         ],
         "title": "NewFlow",
-        "description": "O fluxo entra inteiro — a v1 não tem edição por etapa (ADR-0014 §2)."
+        "description": "The flow goes in whole \u2014 v1 has no per-stage editing (ADR-0014 \u00a72)."
       },
       "NewGrant": {
         "properties": {
@@ -4543,7 +4543,7 @@
           "min_tier"
         ],
         "title": "NewSandbox",
-        "description": "Pedido de provisionamento.\n\n`min_tier` NÃO tem default, e é isso que faz a regra valer: um campo\nopcional com valor padrão seria a presunção voltando pela porta dos fundos.\nSem ele, a validação recusa aqui mesmo — 422 no REST, INVALID_ARGUMENT no\ngRPC — e o núcleo nem chega a ser chamado."
+        "description": "A provisioning request.\n\n`min_tier` has NO default, and that is what makes the rule hold: an optional\nfield with a default value would be the presumption coming back in through\nthe back door. Without it, validation refuses right here \u2014 a 422 in REST,\nINVALID_ARGUMENT in gRPC \u2014 and the core is never even called."
       },
       "NewThread": {
         "properties": {
@@ -4588,31 +4588,31 @@
           },
           "input_tokens": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Input Tokens",
             "default": 0
           },
           "output_tokens": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Output Tokens",
             "default": 0
           },
           "cache_read_tokens": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Cache Read Tokens",
             "default": 0
           },
           "cache_creation_tokens": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Cache Creation Tokens",
             "default": 0
           },
           "cost_micros": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Cost Micros",
             "default": 0
           },
@@ -4627,7 +4627,7 @@
           "model"
         ],
         "title": "NewUsage",
-        "description": "Consumo de modelo a registrar.\n\n`cost_micros` vem de quem chamou o modelo porque é lá que se sabe o preço\nda chamada; a conta não é recalculada na borda."
+        "description": "Model consumption to record.\n\n`cost_micros` comes from whoever called the model because that is where the\ncall's price is known; the sum is not recomputed at the edge."
       },
       "NewWorkspace": {
         "properties": {
@@ -4724,7 +4724,7 @@
           "target_scope"
         ],
         "title": "PromotionTarget",
-        "description": "Nível para onde o fluxo sobe (demanda → projeto → workspace → conta)."
+        "description": "The level the flow moves up to (demand \u2192 project \u2192 workspace \u2192 account)."
       },
       "Provenance": {
         "properties": {
@@ -4755,7 +4755,7 @@
         },
         "type": "object",
         "title": "Provenance",
-        "description": "O rastro da cadeia, estruturado — ver o docstring do módulo."
+        "description": "The chain's trail, structured \u2014 see the module's docstring."
       },
       "PullRequest": {
         "properties": {
@@ -4969,7 +4969,7 @@
         },
         "type": "object",
         "title": "RoutingView",
-        "description": "A decisão do núcleo, com a justificativa INTEIRA (ADR-0011 §3)."
+        "description": "The core's decision, with the WHOLE justification (ADR-0011 \u00a73)."
       },
       "RunTurn": {
         "properties": {
@@ -4996,8 +4996,8 @@
           },
           "max_output_tokens": {
             "type": "integer",
-            "maximum": 64000,
-            "minimum": 256,
+            "maximum": 64000.0,
+            "minimum": 256.0,
             "title": "Max Output Tokens",
             "default": 8192
           }
@@ -5007,7 +5007,7 @@
           "text"
         ],
         "title": "RunTurn",
-        "description": "Um turno a executar numa thread."
+        "description": "A turn to run on a thread."
       },
       "SandboxSummary": {
         "properties": {
@@ -5204,7 +5204,7 @@
           "status"
         ],
         "title": "StageTransition",
-        "description": "Para onde a etapa vai. O vocabulário é fechado e validado AQUI, no caso\nde uso: assim a recusa de um status inventado vale nos dois transportes —\n422 no REST, INVALID_ARGUMENT no gRPC — sem checagem repetida no adaptador."
+        "description": "Where the stage goes. The vocabulary is closed and validated HERE, in the\nuse case: that way the refusal of an invented status holds on both\ntransports \u2014 a 422 in REST, INVALID_ARGUMENT in gRPC \u2014 with no repeated check\nin the adapter."
       },
       "TaskManagerBinding": {
         "properties": {
@@ -5235,7 +5235,7 @@
           "integration_id"
         ],
         "title": "TaskManagerBinding",
-        "description": "Vínculo do projeto com o quadro do provedor.\n\n`external_space_id` é o espaço DELE, nunca a nossa palavra workspace.\n`card_types` vem do provedor e é dinâmico — a plataforma não impõe\nvocabulário de card."
+        "description": "The project's binding to the provider's board.\n\n`external_space_id` is THEIR space, never our word workspace. `card_types`\ncomes from the provider and is dynamic \u2014 the platform imposes no card\nvocabulary."
       },
       "Thread": {
         "properties": {
@@ -5398,7 +5398,7 @@
         },
         "type": "object",
         "title": "TurnUsage",
-        "description": "As quatro parcelas, DISJUNTAS, mais o custo em micros inteiros."
+        "description": "The four parts, DISJOINT, plus the cost in integer micros."
       },
       "UsageEventSummary": {
         "properties": {
@@ -5527,7 +5527,7 @@
           "valid"
         ],
         "title": "ValidationReport",
-        "description": "Relatório, não erro: a tela marca as etapas problemáticas com a lista."
+        "description": "A report, not an error: the screen marks the problematic stages with the list."
       },
       "WorkspaceSummary": {
         "properties": {

@@ -130,7 +130,7 @@ export function ExecStageView({ execData, stageStatus }: Props) {
         <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
           <span>{execData.tasks.length} {t('exec.view.tasks') || 'tarefas'}</span>
           <span>·</span>
-          <span>{numRepos} {numRepos === 1 ? (t('exec.view.repo') || 'repositório') : (t('exec.view.repos') || 'repositórios')}</span>
+          <span>{numRepos} {numRepos === 1 ? (t('exec.view.repo') || 'repository') : (t('exec.view.repos') || 'repositories')}</span>
           {isParallel && (
             <span className="flex items-center gap-1 text-primary font-semibold ml-1">
               <Zap className="w-3 h-3" /> {t('exec.view.parallel') || 'repos em paralelo'}
@@ -190,7 +190,7 @@ export function ExecStageView({ execData, stageStatus }: Props) {
               )}
               {!repoActive && !repoFailed && repoDone === files.length && (
                 <span className="flex items-center gap-1 text-[10px] text-emerald-400">
-                  <CheckCircle2 className="w-3 h-3" /> {t('exec.view.completed') || 'concluído'}
+                  <CheckCircle2 className="w-3 h-3" /> {t('exec.view.completed') || 'done'}
                 </span>
               )}
               <span className="text-[10px] text-muted-foreground font-mono">{repoDone}/{files.length}</span>
@@ -247,7 +247,7 @@ export function ExecStageView({ execData, stageStatus }: Props) {
                         )}
                         {st === 'pending' && (
                           <span className="text-[9px] text-muted-foreground/50 bg-muted/40 border border-border/40 rounded px-1 ml-1">
-                            {t('exec.view.queued') || 'na fila'}
+                            {t('exec.view.queued') || 'queued'}
                           </span>
                         )}
                         {st === 'fail' && (
@@ -274,7 +274,7 @@ export function ExecStageView({ execData, stageStatus }: Props) {
                         >
                           {expanded
                             ? <><ChevronDown  className="w-3 h-3" /> {t('exec.view.close') || 'Fechar'}</>
-                            : <><ChevronRight className="w-3 h-3" /> {t('exec.view.diff') || 'Ver diff'}</>}
+                            : <><ChevronRight className="w-3 h-3" /> {t('exec.view.diff') || 'View the diff'}</>}
                         </button>
                       )}
                     </div>

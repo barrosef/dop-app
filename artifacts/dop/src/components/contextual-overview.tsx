@@ -31,9 +31,9 @@ type OverviewAggregate = {
   prs: PullRequest[];
   files: FileTouched[];
   tests: TestResult[];
-  // `null` = a contagem não está disponível (o provedor não respondeu), e é
-  // diferente de zero commits. O tipo de quem monta o agregado
-  // (`workspace-cockpit.tsx`) já dizia isso; aqui faltava concordar.
+  // `null` = the count is not available (the provider did not answer), and it
+  // is different from zero commits. The type of whoever assembles the aggregate
+  // (`workspace-cockpit.tsx`) already said so; here it was missing agreement.
   commits: number | null;
 };
 

@@ -13,24 +13,25 @@ const titleTransformer: InputTransformerFn = (config) => {
   return config;
 };
 
-// O FastAPI monta o `operationId` como `<função>_<caminho>_<verbo>`, com todo
-// não-alfanumérico virando "_": `get_cockpit_api_v1_demands__demand_id__cockpit_get`.
-// Usado cru, isso vira `useGetCockpitApiV1DemandsDemandIdCockpitGet` espalhado
-// pela tela inteira — e, pior, MUDA quando o caminho muda, o que faz uma
-// mudança de rota parecer uma mudança de API no diff do app.
+// FastAPI assembles the `operationId` as `<function>_<path>_<verb>`, with every
+// non-alphanumeric turning into "_": `get_cockpit_api_v1_demands__demand_id__cockpit_get`.
+// Used raw, that becomes `useGetCockpitApiV1DemandsDemandIdCockpitGet` spread
+// over the whole screen — and, worse, it CHANGES when the path changes, which
+// makes a route change look like an API change in the app's diff.
 //
-// Aqui desfazemos exatamente a construção do FastAPI: tira-se o sufixo
-// `<caminho>_<verbo>` e sobra o nome da função do BFF — a MESMA palavra que
-// está em `app/routers/*.py`. `get_cockpit` → `getCockpit` → `useGetCockpit`.
-// Nenhum nome é inventado aqui; se o sufixo não bater, o id cru passa intacto,
-// e o nome feio aparecendo no código é o aviso de que esta suposição caducou.
-const nomeDaOperacao = (operation: { operationId?: string }, route: string, verb: string) => {
-  const bruto = operation.operationId ?? "";
-  const sufixo = `${route}_${verb}`.replace(/\W/g, "_");
-  const nome = bruto.toLowerCase().endsWith(sufixo.toLowerCase())
-    ? bruto.slice(0, bruto.length - sufixo.length)
-    : bruto.replace(/_(?:api_v1|healthz)_.*$/, "");
-  return nome.replace(/_(\w)/g, (_todo, letra: string) => letra.toUpperCase());
+// Here we undo exactly what FastAPI built: the `<path>_<verb>` suffix is taken
+// off and what is left is the BFF's function name — the SAME word that is in
+// `app/routers/*.py`. `get_cockpit` → `getCockpit` → `useGetCockpit`. No name is
+// invented here; if the suffix does not match, the raw id passes through
+// intact, and the ugly name showing up in the code is the warning that this
+// assumption has expired.
+const operationName = (operation: { operationId?: string }, route: string, verb: string) => {
+  const raw = operation.operationId ?? "";
+  const suffix = `${route}_${verb}`.replace(/\W/g, "_");
+  const name = raw.toLowerCase().endsWith(suffix.toLowerCase())
+    ? raw.slice(0, raw.length - suffix.length)
+    : raw.replace(/_(?:api_v1|healthz)_.*$/, "");
+  return name.replace(/_(\w)/g, (_all, letter: string) => letter.toUpperCase());
 };
 
 export default defineConfig({
@@ -49,7 +50,7 @@ export default defineConfig({
       clean: true,
       prettier: true,
       override: {
-        operationName: nomeDaOperacao,
+        operationName,
         fetch: {
           includeHttpResponseReturnType: false,
         },
@@ -76,11 +77,12 @@ export default defineConfig({
       clean: true,
       prettier: true,
       override: {
-        // De propósito SEM `operationName` aqui: o alvo zod emite um schema por
-        // operação com o nome dela, e encurtar faria `me` colidir com o schema
-        // de componente `MeResponse` — dois símbolos com o mesmo nome no mesmo
-        // barril. O cliente react-query não emite esses schemas, então lá o
-        // nome curto é seguro. Quem consome zod usa o id longo do FastAPI.
+        // Deliberately WITHOUT `operationName` here: the zod target emits one
+        // schema per operation under the operation's name, and shortening would
+        // make `me` collide with the `MeResponse` component schema — two symbols
+        // with the same name in the same barrel. The react-query client does not
+        // emit those schemas, so the short name is safe there. Whoever consumes
+        // zod uses FastAPI's long id.
         zod: {
           coerce: {
             query: ['boolean', 'number', 'string'],

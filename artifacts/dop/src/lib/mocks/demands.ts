@@ -2,57 +2,57 @@ import { Demand, ExecData } from '../api/types';
 
 // Branches convention: "repoName|branchName" — enables repo-grouped display in the UI
 
-const PORTAL_103_INIT_DOC = `# RFC — Integração com novo gateway de pagamentos (PORTAL-103)
+const PORTAL_103_INIT_DOC = `# RFC — Integration with the new payment gateway (PORTAL-103)
 
-## Resumo
+## Summary
 
-Integrar o gateway **PagSeguro** ao Portal do Cliente, substituindo o gateway legado Cielo nas novas transações. A mudança deve ser transparente para o usuário final e não deve interromper fluxos existentes.
+Integrate the **PagSeguro** gateway into the Customer Portal, replacing the legacy Cielo gateway on new transactions. The change has to be transparent to the end user and must not interrupt existing flows.
 
-## Contexto
+## Context
 
-O contrato com a Cielo vence em **30/06/2026**. O PagSeguro oferece melhores taxas para boleto e Pix, e já é usado pelo time de Pagamentos (ws-2). Reaproveitar a integração existente em \`api-pagamentos\` é viável via chamada interna.
+The contract with Cielo expires on **2026-06-30**. PagSeguro offers better rates for boleto and Pix, and is already used by the Payments team (ws-2). Reusing the existing integration in \`api-payments\` is viable through an internal call.
 
-## Objetivos
+## Goals
 
-- Implementar \`PagSeguroGatewayAdapter\` no \`portal-backend\` seguindo a interface \`IGateway\`
-- Suportar os métodos: **cartão de crédito**, **boleto**, **Pix**
-- Exibir status do gateway no painel do cliente (frontend)
-- Manter compatibilidade com transações existentes da Cielo (read-only)
+- Implement \`PagSeguroGatewayAdapter\` in \`portal-backend\` following the \`IGateway\` interface
+- Support the methods: **credit card**, **boleto**, **Pix**
+- Show the gateway's status on the customer's panel (frontend)
+- Keep compatibility with Cielo's existing transactions (read-only)
 
-## Fora do escopo
+## Out of scope
 
-- Migração de transações históricas
-- Estorno via PagSeguro (fase 2)
-- App Mobile (escopo separado)
+- Migrating historical transactions
+- Refunds through PagSeguro (phase 2)
+- The mobile app (a separate scope)
 
-## Critérios de aceite
+## Acceptance criteria
 
-1. Novas cobranças usam PagSeguro por padrão
-2. Painel exibe método e status da transação em tempo real
-3. Cobertura de testes unitários ≥ 80% no adapter
-4. Zero downtime no deploy (feature flag \`USE_PAGSEGURO=true\`)
+1. New charges use PagSeguro by default
+2. The panel shows the transaction's method and status in real time
+3. Unit test coverage ≥ 80% on the adapter
+4. Zero downtime on the deploy (feature flag \`USE_PAGSEGURO=true\`)
 
-## Riscos
+## Risks
 
-| Risco | Probabilidade | Mitigação |
-|-------|---------------|-----------|
-| Instabilidade sandbox PagSeguro | Média | Testes com mock até homologação |
-| Mudança de schema de evento | Baixa | Versionar eventos no \`shared-contracts\` |
+| Risk | Likelihood | Mitigation |
+|------|------------|------------|
+| An unstable PagSeguro sandbox | Medium | Tests with a mock until approval |
+| A change in the event schema | Low | Version the events in \`shared-contracts\` |
 
-## Referências
+## References
 
-- Credenciais: \`secrets/pagseguro\` (Vault)
-- Documentação PagSeguro: [dev.pagseguro.uol.com.br](https://dev.pagseguro.uol.com.br)
-- ADR-012: decisão de arquitetura registrada em \`docs/ADR/ADR-012-gateway-integration.md\`
+- Credentials: \`secrets/pagseguro\` (Vault)
+- PagSeguro documentation: [dev.pagseguro.uol.com.br](https://dev.pagseguro.uol.com.br)
+- ADR-012: the architecture decision recorded in \`docs/ADR/ADR-012-gateway-integration.md\`
 `;
 
-const PORTAL_103_CONTEXT_DOC = `# Contexto técnico — PORTAL-103
+const PORTAL_103_CONTEXT_DOC = `# Technical context — PORTAL-103
 
-## Análise forense do \`portal-backend\`
+## A forensic reading of \`portal-backend\`
 
-### Ponto de entrada atual
+### The current entry point
 
-O fluxo de cobrança passa por \`PaymentService\` (\`src/payments/payment.service.ts\`). Ele chama \`CieloAdapter\` que implementa a interface \`IGateway\`:
+The charge flow goes through \`PaymentService\` (\`src/payments/payment.service.ts\`). It calls \`CieloAdapter\`, which implements the \`IGateway\` interface:
 
 \`\`\`typescript
 export interface IGateway {
@@ -62,72 +62,72 @@ export interface IGateway {
 }
 \`\`\`
 
-### Dependências identificadas
+### The dependencies found
 
-| Arquivo | Papel |
-|---------|-------|
-| \`src/payments/payment.service.ts\` | Orquestrador — injetar novo adapter aqui |
-| \`src/payments/adapters/cielo.adapter.ts\` | Legado — manter para transações antigas |
-| \`src/payments/dto/charge.dto.ts\` | DTO compartilhado — compatível com PagSeguro |
-| \`src/payments/events/payment-created.event.ts\` | Evento publicado no Redis após cobrança |
+| File | Role |
+|------|------|
+| \`src/payments/payment.service.ts\` | The orchestrator — inject the new adapter here |
+| \`src/payments/adapters/cielo.adapter.ts\` | Legacy — keep it for old transactions |
+| \`src/payments/dto/charge.dto.ts\` | A shared DTO — compatible with PagSeguro |
+| \`src/payments/events/payment-created.event.ts\` | The event published on Redis after a charge |
 
-### Feature flag
+### The feature flag
 
-Usar variável de ambiente \`USE_PAGSEGURO\` (já existente no \`.env.example\`) via \`ConfigService\`. Quando \`true\`, \`PaymentService\` instancia \`PagSeguroAdapter\` em vez de \`CieloAdapter\`.
+Use the \`USE_PAGSEGURO\` environment variable (already in \`.env.example\`) through \`ConfigService\`. When \`true\`, \`PaymentService\` instantiates \`PagSeguroAdapter\` instead of \`CieloAdapter\`.
 
-### Frontend (\`portal-frontend\`)
+### The frontend (\`portal-frontend\`)
 
-O componente \`<PaymentStatusBadge />\` em \`src/components/payments/\` lê o campo \`method\` da API. Nenhuma mudança de interface necessária — apenas adicionar o valor \`"pagseguro"\` ao union type.
+The \`<PaymentStatusBadge />\` component in \`src/components/payments/\` reads the API's \`method\` field. No interface change is needed — only adding the \`"pagseguro"\` value to the union type.
 
-### Risco de integração
+### The integration risk
 
-A API sandbox do PagSeguro retorna \`202 Accepted\` assíncrono para Pix — diferente da Cielo que retorna \`200\` síncrono. O \`ChargeResult\` precisa de campo \`pending: boolean\`.
+PagSeguro's sandbox API returns an asynchronous \`202 Accepted\` for Pix — unlike Cielo, which returns a synchronous \`200\`. \`ChargeResult\` needs a \`pending: boolean\` field.
 `;
 
-const PORTAL_103_PLAN_DOC = `# Plano de desenvolvimento — PORTAL-103
+const PORTAL_103_PLAN_DOC = `# Development plan — PORTAL-103
 
-> **Status:** em elaboração — aguardando confirmação do Dev sobre timeout de Pix
+> **Status:** being drafted — waiting on the dev to confirm the Pix timeout
 
-## Tarefas
+## Tasks
 
 ### Backend (\`portal-backend\`)
 
-- [ ] **T1** — Criar \`PagSeguroAdapter\` implementando \`IGateway\`
-  - Suporte a cartão, boleto e Pix
-  - Tratar resposta assíncrona do Pix (\`pending: true\`)
-  - Credenciais via \`ConfigService\` (path: \`secrets/pagseguro\`)
+- [ ] **T1** — Create \`PagSeguroAdapter\` implementing \`IGateway\`
+  - Support for card, boleto and Pix
+  - Handle Pix's asynchronous response (\`pending: true\`)
+  - Credentials through \`ConfigService\` (path: \`secrets/pagseguro\`)
 
-- [ ] **T2** — Atualizar \`PaymentService\` com feature flag
-  - Injetar adapter conforme \`USE_PAGSEGURO\`
-  - Adicionar campo \`pending\` ao \`ChargeResult\`
+- [ ] **T2** — Update \`PaymentService\` with the feature flag
+  - Inject the adapter according to \`USE_PAGSEGURO\`
+  - Add the \`pending\` field to \`ChargeResult\`
 
-- [ ] **T3** — Testes unitários
-  - Mock do HTTP client do PagSeguro
-  - Cobrir: charge ok, charge async (Pix), falha de rede, credencial inválida
+- [ ] **T3** — Unit tests
+  - Mock PagSeguro's HTTP client
+  - Cover: charge ok, async charge (Pix), network failure, invalid credential
 
-- [ ] **T4** — Integração com eventos
-  - Publicar \`payment-created\` no Redis com \`gateway: "pagseguro"\`
+- [ ] **T4** — Integration with the events
+  - Publish \`payment-created\` on Redis with \`gateway: "pagseguro"\`
 
 ### Frontend (\`portal-frontend\`)
 
-- [ ] **T5** — Adicionar \`"pagseguro"\` ao union type de \`method\`
-  - Ícone e label no \`<PaymentStatusBadge />\`
+- [ ] **T5** — Add \`"pagseguro"\` to \`method\`'s union type
+  - An icon and a label in \`<PaymentStatusBadge />\`
 
-- [ ] **T6** — Indicador de "aguardando confirmação Pix" no painel
-  - Poll a cada 5s no endpoint \`GET /api/v1/payments/:id/status\`
+- [ ] **T6** — A "waiting for Pix confirmation" indicator on the panel
+  - Poll every 5s on the \`GET /api/v1/payments/:id/status\` endpoint
 
-## Ordem de execução
+## Execution order
 
 \`\`\`
-T1 → T2 → T3 → T4 (backend, sequencial)
+T1 → T2 → T3 → T4 (backend, sequential)
          ↓
-        T5 → T6 (frontend, pode ser paralelo com T3)
+        T5 → T6 (frontend, may run in parallel with T3)
 \`\`\`
 
-## Estimativa
+## Estimate
 
-| Tarefa | Estimativa |
-|--------|------------|
+| Task | Estimate |
+|------|----------|
 | T1 | 2h |
 | T2 | 1h |
 | T3 | 2h |
@@ -138,232 +138,232 @@ T1 → T2 → T3 → T4 (backend, sequencial)
 `;
 
 const PORTAL_103_TEST_PLAN = {
-  unit: `## Testes Unitários — PORTAL-103
+  unit: `## Unit tests — PORTAL-103
 
-### \`PagSeguroAdapter.charge\` — cartão aprovado
-- **Arrange**: HTTP client mockado, resposta \`{ status: "PAID" }\`; credenciais via \`ConfigService\` mock
+### \`PagSeguroAdapter.charge\` — an approved card
+- **Arrange**: a mocked HTTP client, response \`{ status: "PAID" }\`; credentials through a \`ConfigService\` mock
 - **Act**: \`adapter.charge({ method: "card", amount: 100 })\`
-- **Assert**: Retorna \`{ success: true, pending: false }\`; HTTP client chamado com endpoint correto
+- **Assert**: it returns \`{ success: true, pending: false }\`; the HTTP client is called with the right endpoint
 
-### \`PagSeguroAdapter.charge\` — Pix assíncrono
-- **Arrange**: HTTP client mockado, resposta \`{ status: "WAITING" }\`
+### \`PagSeguroAdapter.charge\` — an asynchronous Pix
+- **Arrange**: a mocked HTTP client, response \`{ status: "WAITING" }\`
 - **Act**: \`adapter.charge({ method: "pix", amount: 50 })\`
-- **Assert**: Retorna \`{ success: true, pending: true }\`
+- **Assert**: it returns \`{ success: true, pending: true }\`
 
-### \`PagSeguroAdapter.charge\` — falha de rede
-- **Arrange**: HTTP client lança \`NetworkError\`
+### \`PagSeguroAdapter.charge\` — a network failure
+- **Arrange**: the HTTP client throws \`NetworkError\`
 - **Act**: \`adapter.charge({ method: "card", amount: 100 })\`
-- **Assert**: Retorna \`{ success: false, error: "network_error" }\`; sem exceção não tratada
+- **Assert**: it returns \`{ success: false, error: "network_error" }\`; no unhandled exception
 
-### \`PaymentService\` com feature flag \`USE_PAGSEGURO=true\`
-- **Arrange**: \`ConfigService\` retorna \`USE_PAGSEGURO=true\`; \`PagSeguroAdapter\` mockado
+### \`PaymentService\` with the feature flag \`USE_PAGSEGURO=true\`
+- **Arrange**: \`ConfigService\` returns \`USE_PAGSEGURO=true\`; \`PagSeguroAdapter\` mocked
 - **Act**: \`paymentService.charge(payload)\`
-- **Assert**: Adapter PagSeguro utilizado; \`ChargeResult.pending\` presente no retorno
+- **Assert**: the PagSeguro adapter is used; \`ChargeResult.pending\` is present in the return
 
-### \`PaymentService\` com feature flag \`USE_PAGSEGURO=false\`
-- **Arrange**: \`ConfigService\` retorna \`USE_PAGSEGURO=false\`; adapter legado mockado
+### \`PaymentService\` with the feature flag \`USE_PAGSEGURO=false\`
+- **Arrange**: \`ConfigService\` returns \`USE_PAGSEGURO=false\`; the legacy adapter mocked
 - **Act**: \`paymentService.charge(payload)\`
-- **Assert**: Adapter legado utilizado; campo \`pending\` ausente no retorno
+- **Assert**: the legacy adapter is used; the \`pending\` field is absent from the return
 `,
-  e2e: `## Testes E2E — PORTAL-103
+  e2e: `## E2E tests — PORTAL-103
 
-### Pagamento via cartão aprovado
-- **Dado que** o usuário está no checkout com item no carrinho
-- **Quando** seleciona "Cartão de crédito", preenche os dados e confirma
-- **Então** vê tela de confirmação "Pagamento aprovado" em menos de 3s
+### A payment by an approved card
+- **Given that** the user is at the checkout with an item in the cart
+- **When** they select "Credit card", fill in the data and confirm
+- **Then** they see the "Payment approved" confirmation screen in under 3s
 
-### Pagamento via Pix — aguardando confirmação
-- **Dado que** o usuário seleciona "Pix" no checkout
-- **Quando** o QR code é exibido e o pagamento fica pendente no gateway
-- **Então** o painel exibe badge "aguardando confirmação Pix" e faz poll a cada 5s
+### A payment by Pix — waiting for confirmation
+- **Given that** the user selects "Pix" at the checkout
+- **When** the QR code is shown and the payment stays pending at the gateway
+- **Then** the panel shows the "waiting for Pix confirmation" badge and polls every 5s
 
-### Pagamento via Pix — confirmação recebida
-- **Dado que** o painel exibe "aguardando confirmação Pix"
-- **Quando** o webhook do PagSeguro notifica pagamento aprovado
-- **Então** o badge muda para "Pago" sem necessidade de refresh manual
+### A payment by Pix — the confirmation arrives
+- **Given that** the panel shows "waiting for Pix confirmation"
+- **When** PagSeguro's webhook reports the payment as approved
+- **Then** the badge changes to "Paid" with no need for a manual refresh
 `,
 };
 
 const PORTAL_104_TEST_PLAN = {
-  unit: `## Testes Unitários — PORTAL-104
+  unit: `## Unit tests — PORTAL-104
 
 ### \`tokenService.generateAccessToken\`
-- **Arrange**: \`TokenService\` instanciado com mock de \`jsonwebtoken@9.0.2\`; payload \`{ id: 1, role: 'admin' }\`
+- **Arrange**: \`TokenService\` instantiated with a mock of \`jsonwebtoken@9.0.2\`; payload \`{ id: 1, role: 'admin' }\`
 - **Act**: \`await generateAccessToken(payload)\`
-- **Assert**: Retorna string JWT válida com expiração 15 min; \`jwt.sign\` chamado com \`await\`
+- **Assert**: it returns a valid JWT string expiring in 15 min; \`jwt.sign\` is called with \`await\`
 
 ### \`tokenService.generateRefreshToken\`
-- **Arrange**: Idem; mock usa \`mockResolvedValue\` (não \`mockReturnValue\`)
+- **Arrange**: the same; the mock uses \`mockResolvedValue\` (not \`mockReturnValue\`)
 - **Act**: \`await generateRefreshToken({ id: 1 })\`
-- **Assert**: JWT com expiração de 7 dias; chamada assíncrona respeitada
+- **Assert**: a JWT expiring in 7 days; the asynchronous call is honoured
 
 ### \`tokenService.rotateToken\`
-- **Arrange**: Refresh token válido no mock; \`jsonwebtoken@9.0.2\` resolvendo assincronamente
+- **Arrange**: a valid refresh token in the mock; \`jsonwebtoken@9.0.2\` resolving asynchronously
 - **Act**: \`await rotateToken(refreshToken)\`
-- **Assert**: Retorna novo par \`{ accessToken, refreshToken }\`; tokens distintos
+- **Assert**: it returns a new \`{ accessToken, refreshToken }\` pair; the tokens differ
 
-### \`authMiddleware\` — bearer válido
-- **Arrange**: Header \`Authorization: Bearer <valid_token>\`; middleware instanciado
-- **Act**: Request atravessa \`authMiddleware\`
-- **Assert**: \`req.user\` preenchido; \`next()\` chamado sem erro
+### \`authMiddleware\` — a valid bearer
+- **Arrange**: the header \`Authorization: Bearer <valid_token>\`; the middleware instantiated
+- **Act**: the request goes through \`authMiddleware\`
+- **Assert**: \`req.user\` is filled in; \`next()\` is called with no error
 
-### \`authMiddleware\` — token ausente → 401
-- **Arrange**: Request sem header \`Authorization\`
-- **Act**: Request atravessa \`authMiddleware\`
-- **Assert**: Resposta \`401 Unauthorized\`; \`next()\` NÃO chamado
+### \`authMiddleware\` — a missing token → 401
+- **Arrange**: a request with no \`Authorization\` header
+- **Act**: the request goes through \`authMiddleware\`
+- **Assert**: a \`401 Unauthorized\` response; \`next()\` is NOT called
 
 ### \`session.signRefreshToken\` (frontend)
-- **Arrange**: \`signRefreshToken\` convertida para \`async\`; payload de usuário mock
+- **Arrange**: \`signRefreshToken\` converted to \`async\`; a mock user payload
 - **Act**: \`await signRefreshToken(payload)\`
-- **Assert**: Retorna JWT; sem \`SyntaxError\` de chamada síncrona legada
+- **Assert**: it returns a JWT; no \`SyntaxError\` from the legacy synchronous call
 `,
-  e2e: `## Testes E2E — PORTAL-104
+  e2e: `## E2E tests — PORTAL-104
 
-### Login com credenciais válidas
-- **Dado que** o usuário acessa \`/login\`
-- **Quando** preenche email e senha corretos e clica em "Entrar"
-- **Então** é redirecionado para \`/dashboard\`; token JWT armazenado no cookie \`session\`
+### Signing in with valid credentials
+- **Given that** the user opens \`/login\`
+- **When** they fill in the right e-mail and password and click "Sign in"
+- **Then** they are redirected to \`/dashboard\`; the JWT token is stored in the \`session\` cookie
 
-### Refresh automático de token expirado
-- **Dado que** o \`accessToken\` expirou (simulado via \`Date.now\` mock)
-- **Quando** o frontend realiza qualquer chamada autenticada
-- **Então** o \`refreshToken\` é usado automaticamente; novo par emitido sem erro 401 visível
+### An expired token refreshes automatically
+- **Given that** the \`accessToken\` has expired (simulated with a \`Date.now\` mock)
+- **When** the frontend makes any authenticated call
+- **Then** the \`refreshToken\` is used automatically; a new pair is issued with no visible 401
 
-### Rejeição de token forjado (CVE-2026-1234)
-- **Dado que** um atacante envia um JWT com chave malformada para \`RS256\`
-- **Quando** o token chega ao \`authMiddleware\`
-- **Então** retorna \`401 Unauthorized\`; nenhum dado sensível exposto no body
+### A forged token is rejected (CVE-2026-1234)
+- **Given that** an attacker sends a JWT with a malformed key for \`RS256\`
+- **When** the token reaches \`authMiddleware\`
+- **Then** it returns \`401 Unauthorized\`; no sensitive data is exposed in the body
 `,
 };
 
-const PORTAL_104_INIT_DOC = `# PRD de Segurança — CVE-2026-1234 (PORTAL-104)
+const PORTAL_104_INIT_DOC = `# Security PRD — CVE-2026-1234 (PORTAL-104)
 
-## Vulnerabilidade
+## The vulnerability
 
-**CVE-2026-1234** afeta \`jsonwebtoken\` nas versões **< 9.0.2**. A falha permite que um atacante forje tokens JWT quando o algoritmo \`RS256\` é usado com chaves malformadas.
+**CVE-2026-1234** affects \`jsonwebtoken\` in versions **< 9.0.2**. The flaw lets an attacker forge JWT tokens when the \`RS256\` algorithm is used with malformed keys.
 
-**CVSS Score:** 9.1 (Crítico)
-**Vetor:** Rede / Sem autenticação prévia / Alto impacto de confidencialidade
+**CVSS score:** 9.1 (Critical)
+**Vector:** Network / No prior authentication / High confidentiality impact
 
-## Sistemas afetados
+## The systems affected
 
-| Repo | Versão atual | Impacto |
-|------|-------------|---------|
-| \`portal-backend\` | \`jsonwebtoken@8.5.1\` | ✅ Afetado — usa RS256 |
-| \`portal-frontend\` | \`jsonwebtoken@8.5.1\` | ⚠️ Afetado — verifica token no SSR |
+| Repo | Current version | Impact |
+|------|-----------------|--------|
+| \`portal-backend\` | \`jsonwebtoken@8.5.1\` | ✅ Affected — it uses RS256 |
+| \`portal-frontend\` | \`jsonwebtoken@8.5.1\` | ⚠️ Affected — it verifies the token in SSR |
 
-## Ação requerida
+## The action required
 
-Atualizar **imediatamente** para \`jsonwebtoken@9.0.2\` em ambos os repos.
+Update **immediately** to \`jsonwebtoken@9.0.2\` in both repos.
 
-### Breaking changes da v9
+### v9's breaking changes
 
-A API \`sign()\` tornou-se **assíncrona** por padrão quando \`callback\` não é fornecido:
+The \`sign()\` API became **asynchronous** by default when no \`callback\` is given:
 
 \`\`\`diff
-- const token = jwt.sign(payload, secret);           // v8 — síncrono
-+ const token = await jwt.sign(payload, secret);      // v9 — assíncrono
+- const token = jwt.sign(payload, secret);           // v8 — synchronous
++ const token = await jwt.sign(payload, secret);      // v9 — asynchronous
 \`\`\`
 
-## Critérios de aceite
+## Acceptance criteria
 
-1. Ambos os repos em \`jsonwebtoken@9.0.2\`
-2. Todas as chamadas de \`sign()\` ajustadas para \`async/await\`
-3. Testes unitários de \`tokenService\` passando
-4. Deploy em produção com zero downtime
+1. Both repos on \`jsonwebtoken@9.0.2\`
+2. Every \`sign()\` call adjusted to \`async/await\`
+3. \`tokenService\`'s unit tests passing
+4. Deployed to production with zero downtime
 
-## Prazo
+## Deadline
 
-Correção deve ser implantada em produção até **48h** da abertura deste card.
+The fix has to be in production within **48h** of this card being opened.
 `;
 
-const PORTAL_104_CONTEXT_DOC = `# Contexto técnico — PORTAL-104
+const PORTAL_104_CONTEXT_DOC = `# Technical context — PORTAL-104
 
-## Inventário de uso do \`jsonwebtoken\`
+## An inventory of \`jsonwebtoken\`'s use
 
 ### \`portal-backend\`
 
-| Arquivo | Uso | Impacto |
-|---------|-----|---------|
-| \`src/auth/tokenService.ts\` | \`jwt.sign()\` (3x) | **Requer async/await** |
-| \`src/middleware/authMiddleware.ts\` | \`jwt.verify()\` | Sem mudança (síncrono mantido) |
-| \`src/auth/tokenService.test.ts\` | Mocks de sign | Ajustar mocks para Promise |
+| File | Use | Impact |
+|------|-----|--------|
+| \`src/auth/tokenService.ts\` | \`jwt.sign()\` (3x) | **Requires async/await** |
+| \`src/middleware/authMiddleware.ts\` | \`jwt.verify()\` | No change (it stays synchronous) |
+| \`src/auth/tokenService.test.ts\` | Mocks of sign | Adjust the mocks to a Promise |
 
 ### \`portal-frontend\`
 
-| Arquivo | Uso | Impacto |
-|---------|-----|---------|
-| \`src/lib/auth/ssr-token.ts\` | \`jwt.verify()\` no middleware Next.js | Sem mudança |
-| \`src/lib/auth/session.ts\` | \`jwt.sign()\` (1x) para refresh token | **Requer async/await** |
+| File | Use | Impact |
+|------|-----|--------|
+| \`src/lib/auth/ssr-token.ts\` | \`jwt.verify()\` in the Next.js middleware | No change |
+| \`src/lib/auth/session.ts\` | \`jwt.sign()\` (1x) for the refresh token | **Requires async/await** |
 
-## Chamadas \`sign()\` identificadas no backend
+## The \`sign()\` calls found in the backend
 
 \`\`\`typescript
-// src/auth/tokenService.ts — linha 42
+// src/auth/tokenService.ts — line 42
 const accessToken = jwt.sign({ sub: user.id, role: user.role }, privateKey, {
   algorithm: 'RS256', expiresIn: '15m'
 });
 
-// src/auth/tokenService.ts — linha 61
+// src/auth/tokenService.ts — line 61
 const refreshToken = jwt.sign({ sub: user.id }, refreshSecret, { expiresIn: '7d' });
 
-// src/auth/tokenService.ts — linha 89 (renovação)
+// src/auth/tokenService.ts — line 89 (renewal)
 const newToken = jwt.sign({ ...decoded, iat: Date.now() }, privateKey, { algorithm: 'RS256' });
 \`\`\`
 
-## Padrão de correção
+## The fix's pattern
 
 \`\`\`typescript
-// Antes (v8)
+// Before (v8)
 const token = jwt.sign(payload, secret, options);
 
-// Depois (v9)
+// After (v9)
 const token = await jwt.sign(payload, secret, options);
-// Funções chamadoras devem ser marcadas como async
+// The calling functions have to be marked async
 \`\`\`
 
-## Observação sobre testes
+## A note on the tests
 
-O mock atual em \`tokenService.test.ts\` usa \`jest.spyOn(jwt, 'sign').mockReturnValue('fake-token')\`. Com a v9, precisa de \`mockResolvedValue('fake-token')\`.
+The current mock in \`tokenService.test.ts\` uses \`jest.spyOn(jwt, 'sign').mockReturnValue('fake-token')\`. With v9 it needs \`mockResolvedValue('fake-token')\`.
 `;
 
-const PORTAL_104_PLAN_DOC = `# Plano de execução — PORTAL-104
+const PORTAL_104_PLAN_DOC = `# Execution plan — PORTAL-104
 
-## Sequência
+## The sequence
 
-### 1. \`portal-frontend\` (menor risco — 1 ocorrência)
+### 1. \`portal-frontend\` (the smaller risk — 1 occurrence)
 
-- [ ] Bump \`jsonwebtoken\` para \`9.0.2\` no \`package.json\`
-- [ ] Tornar \`src/lib/auth/session.ts#signRefreshToken()\` assíncrona
-- [ ] Verificar que chamadores de \`signRefreshToken()\` são async-safe
-- [ ] Rodar \`pnpm test\` no frontend
+- [ ] Bump \`jsonwebtoken\` to \`9.0.2\` in \`package.json\`
+- [ ] Make \`src/lib/auth/session.ts#signRefreshToken()\` asynchronous
+- [ ] Check that \`signRefreshToken()\`'s callers are async-safe
+- [ ] Run \`pnpm test\` on the frontend
 
-### 2. \`portal-backend\` (3 ocorrências + testes)
+### 2. \`portal-backend\` (3 occurrences + tests)
 
-- [ ] Bump \`jsonwebtoken\` para \`9.0.2\`
-- [ ] Converter as 3 chamadas \`sign()\` em \`await jwt.sign()\`
-- [ ] Marcar \`generateAccessToken()\`, \`generateRefreshToken()\`, \`rotateToken()\` como \`async\`
-- [ ] Atualizar mocks em \`tokenService.test.ts\` (\`mockReturnValue\` → \`mockResolvedValue\`)
-- [ ] Rodar \`pnpm test\` no backend
+- [ ] Bump \`jsonwebtoken\` to \`9.0.2\`
+- [ ] Convert the 3 \`sign()\` calls into \`await jwt.sign()\`
+- [ ] Mark \`generateAccessToken()\`, \`generateRefreshToken()\` and \`rotateToken()\` as \`async\`
+- [ ] Update the mocks in \`tokenService.test.ts\` (\`mockReturnValue\` → \`mockResolvedValue\`)
+- [ ] Run \`pnpm test\` on the backend
 
-### 3. Validação integrada
+### 3. Integrated validation
 
-- [ ] Subir ambiente local completo (\`frontend + backend\`)
-- [ ] Testar fluxo de login, refresh e logout manualmente
-- [ ] Confirmar que \`authMiddleware\` ainda rejeita tokens inválidos
+- [ ] Bring the whole local environment up (\`frontend + backend\`)
+- [ ] Test the sign-in, refresh and sign-out flow by hand
+- [ ] Confirm \`authMiddleware\` still rejects invalid tokens
 
-## Checklist de deploy
+## Deploy checklist
 
 \`\`\`
-[ ] PR revisado e aprovado
-[ ] CI verde (todos os testes passando)
-[ ] Deploy em staging — smoke test de login
-[ ] Deploy em produção — monitorar Sentry por 15min
+[ ] The PR reviewed and approved
+[ ] CI green (every test passing)
+[ ] Deployed to staging — a sign-in smoke test
+[ ] Deployed to production — watch Sentry for 15min
 \`\`\`
 
 ## Rollback
 
-Se falha crítica em produção: reverter via feature flag \`LEGACY_JWT=true\` que mantém \`jsonwebtoken@8.5.1\` em modo de compatibilidade (já configurado no Vault).
+On a critical failure in production: revert through the \`LEGACY_JWT=true\` feature flag, which keeps \`jsonwebtoken@8.5.1\` in compatibility mode (already configured in the Vault).
 `;
 
 // ── Exec data for PORTAL-104 (CVE fix — two repos in parallel) ──────────────
@@ -371,7 +371,7 @@ const PORTAL_104_EXEC_DATA: ExecData = {
   tasks: [
     { id: 't1', label: 'T1 — Upgrade portal-frontend', parallelGroup: 0, filePaths: ['portal-frontend::package.json', 'portal-frontend::src/lib/auth/session.ts'], status: 'done' },
     { id: 't2', label: 'T2 — Upgrade portal-backend',  parallelGroup: 0, filePaths: ['portal-backend::package.json', 'portal-backend::src/auth/tokenService.ts'], status: 'done' },
-    { id: 't3', label: 'T3 — Ajustar testes',          parallelGroup: 1, filePaths: ['portal-backend::tests/unit/tokenService.test.ts'], status: 'done' },
+    { id: 't3', label: 'T3 — Adjust the tests',        parallelGroup: 1, filePaths: ['portal-backend::tests/unit/tokenService.test.ts'], status: 'done' },
   ],
   files: [
     {
@@ -405,9 +405,9 @@ const PORTAL_104_EXEC_DATA: ExecData = {
 // ── Exec data for PAY-203 (audit logs — three repos sequential) ──────────────
 const PAY_203_EXEC_DATA: ExecData = {
   tasks: [
-    { id: 't1', label: 'T1 — Criar AuditEvent schema', parallelGroup: 0, filePaths: ['shared-contracts::src/events/AuditEvent.ts'], status: 'done' },
-    { id: 't2', label: 'T2 — Implementar auditService', parallelGroup: 1, filePaths: ['api-pagamentos::src/audit/auditService.ts'], status: 'done' },
-    { id: 't3', label: 'T3 — Escrever testes e2e',      parallelGroup: 2, filePaths: ['api-pagamentos::tests/e2e/audit.e2e.test.ts'], status: 'done' },
+    { id: 't1', label: 'T1 — Create the AuditEvent schema', parallelGroup: 0, filePaths: ['shared-contracts::src/events/AuditEvent.ts'], status: 'done' },
+    { id: 't2', label: 'T2 — Implement auditService', parallelGroup: 1, filePaths: ['api-payments::src/audit/auditService.ts'], status: 'done' },
+    { id: 't3', label: 'T3 — Write the e2e tests',      parallelGroup: 2, filePaths: ['api-payments::tests/e2e/audit.e2e.test.ts'], status: 'done' },
   ],
   files: [
     {
@@ -416,12 +416,12 @@ const PAY_203_EXEC_DATA: ExecData = {
       diff: `--- /dev/null\n+++ b/src/events/AuditEvent.ts\n@@ -0,0 +1,16 @@\n+export type AuditEventType =\n+  | 'payment.created'\n+  | 'payment.captured'\n+  | 'payment.failed'\n+  | 'chargeback.initiated';\n+\n+export interface AuditEvent {\n+  id: string;\n+  type: AuditEventType;\n+  transactionId: string;\n+  amount: number;\n+  currency: 'BRL';\n+  occurredAt: string; // ISO 8601\n+  metadata?: Record<string, unknown>;\n+}`,
     },
     {
-      path: 'src/audit/auditService.ts', repo: 'api-pagamentos', branch: 'feature/PAY-203-audit-log',
+      path: 'src/audit/auditService.ts', repo: 'api-payments', branch: 'feature/PAY-203-audit-log',
       linesAdded: 22, linesRemoved: 0,
       diff: `--- /dev/null\n+++ b/src/audit/auditService.ts\n@@ -0,0 +1,22 @@\n+import { AuditEvent } from 'shared-contracts/src/events/AuditEvent';\n+import { rabbitMQ } from '../infra/rabbitmq';\n+import { logger } from '../infra/logger';\n+\n+const EXCHANGE = 'audit.events';\n+\n+export async function publishAuditEvent(event: AuditEvent): Promise<void> {\n+  try {\n+    await rabbitMQ.publish(EXCHANGE, event.type, event);\n+    logger.info({ event }, 'Audit event published');\n+  } catch (err) {\n+    logger.error({ err, event }, 'Failed to publish audit event');\n+    throw err;\n+  }\n+}\n+\n+export async function buildAuditEvent(\n+  type: AuditEvent['type'],\n+  transactionId: string,\n+  amount: number,\n+): Promise<AuditEvent> {\n+  return { id: crypto.randomUUID(), type, transactionId, amount, currency: 'BRL', occurredAt: new Date().toISOString() };\n+}`,
     },
     {
-      path: 'tests/e2e/audit.e2e.test.ts', repo: 'api-pagamentos', branch: 'feature/PAY-203-audit-log',
+      path: 'tests/e2e/audit.e2e.test.ts', repo: 'api-payments', branch: 'feature/PAY-203-audit-log',
       linesAdded: 28, linesRemoved: 0,
       diff: `--- /dev/null\n+++ b/tests/e2e/audit.e2e.test.ts\n@@ -0,0 +1,28 @@\n+import { publishAuditEvent, buildAuditEvent } from '../../src/audit/auditService';\n+import { rabbitMQ } from '../../src/infra/rabbitmq';\n+\n+describe('Audit log e2e', () => {\n+  let events: unknown[] = [];\n+\n+  beforeAll(async () => {\n+    await rabbitMQ.connect();\n+    rabbitMQ.subscribe('audit.events', e => events.push(e));\n+  });\n+\n+  afterAll(async () => { await rabbitMQ.disconnect(); });\n+\n+  it('should publish payment.created event', async () => {\n+    const ev = await buildAuditEvent('payment.created', 'pmt-9901', 199.90);\n+    await publishAuditEvent(ev);\n+    await new Promise(r => setTimeout(r, 200));\n+    expect(events).toHaveLength(1);\n+    expect(events[0]).toMatchObject({ type: 'payment.created' });\n+  });\n+\n+  it('should publish chargeback event', async () => {\n+    // Requires RabbitMQ consumer with 15s timeout\n+    const ev = await buildAuditEvent('chargeback.initiated', 'pmt-8821', 89.90);\n+    await publishAuditEvent(ev);\n+    await new Promise(r => setTimeout(r, 10000));\n+    expect(events).toHaveLength(2);\n+  });\n+});`,
     },
@@ -433,7 +433,7 @@ export const mockCards: Demand[] = [
     id: 'd-1',
     workspaceId: 'ws-1',
     externalKey: 'PORTAL-101',
-    title: 'Adicionar exportação para PDF', type: 'Story', provider: 'jira',
+    title: 'Add a PDF export', type: 'Story', provider: 'jira',
     assignee: 'João Silva',
     providerStatus: 'To Do',
     dopStatus: 'new',
@@ -445,7 +445,7 @@ export const mockCards: Demand[] = [
     id: 'd-2',
     workspaceId: 'ws-1',
     externalKey: 'PORTAL-102',
-    title: 'Corrigir bug na paginação', type: 'Bug', provider: 'jira',
+    title: 'Fix a bug in the pagination', type: 'Bug', provider: 'jira',
     assignee: 'Maria Oliveira',
     providerStatus: 'To Do',
     dopStatus: 'new',
@@ -457,14 +457,14 @@ export const mockCards: Demand[] = [
     id: 'd-3',
     workspaceId: 'ws-1',
     externalKey: 'PORTAL-103',
-    title: 'Integração com novo gateway de pagamentos', type: 'Epic', provider: 'jira',
+    title: 'Integration with the new payment gateway', type: 'Epic', provider: 'jira',
     assignee: 'João Silva',
     providerStatus: 'In Progress',
     dopStatus: 'doing',
     stages: [
-      { key: 'init',    title: 'Iniciar a demanda',    status: 'done',    summary: 'Card PORTAL-103 lido via MCP Jira. RFC gerada e aprovada.',                                              document: PORTAL_103_INIT_DOC,    startedAt: new Date(Date.now() - 3700000).toISOString(), finishedAt: new Date(Date.now() - 3500000).toISOString() },
-      { key: 'context', title: 'Contextualização',     status: 'done',    summary: 'Análise forense concluída. Identificados 3 pontos de integração no portal-backend.',                    document: PORTAL_103_CONTEXT_DOC, startedAt: new Date(Date.now() - 3500000).toISOString(), finishedAt: new Date(Date.now() - 3200000).toISOString() },
-      { key: 'plan',    title: 'Plano',                status: 'running', summary: 'Elaborando plano de desenvolvimento: 4 tarefas no backend, 2 no frontend.',                            document: PORTAL_103_PLAN_DOC,    testPlan: PORTAL_103_TEST_PLAN, startedAt: new Date(Date.now() - 3200000).toISOString() }
+      { key: 'init',    title: 'Start the demand',    status: 'done',    summary: 'The PORTAL-103 card was read through the Jira MCP. The RFC was generated and approved.',                 document: PORTAL_103_INIT_DOC,    startedAt: new Date(Date.now() - 3700000).toISOString(), finishedAt: new Date(Date.now() - 3500000).toISOString() },
+      { key: 'context', title: 'Contextualisation',     status: 'done',    summary: 'The forensic reading is done. Three integration points were found in portal-backend.',                   document: PORTAL_103_CONTEXT_DOC, startedAt: new Date(Date.now() - 3500000).toISOString(), finishedAt: new Date(Date.now() - 3200000).toISOString() },
+      { key: 'plan',    title: 'Plan',                status: 'running', summary: 'Drafting the development plan: 4 tasks on the backend, 2 on the frontend.',                             document: PORTAL_103_PLAN_DOC,    testPlan: PORTAL_103_TEST_PLAN, startedAt: new Date(Date.now() - 3200000).toISOString() }
     ],
     repositoryOverview: {
       repos: ['portal-backend'],
@@ -479,29 +479,29 @@ export const mockCards: Demand[] = [
       startedAt: new Date(Date.now() - 3700000).toISOString()
     },
     chat: [
-      { id: 'c1', author: 'dev',    text: 'Inicie o trabalho nesta demanda.',  at: new Date(Date.now() - 3500000).toISOString() },
-      { id: 'c2', author: 'claude', text: 'Entendido. Li o card PORTAL-103 via MCP Jira. Vou fazer a análise forense do portal-backend para entender os pontos de integração existentes.', at: new Date(Date.now() - 3400000).toISOString(), actions: ['Executou `dop demand-init PORTAL-103`', 'Leu o card Jira via MCP'] },
-      { id: 'c3', author: 'claude', text: 'Análise forense concluída. Encontrei o serviço `PaymentService` no portal-backend que precisará de extensão. Criando o plano de desenvolvimento agora.', at: new Date(Date.now() - 2800000).toISOString(), actions: ['Criou branch feature/PORTAL-103-gateway', 'Gerou ADR-012-gateway-integration.md'] },
-      { id: 'c4', author: 'dev',    text: 'O gateway novo é o PagSeguro. Credenciais estão no Vault path `secrets/pagseguro`.', at: new Date(Date.now() - 2400000).toISOString() },
-      { id: 'c5', author: 'claude', text: 'Perfeito. Anotei as credenciais (ref no contexto, sem expor o valor). Estou finalizando o plano agora — deve ter 3 tarefas de backend e 1 de frontend para exibir status do gateway.', at: new Date(Date.now() - 2000000).toISOString() }
+      { id: 'c1', author: 'dev',    text: 'Start the work on this demand.',  at: new Date(Date.now() - 3500000).toISOString() },
+      { id: 'c2', author: 'claude', text: 'Understood. I read the PORTAL-103 card through the Jira MCP. I will do a forensic reading of portal-backend to understand the existing integration points.', at: new Date(Date.now() - 3400000).toISOString(), actions: ['Ran `dop demand-init PORTAL-103`', 'Read the Jira card through the MCP'] },
+      { id: 'c3', author: 'claude', text: 'The forensic reading is done. I found the `PaymentService` service in portal-backend, which will need extending. Writing the development plan now.', at: new Date(Date.now() - 2800000).toISOString(), actions: ['Created the feature/PORTAL-103-gateway branch', 'Generated ADR-012-gateway-integration.md'] },
+      { id: 'c4', author: 'dev',    text: 'The new gateway is PagSeguro. The credentials are in the Vault path `secrets/pagseguro`.', at: new Date(Date.now() - 2400000).toISOString() },
+      { id: 'c5', author: 'claude', text: 'Perfect. I noted the credentials (a reference in the context, without exposing the value). I am finishing the plan now — it should have 3 backend tasks and 1 frontend task to show the gateway\u2019s status.', at: new Date(Date.now() - 2000000).toISOString() }
     ]
   },
   {
     id: 'd-4',
     workspaceId: 'ws-1',
     externalKey: 'PORTAL-104',
-    title: 'Atualizar dependências de segurança (CVE-2026-1234)', type: 'Bug', provider: 'jira',
+    title: 'Update the security dependencies (CVE-2026-1234)', type: 'Bug', provider: 'jira',
     assignee: 'Ana Costa',
     providerStatus: 'In Progress',
     dopStatus: 'doing',
     stages: [
-      { key: 'init',    title: 'Iniciar a demanda',    status: 'done',    summary: 'Card lido. CVE-2026-1234 afeta `jsonwebtoken` < 9.0.2. PRD de segurança gerada.',           document: PORTAL_104_INIT_DOC,    startedAt: new Date(Date.now() - 7200000).toISOString(), finishedAt: new Date(Date.now() - 7100000).toISOString() },
-      { key: 'context', title: 'Contextualização',     status: 'done',    summary: 'Ambos os repos usam jsonwebtoken@8.5.1. 4 chamadas sign() identificadas, 1 no frontend.', document: PORTAL_104_CONTEXT_DOC, startedAt: new Date(Date.now() - 7100000).toISOString(), finishedAt: new Date(Date.now() - 6800000).toISOString() },
-      { key: 'plan',    title: 'Plano',                status: 'done',    summary: 'Plano: (1) upgrade frontend (2) upgrade backend (3) ajustar API que mudou na v9.',         document: PORTAL_104_PLAN_DOC,    testPlan: PORTAL_104_TEST_PLAN, startedAt: new Date(Date.now() - 6800000).toISOString(), finishedAt: new Date(Date.now() - 6600000).toISOString() },
-      { key: 'exec',    title: 'Execução do plano',    status: 'done',    summary: '`jsonwebtoken` atualizado para 9.0.2 nos dois repos. 3 chamadas de API ajustadas no backend.', execData: PORTAL_104_EXEC_DATA, startedAt: new Date(Date.now() - 6600000).toISOString(), finishedAt: new Date(Date.now() - 5400000).toISOString() },
-      { key: 'test',    title: 'Execução dos testes',  status: 'done',    startedAt: new Date(Date.now() - 5400000).toISOString(), finishedAt: new Date(Date.now() - 3600000).toISOString() },
-      { key: 'val',     title: 'Validação humana',     status: 'done',    startedAt: new Date(Date.now() - 3600000).toISOString(), finishedAt: new Date(Date.now() - 1800000).toISOString() },
-      { key: 'fin',     title: 'Finalização',          status: 'running', startedAt: new Date(Date.now() -  900000).toISOString() },
+      { key: 'init',    title: 'Start the demand',    status: 'done',    summary: 'The card was read. CVE-2026-1234 affects `jsonwebtoken` < 9.0.2. The security PRD was generated.', document: PORTAL_104_INIT_DOC,    startedAt: new Date(Date.now() - 7200000).toISOString(), finishedAt: new Date(Date.now() - 7100000).toISOString() },
+      { key: 'context', title: 'Contextualisation',     status: 'done',    summary: 'Both repos use jsonwebtoken@8.5.1. Four sign() calls were found, one on the frontend.',   document: PORTAL_104_CONTEXT_DOC, startedAt: new Date(Date.now() - 7100000).toISOString(), finishedAt: new Date(Date.now() - 6800000).toISOString() },
+      { key: 'plan',    title: 'Plan',                status: 'done',    summary: 'The plan: (1) upgrade the frontend (2) upgrade the backend (3) adjust the API that changed in v9.', document: PORTAL_104_PLAN_DOC,    testPlan: PORTAL_104_TEST_PLAN, startedAt: new Date(Date.now() - 6800000).toISOString(), finishedAt: new Date(Date.now() - 6600000).toISOString() },
+      { key: 'exec',    title: 'Plan execution',    status: 'done',    summary: '`jsonwebtoken` was updated to 9.0.2 in both repos. Three API calls were adjusted on the backend.', execData: PORTAL_104_EXEC_DATA, startedAt: new Date(Date.now() - 6600000).toISOString(), finishedAt: new Date(Date.now() - 5400000).toISOString() },
+      { key: 'test',    title: 'Test execution',  status: 'done',    startedAt: new Date(Date.now() - 5400000).toISOString(), finishedAt: new Date(Date.now() - 3600000).toISOString() },
+      { key: 'val',     title: 'Human validation',     status: 'done',    startedAt: new Date(Date.now() - 3600000).toISOString(), finishedAt: new Date(Date.now() - 1800000).toISOString() },
+      { key: 'fin',     title: 'Finalisation',          status: 'running', startedAt: new Date(Date.now() -  900000).toISOString() },
     ],
     repositoryOverview: {
       repos: ['portal-frontend', 'portal-backend'],
@@ -560,7 +560,7 @@ export const mockCards: Demand[] = [
         {
           path: 'src/auth/session.ts', repo: 'portal-backend', branch: 'feature/PORTAL-104-sec-deps',
           kind: 'source', change: 'modified', gitStatus: 'modified', linesAdded: 2, linesRemoved: 0,
-          diff: `--- a/src/auth/session.ts\n+++ b/src/auth/session.ts\n@@ -22,6 +22,8 @@ export async function refreshSession(token: string) {\n   const payload = await verifyToken(token);\n+  // TODO: invalidar token antigo no Redis\n+  // await redis.del(\`session:\${payload.sub}\`);\n   return generateAccessToken({ id: payload.sub, role: payload.role });\n }`,
+          diff: `--- a/src/auth/session.ts\n+++ b/src/auth/session.ts\n@@ -22,6 +22,8 @@ export async function refreshSession(token: string) {\n   const payload = await verifyToken(token);\n+  // TODO: invalidate the old token in Redis\n+  // await redis.del(\`session:\${payload.sub}\`);\n   return generateAccessToken({ id: payload.sub, role: payload.role });\n }`,
         },
         {
           path: '.env.local', repo: 'portal-frontend', branch: 'feature/PORTAL-104-sec-deps',
@@ -585,55 +585,55 @@ export const mockCards: Demand[] = [
       elapsedSeconds: 6200
     },
     chat: [
-      { id: 'c1', author: 'dev',    text: 'PORTAL-104 — CVE crítica. Prioridade alta.',  at: new Date(Date.now() - 7200000).toISOString() },
-      { id: 'c2', author: 'claude', text: 'Iniciando análise. Vou verificar a versão do jsonwebtoken nos dois repos.', at: new Date(Date.now() - 7150000).toISOString(), actions: ['Executou `dop demand-init PORTAL-104`'] },
-      { id: 'c3', author: 'claude', text: 'Ambos os repos estão em jsonwebtoken@8.5.1. A API mudou na v9: `sign()` agora é assíncrona por padrão. Vou ajustar as 3 chamadas afetadas no backend.', at: new Date(Date.now() - 6900000).toISOString(), actions: ['Criou branch portal-frontend/feature/PORTAL-104-sec-deps', 'Criou branch portal-backend/feature/PORTAL-104-sec-deps'] },
-      { id: 'c4', author: 'claude', text: 'Execução concluída. Rodando testes agora. Há uma falha em `authMiddleware > missing token returns 401` que estou investigando — parece ser o teste que precisa de ajuste, não o código.', at: new Date(Date.now() - 5400000).toISOString(), actions: ['Executou `pnpm test`'] }
+      { id: 'c1', author: 'dev',    text: 'PORTAL-104 — a critical CVE. High priority.',  at: new Date(Date.now() - 7200000).toISOString() },
+      { id: 'c2', author: 'claude', text: 'Starting the analysis. I will check jsonwebtoken\u2019s version in both repos.', at: new Date(Date.now() - 7150000).toISOString(), actions: ['Ran `dop demand-init PORTAL-104`'] },
+      { id: 'c3', author: 'claude', text: 'Both repos are on jsonwebtoken@8.5.1. The API changed in v9: `sign()` is now asynchronous by default. I will adjust the 3 affected calls on the backend.', at: new Date(Date.now() - 6900000).toISOString(), actions: ['Created the portal-frontend/feature/PORTAL-104-sec-deps branch', 'Created the portal-backend/feature/PORTAL-104-sec-deps branch'] },
+      { id: 'c4', author: 'claude', text: 'The execution is done. Running the tests now. There is a failure in `authMiddleware > missing token returns 401` that I am investigating — it looks like the test needs adjusting, not the code.', at: new Date(Date.now() - 5400000).toISOString(), actions: ['Ran `pnpm test`'] }
     ]
   },
   {
     id: 'd-5',
     workspaceId: 'ws-2',
     externalKey: 'PAY-201',
-    title: 'Refatorar serviço de reconciliação', type: 'Task', provider: 'clickup',
+    title: 'Refactor the reconciliation service', type: 'Task', provider: 'clickup',
     assignee: 'Carlos Mendes',
     providerStatus: 'In Review',
     dopStatus: 'done',
     stages: [
-      { key: 'init',    title: 'Iniciar a demanda',   status: 'done' },
-      { key: 'context', title: 'Contextualização',    status: 'done' },
-      { key: 'plan',    title: 'Plano',               status: 'done' },
-      { key: 'exec',    title: 'Execução do plano',   status: 'done' },
-      { key: 'test',    title: 'Execução dos testes', status: 'done' },
-      { key: 'val',     title: 'Validação humana',    status: 'done' },
-      { key: 'fin',     title: 'Finalização',         status: 'done' }
+      { key: 'init',    title: 'Start the demand',   status: 'done' },
+      { key: 'context', title: 'Contextualisation',    status: 'done' },
+      { key: 'plan',    title: 'Plan',               status: 'done' },
+      { key: 'exec',    title: 'Plan execution',   status: 'done' },
+      { key: 'test',    title: 'Test execution', status: 'done' },
+      { key: 'val',     title: 'Human validation',    status: 'done' },
+      { key: 'fin',     title: 'Finalisation',         status: 'done' }
     ],
     repositoryOverview: {
-      repos: ['api-pagamentos', 'worker-cobrancas'],
+      repos: ['api-payments', 'worker-billing'],
       branches: [
-        'api-pagamentos|feature/PAY-201-reconcile-refactor',
-        'worker-cobrancas|feature/PAY-201-reconcile-worker'
+        'api-payments|feature/PAY-201-reconcile-refactor',
+        'worker-billing|feature/PAY-201-reconcile-worker'
       ],
       commits: 14,
-      commitsByRepo: { 'api-pagamentos': 9, 'worker-cobrancas': 5 },
+      commitsByRepo: { 'api-payments': 9, 'worker-billing': 5 },
       prs: [
-        { id: 'pr-1', repo: 'api-pagamentos',   sourceBranch: 'feature/PAY-201-reconcile-refactor', targetBranch: 'develop', url: '#', merged: false, hasConflict: false,
+        { id: 'pr-1', repo: 'api-payments',   sourceBranch: 'feature/PAY-201-reconcile-refactor', targetBranch: 'develop', url: '#', merged: false, hasConflict: false,
           reviewers: [
             { name: 'Carlos Mendes',  initials: 'CM', status: 'approved' },
             { name: 'Maria Oliveira', initials: 'MO', status: 'approved' },
             { name: 'Pedro Gomes',    initials: 'PG', status: 'pending'  },
           ] },
-        { id: 'pr-2', repo: 'worker-cobrancas', sourceBranch: 'feature/PAY-201-reconcile-worker',   targetBranch: 'develop', url: '#', merged: false, hasConflict: false,
+        { id: 'pr-2', repo: 'worker-billing', sourceBranch: 'feature/PAY-201-reconcile-worker',   targetBranch: 'develop', url: '#', merged: false, hasConflict: false,
           reviewers: [
             { name: 'Ana Costa', initials: 'AC', status: 'approved' },
           ] },
       ],
       files: [],
       tests: [
-        { name: 'reconcileService > processa lote',      type: 'unit', status: 'success' },
-        { name: 'reconcileService > idempotência',       type: 'unit', status: 'success' },
+        { name: 'reconcileService > processes a batch',   type: 'unit', status: 'success' },
+        { name: 'reconcileService > idempotency',         type: 'unit', status: 'success' },
         { name: 'worker > consume event',                type: 'unit', status: 'success' },
-        { name: 'fluxo completo de reconciliação e2e',   type: 'e2e',  status: 'success' }
+        { name: 'full reconciliation flow e2e',           type: 'e2e',  status: 'success' }
       ],
       startedAt: new Date(Date.now() - 86400000).toISOString(),
       finishedAt: new Date(Date.now() - 43200000).toISOString(),
@@ -645,24 +645,24 @@ export const mockCards: Demand[] = [
     id: 'd-6',
     workspaceId: 'ws-2',
     externalKey: 'PAY-202',
-    title: 'Otimizar queries do banco de dados', type: 'Task', provider: 'clickup',
+    title: 'Optimise the database queries', type: 'Task', provider: 'clickup',
     assignee: 'João Silva',
     providerStatus: 'Done',
     dopStatus: 'delivered',
     stages: [
-      { key: 'init',    title: 'Iniciar a demanda',    status: 'done' },
-      { key: 'context', title: 'Contextualização',     status: 'done' },
-      { key: 'plan',    title: 'Plano',                status: 'done' },
-      { key: 'exec',    title: 'Execução do plano',    status: 'done' },
-      { key: 'test',    title: 'Execução dos testes',  status: 'done' },
-      { key: 'val',     title: 'Validação humana',     status: 'done' },
-      { key: 'fin',     title: 'Finalização',          status: 'done' }
+      { key: 'init',    title: 'Start the demand',    status: 'done' },
+      { key: 'context', title: 'Contextualisation',     status: 'done' },
+      { key: 'plan',    title: 'Plan',                status: 'done' },
+      { key: 'exec',    title: 'Plan execution',    status: 'done' },
+      { key: 'test',    title: 'Test execution',  status: 'done' },
+      { key: 'val',     title: 'Human validation',     status: 'done' },
+      { key: 'fin',     title: 'Finalisation',          status: 'done' }
     ],
     repositoryOverview: {
-      repos: ['api-pagamentos'],
-      branches: ['api-pagamentos|feature/PAY-202-query-opt'],
+      repos: ['api-payments'],
+      branches: ['api-payments|feature/PAY-202-query-opt'],
       commits: 8,
-      prs: [{ id: 'pr-3', repo: 'api-pagamentos', sourceBranch: 'feature/PAY-202-query-opt', targetBranch: 'develop', url: '#', merged: true, hasConflict: false,
+      prs: [{ id: 'pr-3', repo: 'api-payments', sourceBranch: 'feature/PAY-202-query-opt', targetBranch: 'develop', url: '#', merged: true, hasConflict: false,
         reviewers: [
           { name: 'Maria Oliveira', initials: 'MO', status: 'approved' },
           { name: 'João Silva',     initials: 'JS', status: 'approved' },
@@ -670,7 +670,7 @@ export const mockCards: Demand[] = [
       files: [],
       tests: [
         { name: 'query performance < 50ms', type: 'unit', status: 'success' },
-        { name: 'busca paginada e2e',        type: 'e2e',  status: 'success' }
+        { name: 'paginated search e2e',      type: 'e2e',  status: 'success' }
       ],
       startedAt: new Date(Date.now() - 172800000).toISOString(),
       finishedAt: new Date(Date.now() - 129600000).toISOString(),
@@ -682,60 +682,60 @@ export const mockCards: Demand[] = [
     id: 'd-7',
     workspaceId: 'ws-2',
     externalKey: 'PAY-203',
-    title: 'Adicionar logs de auditoria em todas as transações', type: 'Task', provider: 'clickup',
+    title: 'Add audit logs on every transaction', type: 'Task', provider: 'clickup',
     assignee: 'Pedro Gomes',
     providerStatus: 'In Progress',
     dopStatus: 'doing',
     stages: [
-      { key: 'init',    title: 'Iniciar a demanda',   status: 'done' },
-      { key: 'context', title: 'Contextualização',    status: 'done' },
-      { key: 'plan',    title: 'Plano',               status: 'done' },
-      { key: 'exec',    title: 'Execução do plano',   status: 'done', execData: PAY_203_EXEC_DATA },
-      { key: 'test',    title: 'Execução dos testes', status: 'blocked', summary: 'Teste e2e "auditoria de chargeback" falha por timeout no RabbitMQ. Aguardando decisão do Dev sobre retry policy.' }
+      { key: 'init',    title: 'Start the demand',   status: 'done' },
+      { key: 'context', title: 'Contextualisation',    status: 'done' },
+      { key: 'plan',    title: 'Plan',               status: 'done' },
+      { key: 'exec',    title: 'Plan execution',   status: 'done', execData: PAY_203_EXEC_DATA },
+      { key: 'test',    title: 'Test execution', status: 'blocked', summary: 'The "chargeback audit" e2e test fails on a RabbitMQ timeout. Waiting on the dev to decide the retry policy.' }
     ],
     repositoryOverview: {
-      repos: ['api-pagamentos', 'shared-contracts'],
+      repos: ['api-payments', 'shared-contracts'],
       branches: [
-        'api-pagamentos|feature/PAY-203-audit-log',
+        'api-payments|feature/PAY-203-audit-log',
         'shared-contracts|feature/PAY-203-audit-events'
       ],
       commits: null,
       commitsByRepoStatus: 'unavailable',
       prs: [],
       files: [
-        { path: 'api-pagamentos/src/audit/auditService.ts',         kind: 'source', change: 'created'  },
+        { path: 'api-payments/src/audit/auditService.ts',         kind: 'source', change: 'created'  },
         { path: 'shared-contracts/src/events/AuditEvent.ts',        kind: 'source', change: 'created'  },
-        { path: 'api-pagamentos/tests/e2e/audit.e2e.test.ts',       kind: 'test',   change: 'created'  }
+        { path: 'api-payments/tests/e2e/audit.e2e.test.ts',       kind: 'test',   change: 'created'  }
       ],
       tests: [
-        { name: 'auditService > registra transação',     type: 'unit', status: 'success' },
-        { name: 'auditService > serializa evento',       type: 'unit', status: 'success' },
-        { name: 'auditoria de pagamento e2e',            type: 'e2e',  status: 'success' },
-        { name: 'auditoria de chargeback e2e',           type: 'e2e',  status: 'fail'    }
+        { name: 'auditService > records a transaction',   type: 'unit', status: 'success' },
+        { name: 'auditService > serialises an event',     type: 'unit', status: 'success' },
+        { name: 'payment audit e2e',                      type: 'e2e',  status: 'success' },
+        { name: 'chargeback audit e2e',                   type: 'e2e',  status: 'fail'    }
       ],
       startedAt: new Date(Date.now() - 10800000).toISOString(),
       elapsedSeconds: 10000
     },
     chat: [
-      { id: 'c1', author: 'claude', text: 'Bloqueado no teste e2e de chargeback — o consumer RabbitMQ está com timeout de 5s que é insuficiente em ambiente de teste. Opções: (A) aumentar timeout para 15s, (B) usar mock do consumer no teste. Qual prefere?', at: new Date(Date.now() - 900000).toISOString(), actions: ['Bloqueou na etapa "Execução dos testes"'] }
+      { id: 'c1', author: 'claude', text: 'Blocked on the chargeback e2e test — the RabbitMQ consumer has a 5s timeout, which is not enough in a test environment. The options: (A) raise the timeout to 15s, (B) use a mock consumer in the test. Which do you prefer?', at: new Date(Date.now() - 900000).toISOString(), actions: ['Blocked on the "Test execution" stage'] }
     ]
   },
   {
     id: 'd-8',
     workspaceId: 'ws-2',
     externalKey: 'PAY-204',
-    title: 'Corrigir falha intermitente no cron de cobrança', type: 'Bug', provider: 'clickup',
+    title: 'Fix the intermittent failure in the billing cron', type: 'Bug', provider: 'clickup',
     assignee: 'Ana Costa',
     providerStatus: 'In Progress',
     dopStatus: 'doing',
     stages: [
-      { key: 'init',    title: 'Iniciar a demanda', status: 'done' },
-      { key: 'context', title: 'Contextualização',  status: 'done' },
-      { key: 'plan',    title: 'Plano',             status: 'running', summary: 'Análise forense em andamento. Suspeita de race condition no lock distribuído do Redis.' }
+      { key: 'init',    title: 'Start the demand', status: 'done' },
+      { key: 'context', title: 'Contextualisation',  status: 'done' },
+      { key: 'plan',    title: 'Plan',             status: 'running', summary: 'The forensic reading is under way. A race condition in the Redis distributed lock is suspected.' }
     ],
     repositoryOverview: {
-      repos: ['worker-cobrancas'],
-      branches: ['worker-cobrancas|feature/PAY-204-cron-fix'],
+      repos: ['worker-billing'],
+      branches: ['worker-billing|feature/PAY-204-cron-fix'],
       commits: 1,
       prs: [],
       files: [{ path: 'docs/prompts/PAY-204-forensics.md', kind: 'context', change: 'created' }],
@@ -744,8 +744,8 @@ export const mockCards: Demand[] = [
       elapsedSeconds: 1800
     },
     chat: [
-      { id: 'c1', author: 'dev',    text: 'PAY-204 — esse cron falha 1 em 50 execuções. Logs do Sentry em anexo.', at: new Date(Date.now() - 1800000).toISOString() },
-      { id: 'c2', author: 'claude', text: 'Lendo os logs do Sentry. Suspeito de race condition no lock distribuído do Redis — dois workers assumem o lock simultaneamente quando há latência de rede > 200ms. Vou confirmar fazendo análise forense do worker.', at: new Date(Date.now() - 1700000).toISOString(), actions: ['Iniciou análise forense', 'Criou branch feature/PAY-204-cron-fix'] }
+      { id: 'c1', author: 'dev',    text: 'PAY-204 — this cron fails 1 run in 50. The Sentry logs are attached.', at: new Date(Date.now() - 1800000).toISOString() },
+      { id: 'c2', author: 'claude', text: 'Reading the Sentry logs. I suspect a race condition in the Redis distributed lock — two workers take the lock at the same time when network latency goes over 200ms. I will confirm it with a forensic reading of the worker.', at: new Date(Date.now() - 1700000).toISOString(), actions: ['Started the forensic reading', 'Created the feature/PAY-204-cron-fix branch'] }
     ]
   }
 ];

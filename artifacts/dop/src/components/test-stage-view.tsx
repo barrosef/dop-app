@@ -177,7 +177,7 @@ function TestTypeSection({ title, icon, tests }: {
             </span>
           )}
 
-          {/* Right-aligned concluído */}
+          {/* Right-aligned "done" */}
           {sectionFinished && (
             <span className={`ml-auto flex items-center gap-1 text-[10px] font-semibold ${failCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
               {failCount > 0

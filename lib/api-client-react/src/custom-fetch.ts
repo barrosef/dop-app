@@ -9,12 +9,13 @@ export type BodyType<T> = T;
 export type AuthTokenGetter = () => Promise<string | null> | string | null;
 
 /**
- * Fornecedor de cabeçalhos extras, avaliado a cada requisição.
+ * A provider of extra headers, evaluated on every request.
  *
- * Existe por causa do `x-account-id`: o BFF resolve papel e concessões pela
- * CONTA ATIVA, que é escolhida na interface e muda sem recarregar a página. Um
- * cabeçalho fixado na configuração ficaria velho na primeira troca de conta —
- * e uma requisição com a conta errada não dá erro, dá o dado de outra pessoa.
+ * It exists because of `x-account-id`: the BFF resolves role and grants by the
+ * ACTIVE ACCOUNT, which is chosen in the interface and changes without
+ * reloading the page. A header pinned in the configuration would go stale on
+ * the first account switch — and a request with the wrong account does not
+ * error, it returns somebody else's data.
  */
 export type HeadersProvider = () =>
   | Promise<Record<string, string>>
@@ -58,10 +59,10 @@ export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
 }
 
 /**
- * Registra o fornecedor de cabeçalhos extras (ver `HeadersProvider`).
+ * Registers the provider of extra headers (see `HeadersProvider`).
  *
- * Cabeçalho que a chamada já trouxe explicitamente vence o fornecedor — quem
- * escreveu a chamada sabia o que queria. Passe `null` para limpar.
+ * A header the call brought explicitly beats the provider — whoever wrote the
+ * call knew what they wanted. Pass `null` to clear it.
  */
 export function setHeadersProvider(provider: HeadersProvider | null): void {
   _headersProvider = provider;
@@ -372,8 +373,8 @@ export async function customFetch<T = unknown>(
     headers.set("accept", DEFAULT_JSON_ACCEPT);
   }
 
-  // Cabeçalhos do fornecedor (hoje: `x-account-id`). Aplicados ANTES do token
-  // e só onde a chamada não definiu nada — explícito vence configuração.
+  // The provider's headers (today: `x-account-id`). Applied BEFORE the token
+  // and only where the call set nothing — explicit beats configuration.
   if (_headersProvider) {
     const extras = await _headersProvider();
     for (const [key, value] of Object.entries(extras)) {

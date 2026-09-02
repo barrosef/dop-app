@@ -301,7 +301,7 @@ function AddRepoPanel({ onAdd, onCancel }: { onAdd: (r: RepoConfig) => void; onC
               id="repo-url"
               value={form.remoteUrl}
               onChange={e => set('remoteUrl', e.target.value)}
-              placeholder="git@github.com:org/repo.git ou https://github.com/org/repo.git"
+              placeholder="git@github.com:org/repo.git or https://github.com/org/repo.git"
               className={`font-mono text-xs h-8 bg-card/50 ${errors.remoteUrl ? 'border-red-500' : ''}`}
             />
             {errors.remoteUrl && <p className="text-[10px] text-red-400">{errors.remoteUrl}</p>}
@@ -360,7 +360,7 @@ function AddRepoPanel({ onAdd, onCancel }: { onAdd: (r: RepoConfig) => void; onC
           <div className="space-y-1.5">
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('repo.add.baseUrl')}</Label>
             <div className="flex items-center">
-              <Input value={form.baseUrl} onChange={e => set('baseUrl', e.target.value)} placeholder="https://gitlab.empresa.com/org" className={`flex-1 rounded-r-none h-8 font-mono text-xs bg-card/50 ${errors.baseUrl ? 'border-red-500' : ''}`} />
+              <Input value={form.baseUrl} onChange={e => set('baseUrl', e.target.value)} placeholder="https://gitlab.company.com/org" className={`flex-1 rounded-r-none h-8 font-mono text-xs bg-card/50 ${errors.baseUrl ? 'border-red-500' : ''}`} />
               <span className="h-8 px-2 flex items-center border-y border-border bg-muted/30 text-muted-foreground text-xs select-none shrink-0">/</span>
               <Input value={form.repoName} onChange={e => set('repoName', e.target.value)} placeholder="nome-repo" className={`w-32 rounded-l-none h-8 border-l-0 font-mono text-xs bg-card/50 ${errors.repoName ? 'border-red-500' : ''}`} />
             </div>

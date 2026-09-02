@@ -33,14 +33,14 @@ type CentralOverlay =
 
 const MOCK_AZURE_EXTRA_REPOS: Record<string, { name: string; url: string }[]> = {
   'ws-1': [
-    { name: 'portal-admin', url: 'https://org@dev.azure.com/org/portal-cliente/_git/portal-admin' },
-    { name: 'shared-ui',    url: 'https://org@dev.azure.com/org/portal-cliente/_git/shared-ui' },
-    { name: 'portal-docs',  url: 'https://org@dev.azure.com/org/portal-cliente/_git/portal-docs' },
+    { name: 'portal-admin', url: 'https://org@dev.azure.com/org/customer-portal/_git/portal-admin' },
+    { name: 'shared-ui',    url: 'https://org@dev.azure.com/org/customer-portal/_git/shared-ui' },
+    { name: 'portal-docs',  url: 'https://org@dev.azure.com/org/customer-portal/_git/portal-docs' },
   ],
   'ws-2': [
-    { name: 'api-relatorios',      url: 'https://org@dev.azure.com/org/api-pagamentos/_git/api-relatorios' },
-    { name: 'worker-notificacoes', url: 'https://org@dev.azure.com/org/api-pagamentos/_git/worker-notificacoes' },
-    { name: 'billing-service',     url: 'https://org@dev.azure.com/org/api-pagamentos/_git/billing-service' },
+    { name: 'api-relatorios',      url: 'https://org@dev.azure.com/org/api-payments/_git/api-relatorios' },
+    { name: 'worker-notificacoes', url: 'https://org@dev.azure.com/org/api-payments/_git/worker-notificacoes' },
+    { name: 'billing-service',     url: 'https://org@dev.azure.com/org/api-payments/_git/billing-service' },
   ],
 };
 
@@ -299,7 +299,7 @@ function ProviderCardOverlay({ card }: { card: Card }) {
   const { t } = useI18n();
   const [tab, setTab] = useState<'card' | 'rfc'>('card');
   const initStage = card.stages.find(s => s.key === 'init');
-  const isSecurity = card.title.toLowerCase().includes('cve') || card.title.toLowerCase().includes('segurança');
+  const isSecurity = card.title.toLowerCase().includes('cve') || card.title.toLowerCase().includes('security');
 
   return (
     <div className="p-5 space-y-4 max-w-3xl">
@@ -353,7 +353,7 @@ function ProviderCardOverlay({ card }: { card: Card }) {
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{t('exec.provider.description')}</p>
               <p className="text-xs text-foreground/80 leading-relaxed bg-muted/20 border border-border/30 rounded p-3">
                 {isSecurity
-                  ? 'CVE-2026-1234 foi identificada no pacote jsonwebtoken utilizado nos repos portal-frontend e portal-backend. Versões < 9.0.2 são vulneráveis a ataques de falsificação de tokens JWT. Atualização urgente necessária antes do próximo deploy.'
+                  ? t('exec.provider.cve')
                   : `${card.title}. ${t('exec.provider.rfcHint')}`}
               </p>
             </div>
@@ -544,7 +544,7 @@ function RepoManagerOverlay({
             </div>
           )}
 
-          {/* ── Section 2: Disponíveis no workspace ── */}
+          {/* ── Section 2: available in the workspace ── */}
           {addableFromWs.length > 0 && (
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
@@ -797,17 +797,17 @@ function ValidationStageView({
       {/* Footer */}
       <div className="flex items-start justify-between gap-3 pt-1">
         <p className="text-[10px] text-muted-foreground/50 italic leading-relaxed">
-          Chat: <span className="font-mono">"teste e2e-1 realizado com sucesso"</span> · <span className="font-mono">"teste e2e-2 falhou"</span>
-          <br />O Claude pode continuar codando via chat mesmo durante a validação.
+          <span className="font-mono">{t('exec.val.examples')}</span>
+          <br />{t('exec.val.hint')}
         </p>
         {failed === 0 && pending === 0 && (
           <span className="text-[10px] text-emerald-400 flex items-center gap-1 shrink-0">
-            <CheckCircle2 className="w-3 h-3" /> Todos validados
+            <CheckCircle2 className="w-3 h-3" /> {t('exec.val.allValidated')}
           </span>
         )}
         {failed > 0 && (
           <span className="text-[10px] text-red-400 shrink-0 italic">
-            {failed} com falha — peça ajuda ao Claude
+            {t('exec.val.failedHelp', { n: failed })}
           </span>
         )}
       </div>
@@ -911,12 +911,12 @@ function FinalizationStageView({
     });
     const conflictIdx = prs.length > 0 ? prs.length - 1 : -1; // last PR gets conflict for demo
     const repositoryOverviewLabels = [
-      t('exec.fin.overview.pr') || 'PRs e branches',
-      t('exec.fin.overview.commits') || 'Commits e pushes',
-      t('exec.fin.overview.files') || 'Arquivos modificados',
-      t('exec.fin.overview.tests') || 'Testes implementados',
+      t('exec.fin.overview.pr') || 'PRs and branches',
+      t('exec.fin.overview.commits') || 'Commits and pushes',
+      t('exec.fin.overview.files') || 'Modified files',
+      t('exec.fin.overview.tests') || 'Tests implemented',
       t('exec.fin.overview.e2e') || 'Resultados E2E',
-      t('exec.fin.overview.finalizing') || 'Finalizando visão geral'
+      t('exec.fin.overview.finalizing') || 'Finalizing the overview'
     ];
 
     const init: FinStep[] = [
@@ -938,7 +938,7 @@ function FinalizationStageView({
     upd('repos', { status: 'running' });
     for (let i = 0; i < repos.length; i++) {
       if (cancelRef.current) return;
-      updItem('repos', i, { status: 'running', detail: 'verificando...' });
+      updItem('repos', i, { status: 'running', detail: t('exec.fin.checking') });
       await d(550);
       const c = commitCounts[repos[i]];
       updItem('repos', i, { detail: `${c} commit${c !== 1 ? 's' : ''}, pushing...` });
@@ -973,13 +973,13 @@ function FinalizationStageView({
       let hasConflict = false;
       for (let i = 0; i < prs.length; i++) {
         if (cancelRef.current) return;
-        updItem('conflicts', i, { status: 'running', detail: 'verificando...' });
+        updItem('conflicts', i, { status: 'running', detail: t('exec.fin.checking') });
         await d(600);
         const isConflict = i === conflictIdx;
         if (isConflict) hasConflict = true;
         updItem('conflicts', i, {
           status: isConflict ? 'warn' : 'done',
-          detail: isConflict ? 'conflito detectado' : 'sem conflitos ✓',
+          detail: isConflict ? t('exec.fin.conflictFound') : t('exec.fin.noConflict'),
         });
         await d(200);
       }
@@ -1027,7 +1027,7 @@ function FinalizationStageView({
           <div>
             <p className="text-sm font-medium">{t('exec.fin.ready')}</p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              {t('exec.fin.desc') || 'Irá verificar os repos, criar PRs, resolver conflitos e gerar a visão geral final.'}
+              {t('exec.fin.desc') || 'It will check the repos, create PRs, resolve conflicts and generate the final overview.'}
             </p>
           </div>
         </div>
@@ -1168,10 +1168,10 @@ export default function CardExecution() {
   const inputRef      = useRef<HTMLInputElement>(null);
 
   const COMMANDS = [
-    { name: '/plan',   description: 'Solicitar plano de execução' },
-    { name: '/test',   description: 'Executar testes' },
-    { name: '/status', description: 'Ver status do card' },
-    { name: '/commit', description: 'Commitar e abrir PR' },
+    { name: '/plan',   description: t('exec.cmd.plan') },
+    { name: '/test',   description: t('exec.cmd.test') },
+    { name: '/status', description: t('exec.cmd.status') },
+    { name: '/commit', description: t('exec.cmd.commit') },
     ...(workspace?.claudeExtensions?.commands ?? []).map(c => ({
       name: `/${c.name}`, description: c.description,
     })),
@@ -1239,9 +1239,13 @@ export default function CardExecution() {
 
   const handleDocChatRequest = (stageKey: string) => {
     const labels: Record<string, string> = {
-      init: 'PRD/RFC', context: 'documento de contexto', plan: 'plano de desenvolvimento',
+      init: t('exec.doc.init'),
+      context: t('exec.doc.context'),
+      plan: t('exec.doc.plan'),
     };
-    setMessage(`/edit Ajuste o ${labels[stageKey] ?? 'documento'}: `);
+    setMessage(
+      t('exec.doc.editPrefix', { what: labels[stageKey] ?? t('exec.doc.generic') }),
+    );
     setActiveSection('chat');
     setTimeout(() => inputRef.current?.focus(), 50);
   };
@@ -1251,8 +1255,9 @@ export default function CardExecution() {
   };
 
   const handleTestPlanChatRequest = (type: 'unit' | 'e2e') => {
-    const label = type === 'unit' ? 'plano de testes unitários' : 'plano de testes e2e';
-    setMessage(`/edit Ajuste o ${label}: `);
+    const label =
+      type === 'unit' ? t('exec.testplan.unit') : t('exec.testplan.e2e');
+    setMessage(t('exec.doc.editPrefix', { what: label }));
     setActiveSection('chat');
     setTimeout(() => inputRef.current?.focus(), 50);
   };
@@ -1266,7 +1271,7 @@ export default function CardExecution() {
   };
 
   const handleValTestChatRequest = (testTitle: string) => {
-    setMessage(`O teste "${testTitle}" falhou. Preciso de ajuda para investigar e corrigir. `);
+    setMessage(t('exec.chat.testFailed', { title: testTitle }));
     setActiveSection('chat');
     setTimeout(() => inputRef.current?.focus(), 50);
   };
@@ -1846,7 +1851,7 @@ export default function CardExecution() {
                 </div>
               )}
 
-              {/* 4 — Testes / Allure */}
+              {/* 4 — Tests / Allure */}
               <div>
                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{t('exec.stage.test.short')}</p>
                 <button

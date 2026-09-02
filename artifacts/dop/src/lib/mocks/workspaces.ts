@@ -7,13 +7,13 @@ const GL: GitProvider = 'gitlab';
 export const mockWorkspaces: Workspace[] = [
   {
     id: 'ws-1',
-    name: 'Portal do Cliente',
-    root: '/Users/dev/projects/portal-cliente',
+    name: 'Customer Portal',
+    root: '/Users/dev/projects/customer-portal',
     status: 'active',
     gitProvider: 'azure_devops',
     repos: [
-      { id: 'r1', name: 'portal-frontend', provider: AZ, remoteUrl: 'git@ssh.dev.azure.com:v3/org/portal-frontend', protocol: 'ssh', baseBranch: 'main', prTargets: ['develop'], description: 'Frontend React do portal de clientes' },
-      { id: 'r2', name: 'portal-backend',  provider: GH, remoteUrl: 'git@github.com:org/portal-backend.git',         protocol: 'ssh', baseBranch: 'main', prTargets: ['develop'], description: 'API Node.js do portal' },
+      { id: 'r1', name: 'portal-frontend', provider: AZ, remoteUrl: 'git@ssh.dev.azure.com:v3/org/portal-frontend', protocol: 'ssh', baseBranch: 'main', prTargets: ['develop'], description: 'The customer portal\u2019s React frontend' },
+      { id: 'r2', name: 'portal-backend',  provider: GH, remoteUrl: 'git@github.com:org/portal-backend.git',         protocol: 'ssh', baseBranch: 'main', prTargets: ['develop'], description: 'The portal\u2019s Node.js API' },
     ],
     taskManager: { provider: 'jira', baseUrl: 'https://org.atlassian.net', project: 'PORTAL' },
     cardTypes: ['Story', 'Bug', 'Epic'],
@@ -34,33 +34,33 @@ export const mockWorkspaces: Workspace[] = [
       mcps: [{ name: 'pg', kind: 'postgres' }, { name: 'fs', kind: 'filesystem' }],
       plugins: [], skills: [],
       commands: [
-        { name: 'forensics', description: 'Análise forense do código-fonte' },
-        { name: 'adr',       description: 'Criar ADR para decisão técnica' }
+        { name: 'forensics', description: 'A forensic reading of the source code' },
+        { name: 'adr',       description: 'Write an ADR for a technical decision' }
       ]
     },
-    rules: ['Usar React Query para chamadas de API', 'Testes unitários são obrigatórios'],
-    context: 'Portal para clientes gerenciarem suas assinaturas e faturas.'
+    rules: ['Use React Query for API calls', 'Unit tests are mandatory'],
+    context: 'A portal where customers manage their subscriptions and invoices.'
   },
   {
     id: 'ws-2',
-    name: 'API de Pagamentos',
-    root: '/Users/dev/projects/api-pagamentos',
+    name: 'Payments API',
+    root: '/Users/dev/projects/api-payments',
     status: 'active',
     gitProvider: 'azure_devops',
     repos: [
-      { id: 'r3', name: 'api-pagamentos',   provider: AZ, remoteUrl: 'https://org@dev.azure.com/org/api-pagamentos/_git/api-pagamentos',   protocol: 'https', baseBranch: 'main', prTargets: ['develop', 'release'] },
-      { id: 'r4', name: 'worker-cobrancas', provider: GL, remoteUrl: 'https://gitlab.com/org/worker-cobrancas.git',                         protocol: 'https', baseBranch: 'main', prTargets: ['develop'] },
-      { id: 'r5', name: 'shared-contracts', provider: AZ, remoteUrl: 'https://org@dev.azure.com/org/api-pagamentos/_git/shared-contracts',   protocol: 'https', baseBranch: 'main', prTargets: ['develop'] },
+      { id: 'r3', name: 'api-payments',   provider: AZ, remoteUrl: 'https://org@dev.azure.com/org/api-payments/_git/api-payments',   protocol: 'https', baseBranch: 'main', prTargets: ['develop', 'release'] },
+      { id: 'r4', name: 'worker-billing', provider: GL, remoteUrl: 'https://gitlab.com/org/worker-billing.git',                         protocol: 'https', baseBranch: 'main', prTargets: ['develop'] },
+      { id: 'r5', name: 'shared-contracts', provider: AZ, remoteUrl: 'https://org@dev.azure.com/org/api-payments/_git/shared-contracts',   protocol: 'https', baseBranch: 'main', prTargets: ['develop'] },
     ],
     taskManager: { provider: 'clickup', baseUrl: 'https://app.clickup.com', project: 'PAY' },
     cardTypes: ['Task', 'Subtask'],
       runtime: {
         apps: [
-          { id: 'api-payments-d5', name: 'api-pagamentos', role: 'backend', port: 8081, taskId: 'd-5', status: 'running', dependsOn: ['postgres', 'rabbitmq'] },
-          { id: 'api-payments-d6', name: 'api-pagamentos', role: 'backend', port: 8083, taskId: 'd-6', status: 'running', dependsOn: ['postgres', 'redis'] },
-          { id: 'api-payments-d7', name: 'api-pagamentos', role: 'backend', port: 8084, taskId: 'd-7', status: 'running', dependsOn: ['postgres', 'rabbitmq'] },
-          { id: 'worker-billing-d5', name: 'worker-cobrancas', role: 'backend', port: 8082, taskId: 'd-5', status: 'running', dependsOn: ['api-pagamentos', 'rabbitmq'] },
-          { id: 'worker-billing-d8', name: 'worker-cobrancas', role: 'backend', port: 8085, taskId: 'd-8', status: 'stopped', dependsOn: ['api-pagamentos', 'redis'] },
+          { id: 'api-payments-d5', name: 'api-payments', role: 'backend', port: 8081, taskId: 'd-5', status: 'running', dependsOn: ['postgres', 'rabbitmq'] },
+          { id: 'api-payments-d6', name: 'api-payments', role: 'backend', port: 8083, taskId: 'd-6', status: 'running', dependsOn: ['postgres', 'redis'] },
+          { id: 'api-payments-d7', name: 'api-payments', role: 'backend', port: 8084, taskId: 'd-7', status: 'running', dependsOn: ['postgres', 'rabbitmq'] },
+          { id: 'worker-billing-d5', name: 'worker-billing', role: 'backend', port: 8082, taskId: 'd-5', status: 'running', dependsOn: ['api-payments', 'rabbitmq'] },
+          { id: 'worker-billing-d8', name: 'worker-billing', role: 'backend', port: 8085, taskId: 'd-8', status: 'stopped', dependsOn: ['api-payments', 'redis'] },
         ],
         infra: [
           { id: 'payments-postgres', name: 'postgres', taskIds: ['d-5', 'd-6', 'd-7', 'd-8'], status: 'running' },
@@ -71,15 +71,15 @@ export const mockWorkspaces: Workspace[] = [
     claudeExtensions: {
       mcps: [{ name: 'pg', kind: 'postgres' }, { name: 'rmq', kind: 'rabbitmq' }],
       plugins: [], skills: [],
-      commands: [{ name: 'reconcile', description: 'Verificar reconciliação de pagamentos' }]
+      commands: [{ name: 'reconcile', description: 'Check the payment reconciliation' }]
     },
-    rules: ['Toda mutation deve ter teste de integração', 'Eventos RabbitMQ usam o schema do shared-contracts'],
-    context: 'API de processamento e reconciliação de pagamentos via PSPs.'
+    rules: ['Every mutation must have an integration test', 'RabbitMQ events use the shared-contracts schema'],
+    context: 'An API that processes and reconciles payments through PSPs.'
   },
   {
     id: 'ws-3',
-    name: 'App Mobile',
-    root: '/Users/dev/projects/app-mobile',
+    name: 'Mobile App',
+    root: '/Users/dev/projects/mobile-app',
     status: 'draft',
     gitProvider: 'azure_devops',
     repos: [],

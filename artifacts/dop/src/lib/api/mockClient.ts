@@ -211,8 +211,8 @@ class MockDopApi implements DopApi {
     await delay(1000);
     const success = Math.random() > 0.1;
     return success
-      ? { ok: true,  message: 'Conexão estabelecida com sucesso' }
-      : { ok: false, message: 'Falha na conexão. Verifique as credenciais.' };
+      ? { ok: true,  message: 'The connection was established' }
+      : { ok: false, message: 'The connection failed. Check the credentials.' };
   }
 
   async listCards(workspaceId: string): Promise<Card[]> {
@@ -244,9 +244,9 @@ class MockDopApi implements DopApi {
       const claudeMsg: ChatMessage = {
         id: `c-${Date.now() + 1}`,
         author: 'claude',
-        text: `Entendido. Vou proceder com: "${text}". Analisando o impacto e planejando os próximos passos.`,
+        text: `Understood. I will proceed with: "${text}". Analysing the impact and planning the next steps.`,
         at: new Date().toISOString(),
-        actions: ['Analisou o pedido', `Registrou no contexto`]
+        actions: ['Read the request', `Recorded it in the context`]
       };
       demand.chat.push(claudeMsg);
     }, 1500);
