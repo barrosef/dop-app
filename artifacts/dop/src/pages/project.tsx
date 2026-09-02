@@ -1,11 +1,11 @@
 /**
- * Projeto: as demandas dele.
+ * A project: its demands.
  *
- * Projeto é o nível 2 do DOP (GLOSSARIO.md) — não o "projeto do Jira", que é
- * outra coisa e sempre aparece qualificado.
+ * A project is DOP's level 2 (GLOSSARIO.md) — not the "Jira project", which is
+ * something else and always shows up qualified.
  *
- * Card × demanda: o card é a origem (vem do task manager); a demanda é o card
- * em execução na plataforma. Esta lista mostra demandas.
+ * A card vs. a demand: the card is the origin (it comes from the task manager);
+ * the demand is the card in execution on the platform. This list shows demands.
  */
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -18,56 +18,59 @@ import {
   type Demand,
 } from '@workspace/api-client-react';
 
-function Etiqueta({
-  texto,
-  tom,
+import { useI18n } from '../lib/i18n';
+
+function Tag({
+  text,
+  tone,
 }: {
-  texto: string;
-  tom: 'neutro' | 'alerta' | 'ativo';
+  text: string;
+  tone: 'neutral' | 'warning' | 'active';
 }) {
-  const cor =
-    tom === 'alerta'
+  const color =
+    tone === 'warning'
       ? 'border-amber-500/25 bg-amber-500/10 text-amber-400'
-      : tom === 'ativo'
+      : tone === 'active'
         ? 'border-primary/25 bg-primary/10 text-primary'
         : 'border-border bg-muted/40 text-muted-foreground';
   return (
     <span
-      className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${cor}`}
+      className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${color}`}
     >
-      {texto}
+      {text}
     </span>
   );
 }
 
-function LinhaDaDemanda({ demanda }: { demanda: Demand }) {
+function DemandRow({ demand }: { demand: Demand }) {
+  const t = useI18n((s) => s.t);
   return (
     <Link
-      to={`/demandas/${demanda.id}`}
+      to={`/demands/${demand.id}`}
       className="flex items-center gap-3 rounded-md border border-border/60 bg-card/60 px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-muted/40"
-      data-testid={`link-demanda-${demanda.id}`}
+      data-testid={`link-demand-${demand.id}`}
     >
       <CircleDot className="h-4 w-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">
-          {demanda.title || demanda.external_key}
+          {demand.title || demand.external_key}
         </p>
         <p className="truncate text-[11px] text-muted-foreground">
-          {demanda.external_key}
-          {demanda.current_stage_key
-            ? ` · etapa ${demanda.current_stage_key}`
+          {demand.external_key}
+          {demand.current_stage_key
+            ? ` · ${t('project.demand.stage', { key: demand.current_stage_key })}`
             : ''}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
-        {demanda.dop_status ? (
-          <Etiqueta texto={demanda.dop_status} tom="ativo" />
+        {demand.dop_status ? (
+          <Tag text={demand.dop_status} tone="active" />
         ) : null}
-        {demanda.awaiting_decision ? (
-          <Etiqueta texto="aguardando decisão" tom="alerta" />
+        {demand.awaiting_decision ? (
+          <Tag text={t('project.demand.awaiting')} tone="warning" />
         ) : null}
-        {demanda.blocked ? (
-          <span title="bloqueada">
+        {demand.blocked ? (
+          <span title={t('project.demand.blocked')}>
             <Lock className="h-3.5 w-3.5 text-amber-400" />
           </span>
         ) : null}
@@ -76,15 +79,16 @@ function LinhaDaDemanda({ demanda }: { demanda: Demand }) {
   );
 }
 
-export default function Projeto() {
+export default function Project() {
   const { projectId = '' } = useParams();
-  const projeto = useGetProject(projectId, {
+  const t = useI18n((s) => s.t);
+  const project = useGetProject(projectId, {
     query: {
       queryKey: getGetProjectQueryKey(projectId),
       enabled: Boolean(projectId),
     },
   });
-  const demandas = useListDemands(
+  const demands = useListDemands(
     { project_id: projectId },
     {
       query: {
@@ -99,36 +103,40 @@ export default function Projeto() {
       <div className="shrink-0 border-b border-border px-6 py-4">
         <h1
           className="text-lg font-semibold tracking-tight"
-          data-testid="titulo-projeto"
+          data-testid="project-title"
         >
-          {projeto.data?.name ?? 'Projeto'}
+          {project.data?.name ?? t('project.fallbackTitle')}
         </h1>
-        {projeto.data?.description ? (
+        {project.data?.description ? (
           <p className="text-xs text-muted-foreground">
-            {projeto.data.description}
+            {project.data.description}
           </p>
         ) : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-          Demandas
+          {t('project.demands')}
         </h2>
-        {demandas.isLoading ? (
-          <p className="text-xs text-muted-foreground">Carregando…</p>
-        ) : demandas.error ? (
+        {demands.isLoading ? (
+          <p className="text-xs text-muted-foreground">{t('project.loading')}</p>
+        ) : demands.error ? (
           <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{(demandas.error as Error).message}</span>
+            <span>
+              {t('project.error', {
+                reason: (demands.error as Error).message,
+              })}
+            </span>
           </div>
-        ) : (demandas.data?.demands?.length ?? 0) === 0 ? (
+        ) : (demands.data?.demands?.length ?? 0) === 0 ? (
           <p className="text-xs text-muted-foreground">
-            Nenhuma demanda neste projeto ainda.
+            {t('project.demands.empty')}
           </p>
         ) : (
           <div className="space-y-1.5">
-            {demandas.data?.demands?.map((demanda) => (
-              <LinhaDaDemanda key={demanda.id} demanda={demanda} />
+            {demands.data?.demands?.map((demand) => (
+              <DemandRow key={demand.id} demand={demand} />
             ))}
           </div>
         )}

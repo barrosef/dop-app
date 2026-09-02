@@ -1,6 +1,6 @@
 // A ligação com o BFF precisa acontecer ANTES de qualquer requisição: este
 // import só tem efeitos colaterais (base, token e conta ativa do customFetch).
-import "./lib/plataforma/backend";
+import "./lib/platform/backend";
 
 import { createRoot } from "react-dom/client";
 import App from "./App";
