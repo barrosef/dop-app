@@ -53,7 +53,7 @@ Thumbs.db
 .cache/
 .local/
 
-# Ambiente local do Vite (endereços e chaves públicas por máquina).
-# `.env.example` fica versionado; o `.env.local` de cada um, não.
+# Vite's local environment (per-machine addresses and public keys).
+# `.env.example` stays versioned; each person's `.env.local` does not.
 .env.local
 .env.*.local
