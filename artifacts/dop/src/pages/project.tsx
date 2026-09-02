@@ -1,7 +1,7 @@
 /**
  * A project: its demands.
  *
- * A project is DOP's level 2 (GLOSSARIO.md) — not the "Jira project", which is
+ * A project is DOP's level 2 (GLOSSARY.md) — not the "Jira project", which is
  * something else and always shows up qualified.
  *
  * A card vs. a demand: the card is the origin (it comes from the task manager);

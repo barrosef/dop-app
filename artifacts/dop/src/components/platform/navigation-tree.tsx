@@ -4,7 +4,7 @@
  * A single call (`GET /api/v1/tree`) draws the whole column — that is how the
  * BFF serves it, aggregated per screen, and not in N queries per level.
  *
- * Vocabulary (GLOSSARIO.md): a **workspace** is DOP's level 1, the grouper of
+ * Vocabulary (GLOSSARY.md): a **workspace** is DOP's level 1, the grouper of
  * projects. It is not the provider's space — the "ClickUp workspace" is another
  * thing and always appears qualified.
  */
