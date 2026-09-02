@@ -10,15 +10,32 @@
  * not a second copy of the policy on the front end.
  */
 import React from 'react';
-import { AlertTriangle, Building2, Mail, ShieldCheck, Trash2, Users } from 'lucide-react';
+import {
+  AlertTriangle,
+  Building2,
+  ChevronDown,
+  ChevronRight,
+  Mail,
+  ShieldCheck,
+  Trash2,
+  UserMinus,
+  Users,
+} from 'lucide-react';
 import {
   getListAccountsQueryKey,
   getListInvitesQueryKey,
+  getListMemberGrantsQueryKey,
   getListMembersQueryKey,
+  getListResourcesQueryKey,
   useCreateAccount,
   useCreateInvite,
+  useGrantResource,
   useListInvites,
+  useListMemberGrants,
   useListMembers,
+  useListResources,
+  useRemoveMember,
+  useRevokeGrant,
   useRevokeInvite,
   useUpdateMember,
   type InviteSummary,
@@ -31,6 +48,7 @@ import { useAccount } from '../lib/platform/account';
 import { useI18n } from '../lib/i18n';
 
 const ROLES = ['owner', 'admin', 'developer', 'viewer'] as const;
+const LEVELS = ['use', 'manage'] as const;
 
 export default function Account() {
   const t = useI18n((s) => s.t);
@@ -114,13 +132,13 @@ function Members() {
 }
 
 /**
- * A member's row: the role is a select, and the select is the whole edit.
+ * A member's row: the role is a select, and under it what the person reaches.
  *
- * Whoever may not change it gets a 403 from the edge — the screen shows the
- * refusal instead of hiding the control, because hiding would be a second copy
- * of the rule and the two would drift apart. The same goes for the last owner:
- * the domain refuses (`identity.membership.last_owner`) and the message lands
- * right here.
+ * The screen does not hide the controls from whoever may not use them: the edge
+ * answers 403 and the refusal shows on the row itself. Hiding would be a second
+ * copy of the rule, and the two would drift apart. The same goes for the last
+ * owner and for the personal account — those refusals are the domain's, and they
+ * land here.
  */
 function MemberRow({
   member,
@@ -131,37 +149,209 @@ function MemberRow({
 }) {
   const t = useI18n((s) => s.t);
   const update = useUpdateMember();
+  const remove = useRemoveMember();
+  const [open, setOpen] = React.useState(false);
   const [failure, setFailure] = React.useState('');
+
+  function fail(err: unknown) {
+    setFailure((err as Error).message);
+  }
 
   return (
     <li className="rounded-md border border-border/60 bg-card/60 px-3 py-2 text-xs">
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate font-mono">{member.user_id}</span>
-        <select
-          aria-label={t('account.member.changeRole')}
-          value={member.role}
-          disabled={update.isPending}
-          onChange={(e) => {
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 items-center gap-1 text-left hover:text-primary"
+          aria-expanded={open}
+        >
+          {open ? (
+            <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+          )}
+          <span className="truncate font-mono">{member.user_id}</span>
+        </button>
+
+        <div className="flex shrink-0 items-center gap-1">
+          <select
+            aria-label={t('account.member.changeRole')}
+            value={member.role}
+            disabled={update.isPending}
+            onChange={(e) => {
+              setFailure('');
+              update.mutate(
+                { membershipId: member.id, data: { role: e.target.value } },
+                { onSuccess: onChanged, onError: fail },
+              );
+            }}
+            className="rounded-md border border-border bg-background px-2 py-1 text-xs disabled:opacity-50"
+          >
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {t(`account.role.${r}` as never)}
+              </option>
+            ))}
+          </select>
+          {/* Removing is not the same as demoting: what goes with the person is
+              the access they held HERE. What they created stays with the
+              account. */}
+          <button
+            type="button"
+            title={t('account.member.remove')}
+            disabled={remove.isPending}
+            onClick={() => {
+              setFailure('');
+              remove.mutate(
+                { membershipId: member.id },
+                { onSuccess: onChanged, onError: fail },
+              );
+            }}
+            className="rounded p-1 text-muted-foreground hover:bg-muted/50 hover:text-destructive disabled:opacity-50"
+          >
+            <UserMinus className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {failure ? <p className="mt-1 text-[11px] text-destructive">{failure}</p> : null}
+      {open ? <MemberGrants userId={member.user_id} /> : null}
+    </li>
+  );
+}
+
+/**
+ * What one member reaches, and the way to change it.
+ *
+ * Only integrations appear: a credential is CLOSED by nature and access to it is
+ * exactly what has to be handed out one by one. Skills and workflows are open
+ * within the account by default (ADR-0014 §6), so listing them here would offer
+ * a grant that changes nothing.
+ */
+function MemberGrants({ userId }: { userId: string }) {
+  const t = useI18n((s) => s.t);
+  const queryClient = useQueryClient();
+  const { data: grants, error } = useListMemberGrants(userId, {
+    query: { queryKey: getListMemberGrantsQueryKey(userId), retry: false },
+  });
+  const { data: resources } = useListResources(
+    { kind: 'integration' },
+    {
+      query: {
+        queryKey: getListResourcesQueryKey({ kind: 'integration' }),
+        retry: false,
+      },
+    },
+  );
+  const grant = useGrantResource();
+  const revoke = useRevokeGrant();
+  const [resourceId, setResourceId] = React.useState('');
+  const [level, setLevel] = React.useState<string>('use');
+  const [failure, setFailure] = React.useState('');
+
+  function refresh() {
+    queryClient.invalidateQueries({ queryKey: getListMemberGrantsQueryKey(userId) });
+  }
+  function nameOf(id: string) {
+    return resources?.find((r) => r.id === id)?.name ?? id;
+  }
+
+  if (error) return <div className="mt-2"><Refused error={error as Error} /></div>;
+
+  const grantable = (resources ?? []).filter(
+    (r) => !grants?.some((g) => g.resource_id === r.id),
+  );
+
+  return (
+    <div className="mt-2 space-y-2 border-t border-border/60 pt-2">
+      <p className="text-[11px] font-medium text-muted-foreground">
+        {t('account.grants')}
+      </p>
+
+      {!grants?.length ? (
+        <p className="text-[11px] text-muted-foreground">{t('account.grants.empty')}</p>
+      ) : (
+        <ul className="space-y-1">
+          {grants.map((g) => (
+            <li key={g.id} className="flex items-center justify-between gap-2">
+              <span className="truncate">{nameOf(g.resource_id)}</span>
+              <span className="flex items-center gap-1 text-muted-foreground">
+                {t(`account.grants.level.${g.level}` as never)}
+                <button
+                  type="button"
+                  title={t('account.grants.revoke')}
+                  onClick={() => {
+                    setFailure('');
+                    revoke.mutate(
+                      { grantId: g.id },
+                      { onSuccess: refresh, onError: (e) => setFailure((e as Error).message) },
+                    );
+                  }}
+                  className="rounded p-0.5 hover:bg-muted/50 hover:text-destructive"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {grantable.length ? (
+        <form
+          className="flex flex-wrap items-center gap-1"
+          onSubmit={(e) => {
+            e.preventDefault();
             setFailure('');
-            update.mutate(
-              { membershipId: member.id, data: { role: e.target.value } },
+            grant.mutate(
+              { data: { resource_id: resourceId || grantable[0].id, user_id: userId, level } },
               {
-                onSuccess: onChanged,
+                onSuccess: () => {
+                  setResourceId('');
+                  refresh();
+                },
                 onError: (err) => setFailure((err as Error).message),
               },
             );
           }}
-          className="rounded-md border border-border bg-background px-2 py-1 text-xs disabled:opacity-50"
         >
-          {ROLES.map((r) => (
-            <option key={r} value={r}>
-              {t(`account.role.${r}` as never)}
-            </option>
-          ))}
-        </select>
-      </div>
-      {failure ? <p className="mt-1 text-[11px] text-destructive">{failure}</p> : null}
-    </li>
+          <select
+            aria-label={t('account.grants.resource')}
+            value={resourceId || grantable[0].id}
+            onChange={(e) => setResourceId(e.target.value)}
+            className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs"
+          >
+            {grantable.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label={t('account.grants.level')}
+            value={level}
+            onChange={(e) => setLevel(e.target.value)}
+            className="rounded-md border border-border bg-background px-2 py-1 text-xs"
+          >
+            {LEVELS.map((l) => (
+              <option key={l} value={l}>
+                {t(`account.grants.level.${l}` as never)}
+              </option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            disabled={grant.isPending}
+            className="rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground disabled:opacity-50"
+          >
+            {t('account.grants.add')}
+          </button>
+        </form>
+      ) : null}
+
+      {failure ? <p className="text-[11px] text-destructive">{failure}</p> : null}
+    </div>
   );
 }
 

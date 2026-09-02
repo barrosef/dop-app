@@ -181,6 +181,15 @@ export const UpdateMemberApiV1MembersMembershipIdPatchResponse = zod.object({
 
 
 /**
+ * Removes a member from the active account, along with their grants here.
+ * @summary Remove Member
+ */
+export const RemoveMemberApiV1MembersMembershipIdDeleteParams = zod.object({
+  "membership_id": zod.coerce.string()
+})
+
+
+/**
  * Whether the account requires it, whether the person has it, whether this session answered.
  * @summary Second Factor State
  */
@@ -626,6 +635,23 @@ export const SetCredentialApiV1ResourcesResourceIdCredentialPutResponse = zod.ob
 
 
 /**
+ * The resource grants of one member of the active account.
+ * @summary List Member Grants
+ */
+export const ListMemberGrantsApiV1MembersUserIdGrantsGetParams = zod.object({
+  "user_id": zod.coerce.string()
+})
+
+export const ListMemberGrantsApiV1MembersUserIdGrantsGetResponseItem = zod.object({
+  "id": zod.string(),
+  "resource_id": zod.string(),
+  "user_id": zod.string(),
+  "level": zod.string()
+})
+export const ListMemberGrantsApiV1MembersUserIdGrantsGetResponse = zod.array(ListMemberGrantsApiV1MembersUserIdGrantsGetResponseItem)
+
+
+/**
  * @summary Grant Resource
  */
 
@@ -1013,7 +1039,7 @@ export const ListDemandsApiV1DemandsGetResponse = zod.object({
 
 
 /**
- * Inicia a demanda a partir do card do provedor — resolve e congela o fluxo.
+ * Starts the demand from the provider's card — it resolves and freezes the flow.
  * @summary Start Demand
  */
 export const startDemandApiV1DemandsPostHeaderIdempotencyKeyDefault = ``;

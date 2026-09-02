@@ -960,6 +960,77 @@ export const useUpdateMember = <TError = ErrorType<HTTPValidationError>,
       return useMutation(getUpdateMemberMutationOptions(options));
     }
 
+export const getRemoveMemberUrl = (membershipId: string,) => {
+
+
+
+
+  return `/api/v1/members/${membershipId}`
+}
+
+/**
+ * Removes a member from the active account, along with their grants here.
+ * @summary Remove Member
+ */
+export const removeMember = async (membershipId: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRemoveMemberUrl(membershipId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRemoveMemberMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeMember>>, TError,{membershipId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeMember>>, TError,{membershipId: string}, TContext> => {
+
+const mutationKey = ['removeMember'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeMember>>, {membershipId: string}> = (props) => {
+          const {membershipId} = props ?? {};
+
+          return  removeMember(membershipId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveMemberMutationResult = NonNullable<Awaited<ReturnType<typeof removeMember>>>
+
+    export type RemoveMemberMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Remove Member
+ */
+export const useRemoveMember = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeMember>>, TError,{membershipId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeMember>>,
+        TError,
+        {membershipId: string},
+        TContext
+      > => {
+      return useMutation(getRemoveMemberMutationOptions(options));
+    }
+
 export const getSecondFactorStateUrl = () => {
 
 
@@ -2454,6 +2525,84 @@ export const useSetCredential = <TError = ErrorType<HTTPValidationError>,
       return useMutation(getSetCredentialMutationOptions(options));
     }
 
+export const getListMemberGrantsUrl = (userId: string,) => {
+
+
+
+
+  return `/api/v1/members/${userId}/grants`
+}
+
+/**
+ * The resource grants of one member of the active account.
+ * @summary List Member Grants
+ */
+export const listMemberGrants = async (userId: string, options?: RequestInit): Promise<GrantSummary[]> => {
+
+  return customFetch<GrantSummary[]>(getListMemberGrantsUrl(userId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMemberGrantsQueryKey = (userId: string,) => {
+    return [
+    `/api/v1/members/${userId}/grants`
+    ] as const;
+    }
+
+
+export const getListMemberGrantsQueryOptions = <TData = Awaited<ReturnType<typeof listMemberGrants>>, TError = ErrorType<HTTPValidationError>>(userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMemberGrants>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMemberGrantsQueryKey(userId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMemberGrants>>> = ({ signal }) => listMemberGrants(userId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(userId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMemberGrants>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMemberGrantsQueryResult = NonNullable<Awaited<ReturnType<typeof listMemberGrants>>>
+export type ListMemberGrantsQueryError = ErrorType<HTTPValidationError>
+
+
+/**
+ * @summary List Member Grants
+ */
+
+export function useListMemberGrants<TData = Awaited<ReturnType<typeof listMemberGrants>>, TError = ErrorType<HTTPValidationError>>(
+ userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMemberGrants>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMemberGrantsQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getGrantResourceUrl = () => {
 
 
@@ -3222,7 +3371,7 @@ export const getStartDemandUrl = () => {
 }
 
 /**
- * Inicia a demanda a partir do card do provedor — resolve e congela o fluxo.
+ * Starts the demand from the provider's card — it resolves and freezes the flow.
  * @summary Start Demand
  */
 export const startDemand = async (newDemand: NewDemand, options?: RequestInit): Promise<Demand> => {

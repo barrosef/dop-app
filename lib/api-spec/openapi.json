@@ -387,6 +387,40 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Remove Member",
+        "description": "Removes a member from the active account, along with their grants here.",
+        "operationId": "remove_member_api_v1_members__membership_id__delete",
+        "parameters": [
+          {
+            "name": "membership_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Membership Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/me/second-factor": {
@@ -1201,6 +1235,53 @@
         }
       }
     },
+    "/api/v1/members/{user_id}/grants": {
+      "get": {
+        "tags": [
+          "resources"
+        ],
+        "summary": "List Member Grants",
+        "description": "The resource grants of one member of the active account.",
+        "operationId": "list_member_grants_api_v1_members__user_id__grants_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GrantSummary"
+                  },
+                  "title": "Response List Member Grants Api V1 Members  User Id  Grants Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/grants": {
       "post": {
         "tags": [
@@ -1692,7 +1773,7 @@
           "demand"
         ],
         "summary": "Start Demand",
-        "description": "Inicia a demanda a partir do card do provedor \u2014 resolve e congela o fluxo.",
+        "description": "Starts the demand from the provider's card \u2014 it resolves and freezes the flow.",
         "operationId": "start_demand_api_v1_demands_post",
         "parameters": [
           {
