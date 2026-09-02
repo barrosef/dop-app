@@ -20,7 +20,9 @@ import {
   useListInvites,
   useListMembers,
   useRevokeInvite,
+  useUpdateMember,
   type InviteSummary,
+  type MemberSummary,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -87,6 +89,7 @@ function Heading({ children, icon }: { children: React.ReactNode; icon: React.Re
 
 function Members() {
   const t = useI18n((s) => s.t);
+  const queryClient = useQueryClient();
   const { data, error } = useListMembers({
     query: { queryKey: getListMembersQueryKey(), retry: false },
   });
@@ -98,17 +101,67 @@ function Members() {
   return (
     <ul className="space-y-1">
       {data.map((m) => (
-        <li
+        <MemberRow
           key={m.id}
-          className="flex items-center justify-between rounded-md border border-border/60 bg-card/60 px-3 py-2 text-xs"
-        >
-          <span className="font-mono">{m.user_id}</span>
-          <span className="text-muted-foreground">
-            {t(`account.role.${m.role}` as never)}
-          </span>
-        </li>
+          member={m}
+          onChanged={() =>
+            queryClient.invalidateQueries({ queryKey: getListMembersQueryKey() })
+          }
+        />
       ))}
     </ul>
+  );
+}
+
+/**
+ * A member's row: the role is a select, and the select is the whole edit.
+ *
+ * Whoever may not change it gets a 403 from the edge — the screen shows the
+ * refusal instead of hiding the control, because hiding would be a second copy
+ * of the rule and the two would drift apart. The same goes for the last owner:
+ * the domain refuses (`identity.membership.last_owner`) and the message lands
+ * right here.
+ */
+function MemberRow({
+  member,
+  onChanged,
+}: {
+  member: MemberSummary;
+  onChanged: () => void;
+}) {
+  const t = useI18n((s) => s.t);
+  const update = useUpdateMember();
+  const [failure, setFailure] = React.useState('');
+
+  return (
+    <li className="rounded-md border border-border/60 bg-card/60 px-3 py-2 text-xs">
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate font-mono">{member.user_id}</span>
+        <select
+          aria-label={t('account.member.changeRole')}
+          value={member.role}
+          disabled={update.isPending}
+          onChange={(e) => {
+            setFailure('');
+            update.mutate(
+              { membershipId: member.id, data: { role: e.target.value } },
+              {
+                onSuccess: onChanged,
+                onError: (err) => setFailure((err as Error).message),
+              },
+            );
+          }}
+          className="rounded-md border border-border bg-background px-2 py-1 text-xs disabled:opacity-50"
+        >
+          {ROLES.map((r) => (
+            <option key={r} value={r}>
+              {t(`account.role.${r}` as never)}
+            </option>
+          ))}
+        </select>
+      </div>
+      {failure ? <p className="mt-1 text-[11px] text-destructive">{failure}</p> : null}
+    </li>
   );
 }
 
