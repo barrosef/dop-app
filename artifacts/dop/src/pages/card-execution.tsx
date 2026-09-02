@@ -130,7 +130,7 @@ function groupBranchesByRepo(branches: string[]): Record<string, string[]> {
   const groups: Record<string, string[]> = {};
   for (const raw of branches) {
     const { repo, branch } = parseBranch(raw);
-    const key = repo || '(sem repo)';
+    const key = repo || '(no repo)';
     if (!groups[key]) groups[key] = [];
     groups[key].push(branch);
   }
@@ -210,7 +210,7 @@ function FilesByRepoBranch({ files, onDiff }: {
                           ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
                           : 'text-amber-400 border-amber-500/20 bg-amber-500/5'
                       }`}>
-                        {f.change === 'created' ? '+novo' : '~mod'}
+                        {f.change === 'created' ? '+new' : '~mod'}
                       </span>
                       {f.diff && (
                         <button
