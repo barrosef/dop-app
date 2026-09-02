@@ -10,7 +10,7 @@
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, Moon, Sun, TerminalSquare } from 'lucide-react';
+import { LogOut, Moon, ShieldCheck, Sun, TerminalSquare } from 'lucide-react';
 
 import { useUiStore } from '../../store/uiStore';
 import { useAccount } from '../../lib/platform/account';
@@ -75,6 +75,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
           <div className="ml-auto flex items-center gap-2">
             <AttentionBell />
+            <Link
+              to="/account"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+              title={t('account.title')}
+              data-testid="link-account"
+            >
+              <ShieldCheck className="h-4 w-4" />
+            </Link>
             <button
               type="button"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}

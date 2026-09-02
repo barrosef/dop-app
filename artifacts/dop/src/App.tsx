@@ -14,6 +14,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { Layout } from '@/components/layout';
 
 import { Shell } from '@/components/platform/shell';
+import { SecondFactorGate } from '@/components/security/gate';
 import { AccountProvider } from '@/lib/platform/account';
 import { SessionProvider, useSession } from '@/lib/platform/session';
 import { useI18n } from '@/lib/i18n';
@@ -21,6 +22,8 @@ import SignIn from '@/pages/sign-in';
 import Start from '@/pages/start';
 import Project from '@/pages/project';
 import Demand from '@/pages/demand';
+import Invite from '@/pages/invite';
+import Account from '@/pages/account';
 
 import Home from '@/pages/home';
 import WorkspaceWizard from '@/pages/workspace-wizard';
@@ -78,9 +81,15 @@ function AuthenticatedShell() {
 
   return (
     <AccountProvider>
-      <Shell>
-        <Outlet />
-      </Shell>
+      {/* The second factor stands BETWEEN the session and the cockpit: a
+          stepped-up session goes through, one that has not answered sees the
+          challenge, and somebody with no factor in an account that requires one
+          is sent to register it (ADR-0027 §5). */}
+      <SecondFactorGate>
+        <Shell>
+          <Outlet />
+        </Shell>
+      </SecondFactorGate>
     </AccountProvider>
   );
 }
@@ -98,6 +107,25 @@ function MockupShell() {
   );
 }
 
+/**
+ * The invite's route: it needs a SESSION (the core refuses to read an invite
+ * without one) and it does NOT need an active account.
+ */
+function InviteRoute() {
+  const { user, loading } = useSession();
+  const t = useI18n((s) => s.t);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background text-xs text-muted-foreground">
+        {t('auth.restoring')}
+      </div>
+    );
+  }
+  if (!user) return <SignIn />;
+  return <Invite />;
+}
+
 function App() {
   return (
     <ThemeProvider>
@@ -110,7 +138,14 @@ function App() {
                   <Route path="/" element={<Start />} />
                   <Route path="/projects/:projectId" element={<Project />} />
                   <Route path="/demands/:demandId" element={<Demand />} />
+                  <Route path="/account" element={<Account />} />
                 </Route>
+
+                {/* The invite's link lands here, and it is OUTSIDE the shell:
+                    whoever opens it may not be a member of any account yet, and
+                    the shell assumes an active account. It is what P-32 was
+                    missing — until today the e-mail led to a 404. */}
+                <Route path="/invites/:inviteId" element={<InviteRoute />} />
 
                 <Route element={<MockupShell />}>
                   <Route path="/workspaces/new" element={<WorkspaceWizard />} />

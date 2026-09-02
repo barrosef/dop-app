@@ -6,10 +6,17 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InviteSummary {
+/**
+ * What whoever OPENS the link sees.
+
+It does NOT carry the invitee's e-mail: whoever finds the link must not
+learn an address from it (ADR-0026).
+ */
+export interface InvitePreview {
   id: string;
-  email: string;
+  account_name: string;
   role: string;
   status: string;
   expires_at?: string | null;
+  usable: boolean;
 }

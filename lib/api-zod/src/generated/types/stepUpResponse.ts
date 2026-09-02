@@ -6,10 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InviteSummary {
-  id: string;
-  email: string;
-  role: string;
-  status: string;
+export interface StepUpResponse {
+  method: string;
+  recovery?: boolean;
   expires_at?: string | null;
 }

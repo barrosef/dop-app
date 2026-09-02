@@ -6,10 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InviteSummary {
-  id: string;
-  email: string;
-  role: string;
-  status: string;
+export interface ChallengeResponse {
+  challenge_id: string;
+  kind: string;
+  masked_destination?: string;
   expires_at?: string | null;
 }

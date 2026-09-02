@@ -74,6 +74,20 @@ export const ListMembersApiV1AccountsCurrentMembersGetResponse = zod.array(ListM
 
 
 /**
+ * The active account's invites — the history, not only the pending ones.
+ * @summary List Invites
+ */
+export const ListInvitesApiV1InvitesGetResponseItem = zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "status": zod.string(),
+  "expires_at": zod.union([zod.string(),zod.null()]).optional()
+})
+export const ListInvitesApiV1InvitesGetResponse = zod.array(ListInvitesApiV1InvitesGetResponseItem)
+
+
+/**
  * Invites somebody to the active account.
  * @summary Create Invite
  */
@@ -89,6 +103,253 @@ export const CreateInviteApiV1InvitesPostBody = zod.object({
   "resource_id": zod.string(),
   "level": zod.string().default(createInviteApiV1InvitesPostBodyGrantsItemLevelDefault)
 })).optional()
+})
+
+
+/**
+ * The preview of whoever OPENS the e-mail's link.
+
+It is the one identity route with no active account: whoever opens an invite
+may not be a member of anything yet. It is where `/invites/:id` in the
+cockpit lands, and it is what closes P-32 — until today the link led to a
+404.
+ * @summary Get Invite
+ */
+export const GetInviteApiV1InvitesInviteIdGetParams = zod.object({
+  "invite_id": zod.coerce.string()
+})
+
+export const GetInviteApiV1InvitesInviteIdGetResponse = zod.object({
+  "id": zod.string(),
+  "account_name": zod.string(),
+  "role": zod.string(),
+  "status": zod.string(),
+  "expires_at": zod.union([zod.string(),zod.null()]).optional(),
+  "usable": zod.boolean()
+}).describe('What whoever OPENS the link sees.\n\nIt does NOT carry the invitee\'s e-mail: whoever finds the link must not\nlearn an address from it (ADR-0026).')
+
+
+/**
+ * Revokes a pending invite.
+ * @summary Revoke Invite
+ */
+export const RevokeInviteApiV1InvitesInviteIdDeleteParams = zod.object({
+  "invite_id": zod.coerce.string()
+})
+
+export const RevokeInviteApiV1InvitesInviteIdDeleteResponse = zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "status": zod.string(),
+  "expires_at": zod.union([zod.string(),zod.null()]).optional()
+})
+
+
+/**
+ * Accepts the invite and returns the account just joined.
+ * @summary Accept Invite
+ */
+export const AcceptInviteApiV1InvitesInviteIdAcceptPostParams = zod.object({
+  "invite_id": zod.coerce.string()
+})
+
+export const AcceptInviteApiV1InvitesInviteIdAcceptPostResponse = zod.object({
+  "account_id": zod.string(),
+  "account_name": zod.string(),
+  "role": zod.string()
+}).describe('The account just joined, so the cockpit can switch to it with no second\nround trip: whoever accepts an invite wants to be inside.')
+
+
+/**
+ * Changes a member's role in the active account.
+ * @summary Update Member
+ */
+export const UpdateMemberApiV1MembersMembershipIdPatchParams = zod.object({
+  "membership_id": zod.coerce.string()
+})
+
+export const UpdateMemberApiV1MembersMembershipIdPatchBody = zod.object({
+  "role": zod.string()
+})
+
+export const UpdateMemberApiV1MembersMembershipIdPatchResponse = zod.object({
+  "id": zod.string(),
+  "user_id": zod.string(),
+  "role": zod.string()
+})
+
+
+/**
+ * Whether the account requires it, whether the person has it, whether this session answered.
+ * @summary Second Factor State
+ */
+export const secondFactorStateApiV1MeSecondFactorGetResponseFactorsItemMaskedDestinationDefault = ``;
+
+export const SecondFactorStateApiV1MeSecondFactorGetResponse = zod.object({
+  "required": zod.boolean(),
+  "enrolled": zod.boolean(),
+  "stepped_up": zod.boolean(),
+  "needs_setup": zod.boolean(),
+  "allowed": zod.array(zod.string()),
+  "factors": zod.array(zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "status": zod.string(),
+  "label": zod.string(),
+  "masked_destination": zod.string().default(secondFactorStateApiV1MeSecondFactorGetResponseFactorsItemMaskedDestinationDefault),
+  "confirmed_at": zod.union([zod.string(),zod.null()]).optional(),
+  "last_used_at": zod.union([zod.string(),zod.null()]).optional()
+})),
+  "recovery_codes_left": zod.number(),
+  "step_up_expires_at": zod.union([zod.string(),zod.null()]).optional()
+})
+
+
+/**
+ * The caller's factors, with the destination always masked.
+ * @summary List Second Factors
+ */
+export const listSecondFactorsApiV1MeSecondFactorFactorsGetResponseMaskedDestinationDefault = ``;
+
+export const ListSecondFactorsApiV1MeSecondFactorFactorsGetResponseItem = zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "status": zod.string(),
+  "label": zod.string(),
+  "masked_destination": zod.string().default(listSecondFactorsApiV1MeSecondFactorFactorsGetResponseMaskedDestinationDefault),
+  "confirmed_at": zod.union([zod.string(),zod.null()]).optional(),
+  "last_used_at": zod.union([zod.string(),zod.null()]).optional()
+})
+export const ListSecondFactorsApiV1MeSecondFactorFactorsGetResponse = zod.array(ListSecondFactorsApiV1MeSecondFactorFactorsGetResponseItem)
+
+
+/**
+ * Registers a factor. It is born PENDING: what activates it is the confirmation.
+ * @summary Enroll Second Factor
+ */
+export const enrollSecondFactorApiV1MeSecondFactorFactorsPostBodyLabelMax = 60;
+
+export const enrollSecondFactorApiV1MeSecondFactorFactorsPostBodyDestinationDefault = ``;
+
+export const EnrollSecondFactorApiV1MeSecondFactorFactorsPostBody = zod.object({
+  "kind": zod.string(),
+  "label": zod.string().min(1).max(enrollSecondFactorApiV1MeSecondFactorFactorsPostBodyLabelMax),
+  "destination": zod.string().default(enrollSecondFactorApiV1MeSecondFactorFactorsPostBodyDestinationDefault)
+})
+
+
+/**
+ * Proves possession and activates. On the FIRST factor it returns the recovery codes.
+ * @summary Confirm Second Factor
+ */
+export const ConfirmSecondFactorApiV1MeSecondFactorFactorsFactorIdConfirmPostParams = zod.object({
+  "factor_id": zod.coerce.string()
+})
+
+export const confirmSecondFactorApiV1MeSecondFactorFactorsFactorIdConfirmPostBodyCodeMax = 32;
+
+
+
+export const ConfirmSecondFactorApiV1MeSecondFactorFactorsFactorIdConfirmPostBody = zod.object({
+  "challenge_id": zod.string(),
+  "code": zod.string().min(1).max(confirmSecondFactorApiV1MeSecondFactorFactorsFactorIdConfirmPostBodyCodeMax)
+})
+
+export const confirmSecondFactorApiV1MeSecondFactorFactorsFactorIdConfirmPostResponseFactorOneMaskedDestinationDefault = ``;
+
+export const ConfirmSecondFactorApiV1MeSecondFactorFactorsFactorIdConfirmPostResponse = zod.object({
+  "factor": zod.union([zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "status": zod.string(),
+  "label": zod.string(),
+  "masked_destination": zod.string().default(confirmSecondFactorApiV1MeSecondFactorFactorsFactorIdConfirmPostResponseFactorOneMaskedDestinationDefault),
+  "confirmed_at": zod.union([zod.string(),zod.null()]).optional(),
+  "last_used_at": zod.union([zod.string(),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "recovery_codes": zod.array(zod.string()).optional()
+})
+
+
+/**
+ * Removes a factor. The last one is refused where the account requires it.
+ * @summary Revoke Second Factor
+ */
+export const RevokeSecondFactorApiV1MeSecondFactorFactorsFactorIdDeleteParams = zod.object({
+  "factor_id": zod.coerce.string()
+})
+
+
+/**
+ * Starts a step-up. For e-mail and SMS it SENDS the code.
+ * @summary Challenge Second Factor
+ */
+export const challengeSecondFactorApiV1MeSecondFactorChallengePostBodyFactorIdDefault = ``;
+
+export const ChallengeSecondFactorApiV1MeSecondFactorChallengePostBody = zod.object({
+  "factor_id": zod.string().default(challengeSecondFactorApiV1MeSecondFactorChallengePostBodyFactorIdDefault)
+})
+
+export const challengeSecondFactorApiV1MeSecondFactorChallengePostResponseMaskedDestinationDefault = ``;
+
+export const ChallengeSecondFactorApiV1MeSecondFactorChallengePostResponse = zod.object({
+  "challenge_id": zod.string(),
+  "kind": zod.string(),
+  "masked_destination": zod.string().default(challengeSecondFactorApiV1MeSecondFactorChallengePostResponseMaskedDestinationDefault),
+  "expires_at": zod.union([zod.string(),zod.null()]).optional()
+})
+
+
+/**
+ * Answers the challenge and steps THIS session up.
+ * @summary Verify Second Factor
+ */
+export const verifySecondFactorApiV1MeSecondFactorVerifyPostBodyCodeMax = 32;
+
+
+
+export const VerifySecondFactorApiV1MeSecondFactorVerifyPostBody = zod.object({
+  "challenge_id": zod.string(),
+  "code": zod.string().min(1).max(verifySecondFactorApiV1MeSecondFactorVerifyPostBodyCodeMax)
+})
+
+export const verifySecondFactorApiV1MeSecondFactorVerifyPostResponseRecoveryDefault = false;
+
+export const VerifySecondFactorApiV1MeSecondFactorVerifyPostResponse = zod.object({
+  "method": zod.string(),
+  "recovery": zod.boolean().default(verifySecondFactorApiV1MeSecondFactorVerifyPostResponseRecoveryDefault),
+  "expires_at": zod.union([zod.string(),zod.null()]).optional()
+})
+
+
+/**
+ * The way back when the factor is lost. The code dies on use.
+ * @summary Verify Recovery Code
+ */
+export const verifyRecoveryCodeApiV1MeSecondFactorRecoveryPostBodyCodeMax = 64;
+
+
+
+export const VerifyRecoveryCodeApiV1MeSecondFactorRecoveryPostBody = zod.object({
+  "code": zod.string().min(1).max(verifyRecoveryCodeApiV1MeSecondFactorRecoveryPostBodyCodeMax)
+})
+
+export const verifyRecoveryCodeApiV1MeSecondFactorRecoveryPostResponseRecoveryDefault = false;
+
+export const VerifyRecoveryCodeApiV1MeSecondFactorRecoveryPostResponse = zod.object({
+  "method": zod.string(),
+  "recovery": zod.boolean().default(verifyRecoveryCodeApiV1MeSecondFactorRecoveryPostResponseRecoveryDefault),
+  "expires_at": zod.union([zod.string(),zod.null()]).optional()
+})
+
+
+/**
+ * Replaces every recovery code. It requires a stepped-up session.
+ * @summary Regenerate Recovery Codes
+ */
+export const RegenerateRecoveryCodesApiV1MeSecondFactorRecoveryCodesPostResponse = zod.object({
+  "codes": zod.array(zod.string())
 })
 
 

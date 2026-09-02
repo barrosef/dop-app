@@ -5,11 +5,9 @@
  * The DOP platform's edge. REST+SSE for the cockpit, gRPC for the CLI and the agents. All state lives in dop-core.
  * OpenAPI spec version: 0.1.0
  */
+import type { FactorSummary } from './factorSummary';
 
-export interface InviteSummary {
-  id: string;
-  email: string;
-  role: string;
-  status: string;
-  expires_at?: string | null;
+export interface ConfirmResponse {
+  factor?: FactorSummary | null;
+  recovery_codes?: string[];
 }

@@ -6,10 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InviteSummary {
-  id: string;
-  email: string;
+/**
+ * The account just joined, so the cockpit can switch to it with no second
+round trip: whoever accepts an invite wants to be inside.
+ */
+export interface AcceptedInvite {
+  account_id: string;
+  account_name: string;
   role: string;
-  status: string;
-  expires_at?: string | null;
 }

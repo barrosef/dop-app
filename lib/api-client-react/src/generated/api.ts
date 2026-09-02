@@ -20,10 +20,15 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AcceptedInvite,
   AccountSummary,
   ArtifactSummary,
   AttentionBox,
   BudgetView,
+  ChallengeRequest,
+  ChallengeResponse,
+  ConfirmFactor,
+  ConfirmResponse,
   ContextPackageSummary,
   CostSummary,
   DeliveryBoard,
@@ -34,6 +39,8 @@ import type {
   Directive,
   DirectiveDecision,
   EffectiveFlow,
+  EnrollResponse,
+  FactorSummary,
   Finding,
   Flow,
   GateDecision,
@@ -42,6 +49,7 @@ import type {
   GrantSummary,
   HTTPValidationError,
   Healthz200,
+  InvitePreview,
   InviteSummary,
   ListAttentionParams,
   ListDemandsParams,
@@ -52,6 +60,7 @@ import type {
   ListResourcesParams,
   ListRulesParams,
   MeResponse,
+  MemberRole,
   MemberSummary,
   MemoryHit,
   MergeQueueEntry,
@@ -61,6 +70,7 @@ import type {
   NewBudget,
   NewCredential,
   NewDemand,
+  NewFactor,
   NewFinding,
   NewFlow,
   NewGrant,
@@ -78,6 +88,8 @@ import type {
   PullRequest,
   ReadIndexParams,
   RecordUsageOutcome,
+  RecoveryCodes,
+  RecoveryRequest,
   ResolveFlowParams,
   ResourceSummary,
   RouteModelParams,
@@ -85,8 +97,10 @@ import type {
   RunTurn,
   SandboxSummary,
   SearchMemoryParams,
+  SecondFactorState,
   Stage,
   StageTransition,
+  StepUpResponse,
   StreamAccountEventsParams,
   StreamAttentionParams,
   StreamSandboxLogsParams,
@@ -96,6 +110,7 @@ import type {
   TreeNode,
   TurnOutcome,
   ValidationReport,
+  VerifyRequest,
   WorkspaceSummary
 } from './api.schemas';
 
@@ -497,6 +512,84 @@ export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, 
 
 
 
+export const getListInvitesUrl = () => {
+
+
+
+
+  return `/api/v1/invites`
+}
+
+/**
+ * The active account's invites — the history, not only the pending ones.
+ * @summary List Invites
+ */
+export const listInvites = async ( options?: RequestInit): Promise<InviteSummary[]> => {
+
+  return customFetch<InviteSummary[]>(getListInvitesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInvitesQueryKey = () => {
+    return [
+    `/api/v1/invites`
+    ] as const;
+    }
+
+
+export const getListInvitesQueryOptions = <TData = Awaited<ReturnType<typeof listInvites>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInvites>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInvitesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInvites>>> = ({ signal }) => listInvites({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInvites>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInvitesQueryResult = NonNullable<Awaited<ReturnType<typeof listInvites>>>
+export type ListInvitesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List Invites
+ */
+
+export function useListInvites<TData = Awaited<ReturnType<typeof listInvites>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInvites>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInvitesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getCreateInviteUrl = () => {
 
 
@@ -567,6 +660,963 @@ export const useCreateInvite = <TError = ErrorType<HTTPValidationError>,
         TContext
       > => {
       return useMutation(getCreateInviteMutationOptions(options));
+    }
+
+export const getGetInviteUrl = (inviteId: string,) => {
+
+
+
+
+  return `/api/v1/invites/${inviteId}`
+}
+
+/**
+ * The preview of whoever OPENS the e-mail's link.
+
+It is the one identity route with no active account: whoever opens an invite
+may not be a member of anything yet. It is where `/invites/:id` in the
+cockpit lands, and it is what closes P-32 — until today the link led to a
+404.
+ * @summary Get Invite
+ */
+export const getInvite = async (inviteId: string, options?: RequestInit): Promise<InvitePreview> => {
+
+  return customFetch<InvitePreview>(getGetInviteUrl(inviteId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInviteQueryKey = (inviteId: string,) => {
+    return [
+    `/api/v1/invites/${inviteId}`
+    ] as const;
+    }
+
+
+export const getGetInviteQueryOptions = <TData = Awaited<ReturnType<typeof getInvite>>, TError = ErrorType<HTTPValidationError>>(inviteId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInvite>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInviteQueryKey(inviteId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInvite>>> = ({ signal }) => getInvite(inviteId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(inviteId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInvite>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInviteQueryResult = NonNullable<Awaited<ReturnType<typeof getInvite>>>
+export type GetInviteQueryError = ErrorType<HTTPValidationError>
+
+
+/**
+ * @summary Get Invite
+ */
+
+export function useGetInvite<TData = Awaited<ReturnType<typeof getInvite>>, TError = ErrorType<HTTPValidationError>>(
+ inviteId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInvite>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInviteQueryOptions(inviteId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getRevokeInviteUrl = (inviteId: string,) => {
+
+
+
+
+  return `/api/v1/invites/${inviteId}`
+}
+
+/**
+ * Revokes a pending invite.
+ * @summary Revoke Invite
+ */
+export const revokeInvite = async (inviteId: string, options?: RequestInit): Promise<InviteSummary> => {
+
+  return customFetch<InviteSummary>(getRevokeInviteUrl(inviteId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRevokeInviteMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInvite>>, TError,{inviteId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeInvite>>, TError,{inviteId: string}, TContext> => {
+
+const mutationKey = ['revokeInvite'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeInvite>>, {inviteId: string}> = (props) => {
+          const {inviteId} = props ?? {};
+
+          return  revokeInvite(inviteId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeInviteMutationResult = NonNullable<Awaited<ReturnType<typeof revokeInvite>>>
+
+    export type RevokeInviteMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Revoke Invite
+ */
+export const useRevokeInvite = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInvite>>, TError,{inviteId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeInvite>>,
+        TError,
+        {inviteId: string},
+        TContext
+      > => {
+      return useMutation(getRevokeInviteMutationOptions(options));
+    }
+
+export const getAcceptInviteUrl = (inviteId: string,) => {
+
+
+
+
+  return `/api/v1/invites/${inviteId}/accept`
+}
+
+/**
+ * Accepts the invite and returns the account just joined.
+ * @summary Accept Invite
+ */
+export const acceptInvite = async (inviteId: string, options?: RequestInit): Promise<AcceptedInvite> => {
+
+  return customFetch<AcceptedInvite>(getAcceptInviteUrl(inviteId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAcceptInviteMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptInvite>>, TError,{inviteId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof acceptInvite>>, TError,{inviteId: string}, TContext> => {
+
+const mutationKey = ['acceptInvite'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof acceptInvite>>, {inviteId: string}> = (props) => {
+          const {inviteId} = props ?? {};
+
+          return  acceptInvite(inviteId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AcceptInviteMutationResult = NonNullable<Awaited<ReturnType<typeof acceptInvite>>>
+
+    export type AcceptInviteMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Accept Invite
+ */
+export const useAcceptInvite = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptInvite>>, TError,{inviteId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof acceptInvite>>,
+        TError,
+        {inviteId: string},
+        TContext
+      > => {
+      return useMutation(getAcceptInviteMutationOptions(options));
+    }
+
+export const getUpdateMemberUrl = (membershipId: string,) => {
+
+
+
+
+  return `/api/v1/members/${membershipId}`
+}
+
+/**
+ * Changes a member's role in the active account.
+ * @summary Update Member
+ */
+export const updateMember = async (membershipId: string,
+    memberRole: MemberRole, options?: RequestInit): Promise<MemberSummary> => {
+
+  return customFetch<MemberSummary>(getUpdateMemberUrl(membershipId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      memberRole,)
+  }
+);}
+
+
+
+
+export const getUpdateMemberMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMember>>, TError,{membershipId: string;data: BodyType<MemberRole>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMember>>, TError,{membershipId: string;data: BodyType<MemberRole>}, TContext> => {
+
+const mutationKey = ['updateMember'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMember>>, {membershipId: string;data: BodyType<MemberRole>}> = (props) => {
+          const {membershipId,data} = props ?? {};
+
+          return  updateMember(membershipId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMemberMutationResult = NonNullable<Awaited<ReturnType<typeof updateMember>>>
+    export type UpdateMemberMutationBody = BodyType<MemberRole>
+    export type UpdateMemberMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Update Member
+ */
+export const useUpdateMember = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMember>>, TError,{membershipId: string;data: BodyType<MemberRole>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMember>>,
+        TError,
+        {membershipId: string;data: BodyType<MemberRole>},
+        TContext
+      > => {
+      return useMutation(getUpdateMemberMutationOptions(options));
+    }
+
+export const getSecondFactorStateUrl = () => {
+
+
+
+
+  return `/api/v1/me/second-factor`
+}
+
+/**
+ * Whether the account requires it, whether the person has it, whether this session answered.
+ * @summary Second Factor State
+ */
+export const secondFactorState = async ( options?: RequestInit): Promise<SecondFactorState> => {
+
+  return customFetch<SecondFactorState>(getSecondFactorStateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSecondFactorStateQueryKey = () => {
+    return [
+    `/api/v1/me/second-factor`
+    ] as const;
+    }
+
+
+export const getSecondFactorStateQueryOptions = <TData = Awaited<ReturnType<typeof secondFactorState>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof secondFactorState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSecondFactorStateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof secondFactorState>>> = ({ signal }) => secondFactorState({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof secondFactorState>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SecondFactorStateQueryResult = NonNullable<Awaited<ReturnType<typeof secondFactorState>>>
+export type SecondFactorStateQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Second Factor State
+ */
+
+export function useSecondFactorState<TData = Awaited<ReturnType<typeof secondFactorState>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof secondFactorState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSecondFactorStateQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListSecondFactorsUrl = () => {
+
+
+
+
+  return `/api/v1/me/second-factor/factors`
+}
+
+/**
+ * The caller's factors, with the destination always masked.
+ * @summary List Second Factors
+ */
+export const listSecondFactors = async ( options?: RequestInit): Promise<FactorSummary[]> => {
+
+  return customFetch<FactorSummary[]>(getListSecondFactorsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSecondFactorsQueryKey = () => {
+    return [
+    `/api/v1/me/second-factor/factors`
+    ] as const;
+    }
+
+
+export const getListSecondFactorsQueryOptions = <TData = Awaited<ReturnType<typeof listSecondFactors>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSecondFactors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSecondFactorsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSecondFactors>>> = ({ signal }) => listSecondFactors({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSecondFactors>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSecondFactorsQueryResult = NonNullable<Awaited<ReturnType<typeof listSecondFactors>>>
+export type ListSecondFactorsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List Second Factors
+ */
+
+export function useListSecondFactors<TData = Awaited<ReturnType<typeof listSecondFactors>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSecondFactors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSecondFactorsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getEnrollSecondFactorUrl = () => {
+
+
+
+
+  return `/api/v1/me/second-factor/factors`
+}
+
+/**
+ * Registers a factor. It is born PENDING: what activates it is the confirmation.
+ * @summary Enroll Second Factor
+ */
+export const enrollSecondFactor = async (newFactor: NewFactor, options?: RequestInit): Promise<EnrollResponse> => {
+
+  return customFetch<EnrollResponse>(getEnrollSecondFactorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      newFactor,)
+  }
+);}
+
+
+
+
+export const getEnrollSecondFactorMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enrollSecondFactor>>, TError,{data: BodyType<NewFactor>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof enrollSecondFactor>>, TError,{data: BodyType<NewFactor>}, TContext> => {
+
+const mutationKey = ['enrollSecondFactor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof enrollSecondFactor>>, {data: BodyType<NewFactor>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  enrollSecondFactor(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EnrollSecondFactorMutationResult = NonNullable<Awaited<ReturnType<typeof enrollSecondFactor>>>
+    export type EnrollSecondFactorMutationBody = BodyType<NewFactor>
+    export type EnrollSecondFactorMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Enroll Second Factor
+ */
+export const useEnrollSecondFactor = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enrollSecondFactor>>, TError,{data: BodyType<NewFactor>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof enrollSecondFactor>>,
+        TError,
+        {data: BodyType<NewFactor>},
+        TContext
+      > => {
+      return useMutation(getEnrollSecondFactorMutationOptions(options));
+    }
+
+export const getConfirmSecondFactorUrl = (factorId: string,) => {
+
+
+
+
+  return `/api/v1/me/second-factor/factors/${factorId}/confirm`
+}
+
+/**
+ * Proves possession and activates. On the FIRST factor it returns the recovery codes.
+ * @summary Confirm Second Factor
+ */
+export const confirmSecondFactor = async (factorId: string,
+    confirmFactor: ConfirmFactor, options?: RequestInit): Promise<ConfirmResponse> => {
+
+  return customFetch<ConfirmResponse>(getConfirmSecondFactorUrl(factorId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      confirmFactor,)
+  }
+);}
+
+
+
+
+export const getConfirmSecondFactorMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmSecondFactor>>, TError,{factorId: string;data: BodyType<ConfirmFactor>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmSecondFactor>>, TError,{factorId: string;data: BodyType<ConfirmFactor>}, TContext> => {
+
+const mutationKey = ['confirmSecondFactor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmSecondFactor>>, {factorId: string;data: BodyType<ConfirmFactor>}> = (props) => {
+          const {factorId,data} = props ?? {};
+
+          return  confirmSecondFactor(factorId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmSecondFactorMutationResult = NonNullable<Awaited<ReturnType<typeof confirmSecondFactor>>>
+    export type ConfirmSecondFactorMutationBody = BodyType<ConfirmFactor>
+    export type ConfirmSecondFactorMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Confirm Second Factor
+ */
+export const useConfirmSecondFactor = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmSecondFactor>>, TError,{factorId: string;data: BodyType<ConfirmFactor>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmSecondFactor>>,
+        TError,
+        {factorId: string;data: BodyType<ConfirmFactor>},
+        TContext
+      > => {
+      return useMutation(getConfirmSecondFactorMutationOptions(options));
+    }
+
+export const getRevokeSecondFactorUrl = (factorId: string,) => {
+
+
+
+
+  return `/api/v1/me/second-factor/factors/${factorId}`
+}
+
+/**
+ * Removes a factor. The last one is refused where the account requires it.
+ * @summary Revoke Second Factor
+ */
+export const revokeSecondFactor = async (factorId: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRevokeSecondFactorUrl(factorId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRevokeSecondFactorMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeSecondFactor>>, TError,{factorId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeSecondFactor>>, TError,{factorId: string}, TContext> => {
+
+const mutationKey = ['revokeSecondFactor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeSecondFactor>>, {factorId: string}> = (props) => {
+          const {factorId} = props ?? {};
+
+          return  revokeSecondFactor(factorId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeSecondFactorMutationResult = NonNullable<Awaited<ReturnType<typeof revokeSecondFactor>>>
+
+    export type RevokeSecondFactorMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Revoke Second Factor
+ */
+export const useRevokeSecondFactor = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeSecondFactor>>, TError,{factorId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeSecondFactor>>,
+        TError,
+        {factorId: string},
+        TContext
+      > => {
+      return useMutation(getRevokeSecondFactorMutationOptions(options));
+    }
+
+export const getChallengeSecondFactorUrl = () => {
+
+
+
+
+  return `/api/v1/me/second-factor/challenge`
+}
+
+/**
+ * Starts a step-up. For e-mail and SMS it SENDS the code.
+ * @summary Challenge Second Factor
+ */
+export const challengeSecondFactor = async (challengeRequest: ChallengeRequest, options?: RequestInit): Promise<ChallengeResponse> => {
+
+  return customFetch<ChallengeResponse>(getChallengeSecondFactorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      challengeRequest,)
+  }
+);}
+
+
+
+
+export const getChallengeSecondFactorMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof challengeSecondFactor>>, TError,{data: BodyType<ChallengeRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof challengeSecondFactor>>, TError,{data: BodyType<ChallengeRequest>}, TContext> => {
+
+const mutationKey = ['challengeSecondFactor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof challengeSecondFactor>>, {data: BodyType<ChallengeRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  challengeSecondFactor(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChallengeSecondFactorMutationResult = NonNullable<Awaited<ReturnType<typeof challengeSecondFactor>>>
+    export type ChallengeSecondFactorMutationBody = BodyType<ChallengeRequest>
+    export type ChallengeSecondFactorMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Challenge Second Factor
+ */
+export const useChallengeSecondFactor = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof challengeSecondFactor>>, TError,{data: BodyType<ChallengeRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof challengeSecondFactor>>,
+        TError,
+        {data: BodyType<ChallengeRequest>},
+        TContext
+      > => {
+      return useMutation(getChallengeSecondFactorMutationOptions(options));
+    }
+
+export const getVerifySecondFactorUrl = () => {
+
+
+
+
+  return `/api/v1/me/second-factor/verify`
+}
+
+/**
+ * Answers the challenge and steps THIS session up.
+ * @summary Verify Second Factor
+ */
+export const verifySecondFactor = async (verifyRequest: VerifyRequest, options?: RequestInit): Promise<StepUpResponse> => {
+
+  return customFetch<StepUpResponse>(getVerifySecondFactorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      verifyRequest,)
+  }
+);}
+
+
+
+
+export const getVerifySecondFactorMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifySecondFactor>>, TError,{data: BodyType<VerifyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifySecondFactor>>, TError,{data: BodyType<VerifyRequest>}, TContext> => {
+
+const mutationKey = ['verifySecondFactor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifySecondFactor>>, {data: BodyType<VerifyRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  verifySecondFactor(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifySecondFactorMutationResult = NonNullable<Awaited<ReturnType<typeof verifySecondFactor>>>
+    export type VerifySecondFactorMutationBody = BodyType<VerifyRequest>
+    export type VerifySecondFactorMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Verify Second Factor
+ */
+export const useVerifySecondFactor = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifySecondFactor>>, TError,{data: BodyType<VerifyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verifySecondFactor>>,
+        TError,
+        {data: BodyType<VerifyRequest>},
+        TContext
+      > => {
+      return useMutation(getVerifySecondFactorMutationOptions(options));
+    }
+
+export const getVerifyRecoveryCodeUrl = () => {
+
+
+
+
+  return `/api/v1/me/second-factor/recovery`
+}
+
+/**
+ * The way back when the factor is lost. The code dies on use.
+ * @summary Verify Recovery Code
+ */
+export const verifyRecoveryCode = async (recoveryRequest: RecoveryRequest, options?: RequestInit): Promise<StepUpResponse> => {
+
+  return customFetch<StepUpResponse>(getVerifyRecoveryCodeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      recoveryRequest,)
+  }
+);}
+
+
+
+
+export const getVerifyRecoveryCodeMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyRecoveryCode>>, TError,{data: BodyType<RecoveryRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifyRecoveryCode>>, TError,{data: BodyType<RecoveryRequest>}, TContext> => {
+
+const mutationKey = ['verifyRecoveryCode'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyRecoveryCode>>, {data: BodyType<RecoveryRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  verifyRecoveryCode(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifyRecoveryCodeMutationResult = NonNullable<Awaited<ReturnType<typeof verifyRecoveryCode>>>
+    export type VerifyRecoveryCodeMutationBody = BodyType<RecoveryRequest>
+    export type VerifyRecoveryCodeMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Verify Recovery Code
+ */
+export const useVerifyRecoveryCode = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyRecoveryCode>>, TError,{data: BodyType<RecoveryRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verifyRecoveryCode>>,
+        TError,
+        {data: BodyType<RecoveryRequest>},
+        TContext
+      > => {
+      return useMutation(getVerifyRecoveryCodeMutationOptions(options));
+    }
+
+export const getRegenerateRecoveryCodesUrl = () => {
+
+
+
+
+  return `/api/v1/me/second-factor/recovery-codes`
+}
+
+/**
+ * Replaces every recovery code. It requires a stepped-up session.
+ * @summary Regenerate Recovery Codes
+ */
+export const regenerateRecoveryCodes = async ( options?: RequestInit): Promise<RecoveryCodes> => {
+
+  return customFetch<RecoveryCodes>(getRegenerateRecoveryCodesUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRegenerateRecoveryCodesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof regenerateRecoveryCodes>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof regenerateRecoveryCodes>>, TError,void, TContext> => {
+
+const mutationKey = ['regenerateRecoveryCodes'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof regenerateRecoveryCodes>>, void> = () => {
+
+
+          return  regenerateRecoveryCodes(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegenerateRecoveryCodesMutationResult = NonNullable<Awaited<ReturnType<typeof regenerateRecoveryCodes>>>
+
+    export type RegenerateRecoveryCodesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Regenerate Recovery Codes
+ */
+export const useRegenerateRecoveryCodes = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof regenerateRecoveryCodes>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof regenerateRecoveryCodes>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRegenerateRecoveryCodesMutationOptions(options));
     }
 
 export const getGetTreeUrl = () => {

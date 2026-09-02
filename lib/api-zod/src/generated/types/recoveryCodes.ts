@@ -6,10 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InviteSummary {
-  id: string;
-  email: string;
-  role: string;
-  status: string;
-  expires_at?: string | null;
+export interface RecoveryCodes {
+  codes: string[];
 }

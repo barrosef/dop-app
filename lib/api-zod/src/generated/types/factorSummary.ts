@@ -6,10 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InviteSummary {
+export interface FactorSummary {
   id: string;
-  email: string;
-  role: string;
+  kind: string;
   status: string;
-  expires_at?: string | null;
+  label: string;
+  masked_destination?: string;
+  confirmed_at?: string | null;
+  last_used_at?: string | null;
 }

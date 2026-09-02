@@ -5,6 +5,16 @@
  * The DOP platform's edge. REST+SSE for the cockpit, gRPC for the CLI and the agents. All state lives in dop-core.
  * OpenAPI spec version: 0.1.0
  */
+/**
+ * The account just joined, so the cockpit can switch to it with no second
+round trip: whoever accepts an invite wants to be inside.
+ */
+export interface AcceptedInvite {
+  account_id: string;
+  account_name: string;
+  role: string;
+}
+
 export interface AccountSummary {
   id: string;
   handle: string;
@@ -93,6 +103,41 @@ export interface BudgetView {
   limit: Money;
   spent: Money;
   remaining?: Money | null;
+}
+
+export interface ChallengeRequest {
+  factor_id?: string;
+}
+
+export interface ChallengeResponse {
+  challenge_id: string;
+  kind: string;
+  masked_destination?: string;
+  expires_at?: string | null;
+}
+
+export interface ConfirmFactor {
+  challenge_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 32
+     */
+  code: string;
+}
+
+export interface FactorSummary {
+  id: string;
+  kind: string;
+  status: string;
+  label: string;
+  masked_destination?: string;
+  confirmed_at?: string | null;
+  last_used_at?: string | null;
+}
+
+export interface ConfirmResponse {
+  factor?: FactorSummary | null;
+  recovery_codes?: string[];
 }
 
 export type FindingSummaryPayload = { [key: string]: unknown };
@@ -308,6 +353,13 @@ export interface EndpointSummary {
   state?: string;
 }
 
+export interface EnrollResponse {
+  factor: FactorSummary;
+  challenge_id: string;
+  secret?: string;
+  uri?: string;
+}
+
 export interface FindingRef {
   id?: string;
   title?: string;
@@ -344,11 +396,27 @@ export interface HTTPValidationError {
   detail?: ValidationError[];
 }
 
+/**
+ * What whoever OPENS the link sees.
+
+It does NOT carry the invitee's e-mail: whoever finds the link must not
+learn an address from it (ADR-0026).
+ */
+export interface InvitePreview {
+  id: string;
+  account_name: string;
+  role: string;
+  status: string;
+  expires_at?: string | null;
+  usable: boolean;
+}
+
 export interface InviteSummary {
   id: string;
   email: string;
   role: string;
   status: string;
+  expires_at?: string | null;
 }
 
 export interface MeResponse {
@@ -358,6 +426,10 @@ export interface MeResponse {
   name: string;
   providers: string[];
   account_id: string;
+  role: string;
+}
+
+export interface MemberRole {
   role: string;
 }
 
@@ -444,6 +516,16 @@ export interface NewDemand {
   project_id: string;
   /** @minLength 1 */
   external_key: string;
+}
+
+export interface NewFactor {
+  kind: string;
+  /**
+     * @minLength 1
+     * @maxLength 60
+     */
+  label: string;
+  destination?: string;
 }
 
 export type NewFindingPayload = { [key: string]: unknown };
@@ -606,6 +688,18 @@ export interface RecordUsageOutcome {
   budgets?: BudgetView[];
 }
 
+export interface RecoveryCodes {
+  codes: string[];
+}
+
+export interface RecoveryRequest {
+  /**
+     * @minLength 1
+     * @maxLength 64
+     */
+  code: string;
+}
+
 export type ResourceSummaryConfig = { [key: string]: unknown };
 
 export interface ResourceSummary {
@@ -663,6 +757,17 @@ export interface SandboxSummary {
   last_active_at?: string | null;
 }
 
+export interface SecondFactorState {
+  required: boolean;
+  enrolled: boolean;
+  stepped_up: boolean;
+  needs_setup: boolean;
+  allowed: string[];
+  factors: FactorSummary[];
+  recovery_codes_left: number;
+  step_up_expires_at?: string | null;
+}
+
 /**
  * Where the stage goes. The vocabulary is closed and validated HERE, in the
 use case: that way the refusal of an invented status holds on both
@@ -672,6 +777,12 @@ in the adapter.
 export interface StageTransition {
   /** @pattern ^(pending|running|blocked|done)$ */
   status: string;
+}
+
+export interface StepUpResponse {
+  method: string;
+  recovery?: boolean;
+  expires_at?: string | null;
 }
 
 export interface WorkspaceSummary {
@@ -722,6 +833,15 @@ export interface ValidationReport {
   valid: boolean;
   errors?: string[];
   warnings?: string[];
+}
+
+export interface VerifyRequest {
+  challenge_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 32
+     */
+  code: string;
 }
 
 export type Healthz200 = { [key: string]: unknown };

@@ -144,6 +144,30 @@
       }
     },
     "/api/v1/invites": {
+      "get": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "List Invites",
+        "description": "The active account's invites \u2014 the history, not only the pending ones.",
+        "operationId": "list_invites_api_v1_invites_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InviteSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Invites Api V1 Invites Get"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "identity"
@@ -178,6 +202,511 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invites/{invite_id}": {
+      "get": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Get Invite",
+        "description": "The preview of whoever OPENS the e-mail's link.\n\nIt is the one identity route with no active account: whoever opens an invite\nmay not be a member of anything yet. It is where `/invites/:id` in the\ncockpit lands, and it is what closes P-32 \u2014 until today the link led to a\n404.",
+        "operationId": "get_invite_api_v1_invites__invite_id__get",
+        "parameters": [
+          {
+            "name": "invite_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invite Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitePreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Revoke Invite",
+        "description": "Revokes a pending invite.",
+        "operationId": "revoke_invite_api_v1_invites__invite_id__delete",
+        "parameters": [
+          {
+            "name": "invite_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invite Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invites/{invite_id}/accept": {
+      "post": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Accept Invite",
+        "description": "Accepts the invite and returns the account just joined.",
+        "operationId": "accept_invite_api_v1_invites__invite_id__accept_post",
+        "parameters": [
+          {
+            "name": "invite_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invite Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptedInvite"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/members/{membership_id}": {
+      "patch": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Update Member",
+        "description": "Changes a member's role in the active account.",
+        "operationId": "update_member_api_v1_members__membership_id__patch",
+        "parameters": [
+          {
+            "name": "membership_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Membership Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberRole"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/second-factor": {
+      "get": {
+        "tags": [
+          "second factor"
+        ],
+        "summary": "Second Factor State",
+        "description": "Whether the account requires it, whether the person has it, whether this session answered.",
+        "operationId": "second_factor_state_api_v1_me_second_factor_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecondFactorState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/second-factor/factors": {
+      "get": {
+        "tags": [
+          "second factor"
+        ],
+        "summary": "List Second Factors",
+        "description": "The caller's factors, with the destination always masked.",
+        "operationId": "list_second_factors_api_v1_me_second_factor_factors_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FactorSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Second Factors Api V1 Me Second Factor Factors Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "second factor"
+        ],
+        "summary": "Enroll Second Factor",
+        "description": "Registers a factor. It is born PENDING: what activates it is the confirmation.",
+        "operationId": "enroll_second_factor_api_v1_me_second_factor_factors_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewFactor"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/second-factor/factors/{factor_id}/confirm": {
+      "post": {
+        "tags": [
+          "second factor"
+        ],
+        "summary": "Confirm Second Factor",
+        "description": "Proves possession and activates. On the FIRST factor it returns the recovery codes.",
+        "operationId": "confirm_second_factor_api_v1_me_second_factor_factors__factor_id__confirm_post",
+        "parameters": [
+          {
+            "name": "factor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Factor Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmFactor"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/second-factor/factors/{factor_id}": {
+      "delete": {
+        "tags": [
+          "second factor"
+        ],
+        "summary": "Revoke Second Factor",
+        "description": "Removes a factor. The last one is refused where the account requires it.",
+        "operationId": "revoke_second_factor_api_v1_me_second_factor_factors__factor_id__delete",
+        "parameters": [
+          {
+            "name": "factor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Factor Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/second-factor/challenge": {
+      "post": {
+        "tags": [
+          "second factor"
+        ],
+        "summary": "Challenge Second Factor",
+        "description": "Starts a step-up. For e-mail and SMS it SENDS the code.",
+        "operationId": "challenge_second_factor_api_v1_me_second_factor_challenge_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChallengeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/second-factor/verify": {
+      "post": {
+        "tags": [
+          "second factor"
+        ],
+        "summary": "Verify Second Factor",
+        "description": "Answers the challenge and steps THIS session up.",
+        "operationId": "verify_second_factor_api_v1_me_second_factor_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepUpResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/second-factor/recovery": {
+      "post": {
+        "tags": [
+          "second factor"
+        ],
+        "summary": "Verify Recovery Code",
+        "description": "The way back when the factor is lost. The code dies on use.",
+        "operationId": "verify_recovery_code_api_v1_me_second_factor_recovery_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecoveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepUpResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/second-factor/recovery-codes": {
+      "post": {
+        "tags": [
+          "second factor"
+        ],
+        "summary": "Regenerate Recovery Codes",
+        "description": "Replaces every recovery code. It requires a stepped-up session.",
+        "operationId": "regenerate_recovery_codes_api_v1_me_second_factor_recovery_codes_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodes"
                 }
               }
             }
@@ -3127,6 +3656,30 @@
   },
   "components": {
     "schemas": {
+      "AcceptedInvite": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "account_name": {
+            "type": "string",
+            "title": "Account Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "account_name",
+          "role"
+        ],
+        "title": "AcceptedInvite",
+        "description": "The account just joined, so the cockpit can switch to it with no second\nround trip: whoever accepts an invite wants to be inside."
+      },
       "AccountSummary": {
         "properties": {
           "id": {
@@ -3429,6 +3982,94 @@
           "spent"
         ],
         "title": "BudgetView"
+      },
+      "ChallengeRequest": {
+        "properties": {
+          "factor_id": {
+            "type": "string",
+            "title": "Factor Id",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "ChallengeRequest"
+      },
+      "ChallengeResponse": {
+        "properties": {
+          "challenge_id": {
+            "type": "string",
+            "title": "Challenge Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "masked_destination": {
+            "type": "string",
+            "title": "Masked Destination",
+            "default": ""
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "challenge_id",
+          "kind"
+        ],
+        "title": "ChallengeResponse"
+      },
+      "ConfirmFactor": {
+        "properties": {
+          "challenge_id": {
+            "type": "string",
+            "title": "Challenge Id"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "challenge_id",
+          "code"
+        ],
+        "title": "ConfirmFactor"
+      },
+      "ConfirmResponse": {
+        "properties": {
+          "factor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FactorSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recovery_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recovery Codes"
+          }
+        },
+        "type": "object",
+        "title": "ConfirmResponse"
       },
       "ContextPackageSummary": {
         "properties": {
@@ -3792,6 +4433,88 @@
         ],
         "title": "EndpointSummary"
       },
+      "EnrollResponse": {
+        "properties": {
+          "factor": {
+            "$ref": "#/components/schemas/FactorSummary"
+          },
+          "challenge_id": {
+            "type": "string",
+            "title": "Challenge Id"
+          },
+          "secret": {
+            "type": "string",
+            "title": "Secret",
+            "default": ""
+          },
+          "uri": {
+            "type": "string",
+            "title": "Uri",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "factor",
+          "challenge_id"
+        ],
+        "title": "EnrollResponse"
+      },
+      "FactorSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "masked_destination": {
+            "type": "string",
+            "title": "Masked Destination",
+            "default": ""
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "label"
+        ],
+        "title": "FactorSummary"
+      },
       "Finding": {
         "properties": {
           "id": {
@@ -3984,6 +4707,51 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "InvitePreview": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "account_name": {
+            "type": "string",
+            "title": "Account Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "usable": {
+            "type": "boolean",
+            "title": "Usable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "account_name",
+          "role",
+          "status",
+          "usable"
+        ],
+        "title": "InvitePreview",
+        "description": "What whoever OPENS the link sees.\n\nIt does NOT carry the invitee's e-mail: whoever finds the link must not\nlearn an address from it (ADR-0026)."
+      },
       "InviteSummary": {
         "properties": {
           "id": {
@@ -4001,6 +4769,17 @@
           "status": {
             "type": "string",
             "title": "Status"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
           }
         },
         "type": "object",
@@ -4057,6 +4836,19 @@
           "role"
         ],
         "title": "MeResponse"
+      },
+      "MemberRole": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "title": "MemberRole"
       },
       "MemberSummary": {
         "properties": {
@@ -4330,6 +5122,31 @@
           "external_key"
         ],
         "title": "NewDemand"
+      },
+      "NewFactor": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "destination": {
+            "type": "string",
+            "title": "Destination",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "label"
+        ],
+        "title": "NewFactor"
       },
       "NewFinding": {
         "properties": {
@@ -4847,6 +5664,37 @@
         ],
         "title": "RecordUsageOutcome"
       },
+      "RecoveryCodes": {
+        "properties": {
+          "codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Codes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codes"
+        ],
+        "title": "RecoveryCodes"
+      },
+      "RecoveryRequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "RecoveryRequest"
+      },
       "ResourceSummary": {
         "properties": {
           "id": {
@@ -5061,6 +5909,66 @@
         ],
         "title": "SandboxSummary"
       },
+      "SecondFactorState": {
+        "properties": {
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "enrolled": {
+            "type": "boolean",
+            "title": "Enrolled"
+          },
+          "stepped_up": {
+            "type": "boolean",
+            "title": "Stepped Up"
+          },
+          "needs_setup": {
+            "type": "boolean",
+            "title": "Needs Setup"
+          },
+          "allowed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allowed"
+          },
+          "factors": {
+            "items": {
+              "$ref": "#/components/schemas/FactorSummary"
+            },
+            "type": "array",
+            "title": "Factors"
+          },
+          "recovery_codes_left": {
+            "type": "integer",
+            "title": "Recovery Codes Left"
+          },
+          "step_up_expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Up Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "required",
+          "enrolled",
+          "stepped_up",
+          "needs_setup",
+          "allowed",
+          "factors",
+          "recovery_codes_left"
+        ],
+        "title": "SecondFactorState"
+      },
       "Stage": {
         "properties": {
           "key": {
@@ -5205,6 +6113,35 @@
         ],
         "title": "StageTransition",
         "description": "Where the stage goes. The vocabulary is closed and validated HERE, in the\nuse case: that way the refusal of an invented status holds on both\ntransports \u2014 a 422 in REST, INVALID_ARGUMENT in gRPC \u2014 with no repeated check\nin the adapter."
+      },
+      "StepUpResponse": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "recovery": {
+            "type": "boolean",
+            "title": "Recovery",
+            "default": false
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "method"
+        ],
+        "title": "StepUpResponse"
       },
       "TaskManagerBinding": {
         "properties": {
@@ -5528,6 +6465,26 @@
         ],
         "title": "ValidationReport",
         "description": "A report, not an error: the screen marks the problematic stages with the list."
+      },
+      "VerifyRequest": {
+        "properties": {
+          "challenge_id": {
+            "type": "string",
+            "title": "Challenge Id"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "challenge_id",
+          "code"
+        ],
+        "title": "VerifyRequest"
       },
       "WorkspaceSummary": {
         "properties": {

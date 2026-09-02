@@ -6,10 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InviteSummary {
-  id: string;
-  email: string;
-  role: string;
-  status: string;
-  expires_at?: string | null;
+export interface ConfirmFactor {
+  challenge_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 32
+     */
+  code: string;
 }
