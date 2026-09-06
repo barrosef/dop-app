@@ -21,12 +21,22 @@ import { useI18n } from '../lib/i18n';
 type T = ReturnType<typeof useI18n.getState>['t'];
 type LinkMethod = 'password' | 'google.com' | 'github.com';
 
+// `weak-password` is not reachable from THIS screen — `linkPending` only ever
+// calls `signInWithEmailAndPassword` (proving a password that already
+// exists) or `signInWithPopup`, never `createUserWithEmailAndPassword`,
+// which is the only call that can produce it. No case for it here; the
+// default below still gives it a real message rather than an empty box, in
+// case that ever changes.
 function messageFor(t: T, decision: AuthDecision): string {
   switch (decision.kind) {
     case 'invalid-credential':
       return t('auth.invalid');
-    case 'weak-password':
-      return t('auth.error.weakPassword');
+    case 'link-required':
+      // Excluding the just-attempted provider from `offered` (below) removes
+      // the one collision we know about, but not every one there could ever
+      // be — an empty error box would still read as a dead button for
+      // whichever edge case remains.
+      return t('auth.error.linkRequired');
     case 'misconfigured-domain':
       return t('auth.error.misconfigured');
     case 'rate-limited':
@@ -36,7 +46,7 @@ function messageFor(t: T, decision: AuthDecision): string {
     case 'unknown':
       return t('auth.error.unknown', { code: decision.code });
     default:
-      return '';
+      return t('auth.error.unknown', { code: decision.kind });
   }
 }
 
@@ -44,7 +54,10 @@ function messageFor(t: T, decision: AuthDecision): string {
 // e-mail enumeration protection on — a normal answer, not a failure. Offering
 // all three ways in when that happens is the only choice that never
 // dead-ends: the alternative (showing nothing) would strand the person with
-// a screen that has no button on it at all.
+// a screen that has no button on it at all. The provider the person just
+// tried is dropped from the result regardless (see `offered` below): that is
+// the one method `account-exists-with-different-credential` just proved is
+// NOT on this account.
 const ALL_METHODS: LinkMethod[] = ['password', 'google.com', 'github.com'];
 
 export default function LinkProvider() {
@@ -57,8 +70,10 @@ export default function LinkProvider() {
 
   if (!pendingLink) return <Navigate to="/sign-in" replace />;
 
-  const { email, methods } = pendingLink;
-  const offered = methods.length > 0 ? methods : ALL_METHODS;
+  const { email, methods, attempted } = pendingLink;
+  const offered = (methods.length > 0 ? methods : ALL_METHODS).filter(
+    (method) => method !== attempted,
+  );
 
   async function connect(method: LinkMethod, methodPassword?: string) {
     setError('');

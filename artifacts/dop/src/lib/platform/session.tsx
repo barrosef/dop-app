@@ -68,8 +68,11 @@ type Session = {
   // a normal answer, not a failure — it is what a project with e-mail
   // enumeration protection always returns, protection being a console setting
   // this code cannot see. The screen must treat empty as "offer every way in
-  // and let the person pick", never as broken.
-  pendingLink: { email: string; methods: LinkMethod[] } | null;
+  // and let the person pick", never as broken. `attempted` is the provider
+  // that just failed with `account-exists-with-different-credential` — the
+  // one method proven NOT to be on the account, so it must never be among the
+  // ones offered back.
+  pendingLink: { email: string; methods: LinkMethod[]; attempted: LinkMethod } | null;
 };
 
 const SessionContext = React.createContext<Session | null>(null);
@@ -129,15 +132,26 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           const decision = decideFromAuthError(failure);
           if (decision.kind === 'link-required') {
             pending.current = credentialFromError(provider, failure);
-            // An empty array here is not a failed lookup — it is what a
-            // project with e-mail enumeration protection always returns. The
-            // screen is told to treat it as "offer every way in", so this
-            // layer does not need to special-case it further.
-            const methods = (await fetchSignInMethodsForEmail(
-              auth,
-              decision.email,
-            )) as LinkMethod[];
-            setPendingLink({ email: decision.email, methods });
+            // A failure IN THIS LOOKUP must not swallow the original
+            // failure below — the person still needs to reach
+            // `/link-provider`, and an empty list is already a case that
+            // screen treats as "offer every way in", so falling back to it
+            // costs nothing extra.
+            let methods: LinkMethod[] = [];
+            try {
+              // An empty array here is not a failed lookup — it is what a
+              // project with e-mail enumeration protection always returns.
+              // The screen is told to treat it as "offer every way in", so
+              // this layer does not need to special-case it further.
+              methods = (await fetchSignInMethodsForEmail(
+                auth,
+                decision.email,
+              )) as LinkMethod[];
+            } catch {
+              // See comment above — `methods` stays empty.
+            }
+            const attempted: LinkMethod = provider === 'google' ? 'google.com' : 'github.com';
+            setPendingLink({ email: decision.email, methods, attempted });
           }
           throw failure;
         }
