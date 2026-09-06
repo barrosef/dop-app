@@ -4,6 +4,11 @@ The DOP platform's web cockpit: the attention box, the tree of workspaces and
 projects, and the demand's cockpit. It talks to the **BFF (`dop-api`)**; it has
 no database and no business rule of its own.
 
+**Before changing anything, read [`RAILS.md`](RAILS.md)** — it says what must
+stay true after a change, and which decisions belong to the three repositories
+that are not visible from here (the core, the BFF and the infrastructure). This
+file says how to run the project; that one says how not to break it.
+
 ## Run & Operate
 
 - `pnpm --filter @workspace/dop run dev` — the cockpit (it needs `PORT` and `BASE_PATH`; see `artifacts/dop/.env.example`)
