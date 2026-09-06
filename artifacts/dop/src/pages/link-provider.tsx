@@ -39,6 +39,11 @@ function messageFor(t: T, decision: AuthDecision): string {
       return t('auth.error.linkRequired');
     case 'misconfigured-domain':
       return t('auth.error.misconfigured');
+    case 'abandoned':
+      // Firebase reports a deliberate cancel and an org blocking third-party
+      // apps with the SAME code — see `auth-errors.ts`. This line has to
+      // read true for both without claiming to know which one happened.
+      return t('auth.error.abandoned');
     case 'rate-limited':
       return t('auth.error.rateLimited');
     case 'popup-blocked':
@@ -83,7 +88,6 @@ export default function LinkProvider() {
       navigate('/');
     } catch (failure) {
       const decision = decideFromAuthError(failure);
-      if (decision.kind === 'abandoned') return;
       setError(messageFor(t, decision));
     } finally {
       setSubmitting(false);
