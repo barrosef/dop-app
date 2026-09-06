@@ -572,8 +572,41 @@ export const dictionaries = {
     'auth.submit': 'Entrar',
     'auth.submitting': 'Entrando…',
     'auth.invalid': 'E-mail ou senha inválidos.',
-    'auth.failed': 'Não foi possível entrar: {reason}',
     'auth.emulator': 'Emulador do Firebase Auth em uso ({url}). Em produção a assinatura do token é verificada de verdade.',
+    'auth.signUp.title': 'Criar conta',
+    'auth.signUp.subtitle': 'Comece com seu e-mail ou por um provedor que você já usa.',
+    'auth.signUp.submit': 'Criar conta',
+    'auth.signUp.submitting': 'Criando…',
+    'auth.signUp.haveAccount': 'Já tem conta? Entrar',
+    'auth.signIn.noAccount': 'Não tem conta? Criar',
+    'auth.or': 'ou',
+    'auth.with.google': 'Continuar com Google',
+    'auth.with.github': 'Continuar com GitHub',
+    'auth.error.weakPassword': 'Escolha uma senha mais longa.',
+    // `misconfigured-domain` means OUR Firebase project is missing this
+    // origin from its Authorized Domains — not the person's or their
+    // organization's doing, and not something a GitHub administrator on
+    // their side could fix. The copy must not send them to ask anybody.
+    'auth.error.misconfigured': 'O acesso não está configurado para este endereço. Já fomos avisados — tente novamente mais tarde.',
+    // Firebase reports "the person closed the popup" and "their GitHub
+    // organization blocked the app and this is that refusal page" with the
+    // SAME code — there is no way to tell them apart, so this line has to
+    // read true either way instead of guessing.
+    'auth.error.abandoned': 'O login não foi concluído. Se apareceu uma página explicando alguma restrição, um administrador dessa organização precisa aprovar o acesso; caso contrário, é só tentar de novo.',
+    'auth.error.rateLimited': 'Muitas tentativas. Espere um pouco e tente de novo.',
+    'auth.error.popupBlocked': 'Seu navegador bloqueou a janela de entrada; permita pop-ups e tente de novo.',
+    'auth.error.unknown': 'Não foi possível continuar ({code}).',
+    'auth.error.linkRequired': 'Esse jeito de entrar já está ligado a outra conta.',
+    'auth.link.title': 'Você já tem conta',
+    'auth.link.explain': 'Já existe uma conta com {email}. Entre pelo jeito que você usou da primeira vez e a gente conecta este novo acesso.',
+    'auth.link.submit': 'Entrar e conectar',
+    'auth.verify.title': 'Confirme seu e-mail',
+    'auth.verify.sent': 'Enviamos um link para {email}. Abra o link e volte aqui.',
+    'auth.verify.resend': 'Enviar de novo',
+    'auth.verify.resent': 'Enviado.',
+    'auth.verify.check': 'Já confirmei',
+    'auth.verify.notYet': 'Ainda não confirmado. Abra o link do e-mail e tente de novo.',
+    'auth.verify.signOut': 'Usar outro endereço',
 
     'shell.restoring': 'Restaurando sessão…',
     'shell.accounts.loading': 'carregando contas…',
@@ -1215,8 +1248,41 @@ export const dictionaries = {
     'auth.submit': 'Sign in',
     'auth.submitting': 'Signing in…',
     'auth.invalid': 'Invalid e-mail or password.',
-    'auth.failed': 'Could not sign in: {reason}',
     'auth.emulator': 'The Firebase Auth emulator is in use ({url}). In production the token\u2019s signature really is verified.',
+    'auth.signUp.title': 'Create an account',
+    'auth.signUp.subtitle': 'Start with your e-mail, or with a provider you already use.',
+    'auth.signUp.submit': 'Create account',
+    'auth.signUp.submitting': 'Creating\u2026',
+    'auth.signUp.haveAccount': 'Already have an account? Sign in',
+    'auth.signIn.noAccount': 'No account? Create one',
+    'auth.or': 'or',
+    'auth.with.google': 'Continue with Google',
+    'auth.with.github': 'Continue with GitHub',
+    'auth.error.weakPassword': 'Choose a longer password.',
+    // `misconfigured-domain` means OUR Firebase project is missing this
+    // origin from its Authorized Domains \u2014 not the person's or their
+    // organization's doing, and not something a GitHub administrator on
+    // their side could fix. The copy must not send them to ask anybody.
+    'auth.error.misconfigured': 'Sign-in is not configured for this address. We have been alerted \u2014 please try again later.',
+    // Firebase reports "the person closed the popup" and "their GitHub
+    // organization blocked the app and this is that refusal page" with the
+    // SAME code \u2014 there is no way to tell them apart, so this line has to
+    // read true either way instead of guessing.
+    'auth.error.abandoned': 'Sign-in did not complete. If a page appeared explaining a restriction, an administrator of that organization has to approve access; otherwise, just try again.',
+    'auth.error.rateLimited': 'Too many attempts. Wait a moment and try again.',
+    'auth.error.popupBlocked': 'Your browser blocked the sign-in window; allow pop-ups and try again.',
+    'auth.error.unknown': 'Could not continue ({code}).',
+    'auth.error.linkRequired': 'That way of signing in is already linked to a different account.',
+    'auth.link.title': 'You already have an account',
+    'auth.link.explain': 'There is already an account for {email}. Sign in the way you did the first time and we will connect this new one.',
+    'auth.link.submit': 'Sign in and connect',
+    'auth.verify.title': 'Confirm your e-mail',
+    'auth.verify.sent': 'We sent a link to {email}. Open it and come back.',
+    'auth.verify.resend': 'Send it again',
+    'auth.verify.resent': 'Sent.',
+    'auth.verify.check': 'I have confirmed',
+    'auth.verify.notYet': 'Not confirmed yet. Open the link in the e-mail and try again.',
+    'auth.verify.signOut': 'Use a different address',
 
     'shell.restoring': 'Restoring the session…',
     'shell.accounts.loading': 'loading accounts…',
