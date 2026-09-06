@@ -1,12 +1,10 @@
 /**
- * Signing in — e-mail and password against Firebase Auth.
+ * Creating an account — e-mail and password, or a provider popup.
  *
- * The same code runs against the emulator (locally) and against the real
- * Firebase (production): only the address changes, in
- * `VITE_FIREBASE_AUTH_EMULATOR_URL`. The emulator's token comes with
- * `alg: none`, with no signature — in production it is signed and the BFF checks
- * the signature, the issuer and the audience. Nothing on this screen may assume
- * the difference.
+ * Modelled on `sign-in.tsx`: same card, same layout, same `data-testid`
+ * convention. The provider buttons here and on `sign-in.tsx` are the SAME
+ * call (`signInWith`) — a provider sign-in creates the account when there is
+ * none, so one control does both jobs.
  */
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -19,11 +17,11 @@ import { useI18n } from '../lib/i18n';
 
 type T = ReturnType<typeof useI18n.getState>['t'];
 
-// Shared with `sign-up.tsx`: both end up with an `AuthDecision` and both
-// display it the same way, except for the two kinds that are not a message
-// at all (`link-required` sends the person somewhere, `abandoned` says
-// nothing because they closed the popup on purpose) — the caller handles
-// those before this runs.
+// Shared between the password form and the provider buttons: both end up with
+// an `AuthDecision` and both display it the same way, except for the two
+// kinds that are not a message at all (`link-required` sends the person
+// somewhere, `abandoned` says nothing because they closed the popup on
+// purpose). Those two are handled by the caller before this runs.
 function messageFor(t: T, decision: AuthDecision): string {
   switch (decision.kind) {
     case 'invalid-credential':
@@ -43,8 +41,8 @@ function messageFor(t: T, decision: AuthDecision): string {
   }
 }
 
-export default function SignIn() {
-  const { signIn, signInWith } = useSession();
+export default function SignUp() {
+  const { signUp, signInWith } = useSession();
   const t = useI18n((s) => s.t);
   const navigate = useNavigate();
   const [email, setEmail] = React.useState('');
@@ -60,6 +58,12 @@ export default function SignIn() {
   function handleFailure(failure: unknown): void {
     const decision = decideFromAuthError(failure);
     if (decision.kind === 'link-required') {
+      // `signUp`'s own collision (typing an e-mail that already has an
+      // account) never captures a credential to attach — `pendingLink` stays
+      // null for it. `/link-provider` finds that and bounces to `/sign-in`,
+      // where the provider buttons DO populate it when that turns out to be
+      // the way in. Going there anyway costs one extra bounce and avoids a
+      // dead end.
       navigate('/link-provider');
       return;
     }
@@ -75,7 +79,8 @@ export default function SignIn() {
     setError('');
     setSubmitting(true);
     try {
-      await signIn(email, password);
+      await signUp(email, password);
+      navigate('/verify-email');
     } catch (failure) {
       handleFailure(failure);
     } finally {
@@ -100,13 +105,13 @@ export default function SignIn() {
       <form
         onSubmit={onSubmit}
         className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-card p-6"
-        data-testid="form-sign-in"
+        data-testid="form-sign-up"
       >
         <div className="flex items-center gap-2">
           <TerminalSquare className="h-6 w-6 text-primary" />
-          <h1 className="text-lg font-bold tracking-tight">{t('auth.title')}</h1>
+          <h1 className="text-lg font-bold tracking-tight">{t('auth.signUp.title')}</h1>
         </div>
-        <p className="text-xs text-muted-foreground">{t('auth.subtitle')}</p>
+        <p className="text-xs text-muted-foreground">{t('auth.signUp.subtitle')}</p>
 
         <label className="block space-y-1">
           <span className="text-xs font-medium">{t('auth.email')}</span>
@@ -127,7 +132,7 @@ export default function SignIn() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
+            autoComplete="new-password"
             required
             className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-primary/60"
             data-testid="input-password"
@@ -137,7 +142,7 @@ export default function SignIn() {
         {error ? (
           <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span data-testid="text-sign-in-error">{error}</span>
+            <span data-testid="text-sign-up-error">{error}</span>
           </div>
         ) : null}
 
@@ -145,9 +150,9 @@ export default function SignIn() {
           type="submit"
           disabled={submitting}
           className="h-9 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
-          data-testid="button-sign-in"
+          data-testid="button-sign-up"
         >
-          {submitting ? t('auth.submitting') : t('auth.submit')}
+          {submitting ? t('auth.signUp.submitting') : t('auth.signUp.submit')}
         </button>
 
         <div className="flex items-center gap-2 text-[10px] uppercase text-muted-foreground">
@@ -177,8 +182,8 @@ export default function SignIn() {
         </button>
 
         <p className="text-center text-xs text-muted-foreground">
-          <Link to="/sign-up" data-testid="link-sign-up">
-            {t('auth.signIn.noAccount')}
+          <Link to="/sign-in" data-testid="link-sign-in">
+            {t('auth.signUp.haveAccount')}
           </Link>
         </p>
 

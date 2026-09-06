@@ -19,6 +19,7 @@ import { AccountProvider } from '@/lib/platform/account';
 import { SessionProvider, useSession } from '@/lib/platform/session';
 import { useI18n } from '@/lib/i18n';
 import SignIn from '@/pages/sign-in';
+import SignUp from '@/pages/sign-up';
 import Start from '@/pages/start';
 import Project from '@/pages/project';
 import Demand from '@/pages/demand';
@@ -44,6 +45,41 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * The spinner shared by every screen that has to wait for
+ * `onIdTokenChanged`'s first callback before it can decide anything —
+ * duplicating the same three lines per guard would drift out of sync with
+ * `auth.restoring`'s wording sooner or later.
+ */
+function Restoring() {
+  const t = useI18n((s) => s.t);
+  return (
+    <div className="flex h-screen items-center justify-center bg-background text-xs text-muted-foreground">
+      {t('auth.restoring')}
+    </div>
+  );
+}
+
+/**
+ * `/sign-up` and `/sign-in` are for someone who is NOT signed in yet — a
+ * signed-in person landing here (a stale bookmark, a link opened twice) goes
+ * to `/`, and from there `AuthenticatedShell` decides the rest (including
+ * whether they still owe us a verified e-mail).
+ */
+function SignUpRoute() {
+  const { user, loading } = useSession();
+  if (loading) return <Restoring />;
+  if (user) return <Navigate to="/" replace />;
+  return <SignUp />;
+}
+
+function SignInRoute() {
+  const { user, loading } = useSession();
+  if (loading) return <Restoring />;
+  if (user) return <Navigate to="/" replace />;
+  return <SignIn />;
+}
+
 function CardsRedirect() {
   const { id } = useParams();
   return <Navigate to={`/workspaces/${id}`} replace />;
@@ -68,15 +104,8 @@ function CardRedirect() {
  */
 function AuthenticatedShell() {
   const { user, loading } = useSession();
-  const t = useI18n((s) => s.t);
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background text-xs text-muted-foreground">
-        {t('auth.restoring')}
-      </div>
-    );
-  }
+  if (loading) return <Restoring />;
   if (!user) return <SignIn />;
 
   return (
@@ -113,15 +142,8 @@ function MockupShell() {
  */
 function InviteRoute() {
   const { user, loading } = useSession();
-  const t = useI18n((s) => s.t);
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background text-xs text-muted-foreground">
-        {t('auth.restoring')}
-      </div>
-    );
-  }
+  if (loading) return <Restoring />;
   if (!user) return <SignIn />;
   return <Invite />;
 }
@@ -146,6 +168,13 @@ function App() {
                     the shell assumes an active account. It is what P-32 was
                     missing — until today the e-mail led to a 404. */}
                 <Route path="/invites/:inviteId" element={<InviteRoute />} />
+
+                {/* Sign-up, sign-in and the two screens after them are all
+                    OUTSIDE the shell, for the same reason the invite route is:
+                    none of them has an active account yet, and some of them
+                    (link-provider) do not even have a session. */}
+                <Route path="/sign-up" element={<SignUpRoute />} />
+                <Route path="/sign-in" element={<SignInRoute />} />
 
                 <Route element={<MockupShell />}>
                   <Route path="/workspaces/new" element={<WorkspaceWizard />} />
