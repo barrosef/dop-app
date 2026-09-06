@@ -26,11 +26,11 @@ describe('decideFromAuthError', () => {
     expect(decision).toEqual({ kind: 'link-required', email: 'ana@example.com' });
   });
 
-  it('recognises an organization that blocks third-party applications', () => {
-    // The person did nothing wrong and retrying will not help: an administrator
-    // has to approve. A generic message would send them round the loop forever.
+  it('flags a missing Authorized Domain as our misconfiguration, not theirs', () => {
+    // Nothing the person or an administrator on their side can fix — the
+    // current origin is simply absent from our own Firebase project config.
     expect(decideFromAuthError({ code: 'auth/unauthorized-domain' })).toEqual({
-      kind: 'blocked-by-organization',
+      kind: 'misconfigured-domain',
     });
   });
 
@@ -61,5 +61,22 @@ describe('decideFromAuthError', () => {
     expect(
       decideFromAuthError({ code: 'auth/email-already-in-use' }),
     ).toEqual({ kind: 'link-required', email: '' });
+  });
+
+  it('tells a cool-down apart from a wrong credential', () => {
+    // Retrying right away will not help — waiting will. Collapsing this into
+    // "invalid credential" would send the person into a retry loop.
+    expect(decideFromAuthError({ code: 'auth/too-many-requests' })).toEqual({
+      kind: 'rate-limited',
+    });
+  });
+
+  it('tells a browser-blocked popup apart from one the person closed', () => {
+    // The person never saw anything to abandon — the fix is to allow popups,
+    // which only makes sense if the message says so instead of reading as a
+    // dead button.
+    expect(decideFromAuthError({ code: 'auth/popup-blocked' })).toEqual({
+      kind: 'popup-blocked',
+    });
   });
 });

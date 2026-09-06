@@ -15,9 +15,11 @@
 export type AuthDecision =
   | { kind: 'invalid-credential' }
   | { kind: 'link-required'; email: string }
-  | { kind: 'blocked-by-organization' }
+  | { kind: 'misconfigured-domain' }
   | { kind: 'abandoned' }
   | { kind: 'weak-password' }
+  | { kind: 'rate-limited' }
+  | { kind: 'popup-blocked' }
   | { kind: 'unknown'; code: string };
 
 function codeOf(err: unknown): string {
@@ -51,17 +53,38 @@ export function decideFromAuthError(err: unknown): AuthDecision {
     case 'auth/email-already-in-use':
       return { kind: 'link-required', email: emailOf(err) };
 
-    // Firebase reports an organization's third-party-application restriction as
-    // an unauthorized domain. Retrying cannot help — an administrator has to act.
+    // This means the current origin is missing from OUR project's Authorized
+    // Domains list in the Firebase console — nothing the person or their
+    // organization did. Neither they nor an administrator on their side can
+    // fix it, so whatever message the UI attaches to this kind must not send
+    // them to ask anybody: it is an alert for whoever runs this platform.
     case 'auth/unauthorized-domain':
-      return { kind: 'blocked-by-organization' };
+      return { kind: 'misconfigured-domain' };
 
+    // A GitHub organization that blocks third-party applications shows its own
+    // restriction page inside the popup, not a Firebase error. If the person
+    // closes that popup we only ever see `popup-closed-by-user` — the same
+    // code as someone simply changing their mind. There is no error code that
+    // tells the two apart, so resist the urge to guess: `abandoned` means "we
+    // don't know why", not "they gave up".
     case 'auth/popup-closed-by-user':
     case 'auth/cancelled-popup-request':
       return { kind: 'abandoned' };
 
     case 'auth/weak-password':
       return { kind: 'weak-password' };
+
+    // Retrying immediately will not help — Firebase is asking for a cool-down,
+    // not a correction.
+    case 'auth/too-many-requests':
+      return { kind: 'rate-limited' };
+
+    // Distinct from `abandoned`: the browser stopped the popup from opening at
+    // all, so nothing was ever shown to the person. Reporting it as "you
+    // changed your mind" would read as a dead button — this is the one case
+    // among the popup failures the person can actually fix (allow popups).
+    case 'auth/popup-blocked':
+      return { kind: 'popup-blocked' };
 
     default:
       return { kind: 'unknown', code };
