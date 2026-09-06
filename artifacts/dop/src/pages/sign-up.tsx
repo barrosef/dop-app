@@ -18,10 +18,9 @@ import { useI18n } from '../lib/i18n';
 type T = ReturnType<typeof useI18n.getState>['t'];
 
 // Shared between the password form and the provider buttons: both end up with
-// an `AuthDecision` and both display it the same way, except for the two
-// kinds that are not a message at all (`link-required` sends the person
-// somewhere, `abandoned` says nothing because they closed the popup on
-// purpose). Those two are handled by the caller before this runs.
+// an `AuthDecision` and both display it the same way, except for
+// `link-required`, which is not a message at all — it sends the person
+// somewhere instead — and is handled by the caller before this runs.
 function messageFor(t: T, decision: AuthDecision): string {
   switch (decision.kind) {
     case 'invalid-credential':
@@ -30,6 +29,11 @@ function messageFor(t: T, decision: AuthDecision): string {
       return t('auth.error.weakPassword');
     case 'misconfigured-domain':
       return t('auth.error.misconfigured');
+    case 'abandoned':
+      // Firebase reports a deliberate cancel and an org blocking third-party
+      // apps with the SAME code — see `auth-errors.ts`. This line has to
+      // read true for both without claiming to know which one happened.
+      return t('auth.error.abandoned');
     case 'rate-limited':
       return t('auth.error.rateLimited');
     case 'popup-blocked':
@@ -37,7 +41,7 @@ function messageFor(t: T, decision: AuthDecision): string {
     case 'unknown':
       return t('auth.error.unknown', { code: decision.code });
     default:
-      return '';
+      return t('auth.error.unknown', { code: decision.kind });
   }
 }
 
@@ -55,20 +59,23 @@ export default function SignUp() {
   // `catch` running right after still sees the value from before the update
   // (React state, not a ref). `/link-provider` is the right place to read
   // `pendingLink` — its own render happens after the update has landed.
-  function handleFailure(failure: unknown): void {
+  //
+  // `viaProvider` tells the two callers apart: `onProvider`'s `signInWith`
+  // always captures a credential to attach before rethrowing, so a
+  // `link-required` from there belongs on `/link-provider`. `onSubmit`'s
+  // `signUp` (typing an e-mail that already has an account) never captures
+  // one — `pendingLink` stays null for it — so sending it to
+  // `/link-provider` would only bounce it straight back here with nothing
+  // shown. Landing on `/sign-in` directly, with the reason carried in router
+  // state, is the one redirect instead of two.
+  function handleFailure(failure: unknown, viaProvider: boolean): void {
     const decision = decideFromAuthError(failure);
     if (decision.kind === 'link-required') {
-      // `signUp`'s own collision (typing an e-mail that already has an
-      // account) never captures a credential to attach — `pendingLink` stays
-      // null for it. `/link-provider` finds that and bounces to `/sign-in`,
-      // where the provider buttons DO populate it when that turns out to be
-      // the way in. Going there anyway costs one extra bounce and avoids a
-      // dead end.
-      navigate('/link-provider');
-      return;
-    }
-    if (decision.kind === 'abandoned') {
-      // The person closed the popup on purpose; there is nothing to say.
+      if (viaProvider) {
+        navigate('/link-provider');
+      } else {
+        navigate('/sign-in', { state: { linkEmail: decision.email } });
+      }
       return;
     }
     setError(messageFor(t, decision));
@@ -82,7 +89,7 @@ export default function SignUp() {
       await signUp(email, password);
       navigate('/verify-email');
     } catch (failure) {
-      handleFailure(failure);
+      handleFailure(failure, false);
     } finally {
       setSubmitting(false);
     }
@@ -96,7 +103,7 @@ export default function SignUp() {
       // never sends it to `/verify-email` — landing on `/` is always right.
       navigate('/');
     } catch (failure) {
-      handleFailure(failure);
+      handleFailure(failure, true);
     }
   }
 

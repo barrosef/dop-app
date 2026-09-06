@@ -9,7 +9,7 @@
  * the difference.
  */
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AlertTriangle, Chrome, Github, TerminalSquare } from 'lucide-react';
 
 import { useSession } from '../lib/platform/session';
@@ -20,10 +20,9 @@ import { useI18n } from '../lib/i18n';
 type T = ReturnType<typeof useI18n.getState>['t'];
 
 // Shared with `sign-up.tsx`: both end up with an `AuthDecision` and both
-// display it the same way, except for the two kinds that are not a message
-// at all (`link-required` sends the person somewhere, `abandoned` says
-// nothing because they closed the popup on purpose) — the caller handles
-// those before this runs.
+// display it the same way, except for `link-required`, which is not a
+// message at all — it sends the person somewhere instead — and is handled by
+// the caller before this runs.
 function messageFor(t: T, decision: AuthDecision): string {
   switch (decision.kind) {
     case 'invalid-credential':
@@ -32,6 +31,11 @@ function messageFor(t: T, decision: AuthDecision): string {
       return t('auth.error.weakPassword');
     case 'misconfigured-domain':
       return t('auth.error.misconfigured');
+    case 'abandoned':
+      // Firebase reports a deliberate cancel and an org blocking third-party
+      // apps with the SAME code — see `auth-errors.ts`. This line has to
+      // read true for both without claiming to know which one happened.
+      return t('auth.error.abandoned');
     case 'rate-limited':
       return t('auth.error.rateLimited');
     case 'popup-blocked':
@@ -39,7 +43,7 @@ function messageFor(t: T, decision: AuthDecision): string {
     case 'unknown':
       return t('auth.error.unknown', { code: decision.code });
     default:
-      return '';
+      return t('auth.error.unknown', { code: decision.kind });
   }
 }
 
@@ -47,7 +51,13 @@ export default function SignIn() {
   const { signIn, signInWith } = useSession();
   const t = useI18n((s) => s.t);
   const navigate = useNavigate();
-  const [email, setEmail] = React.useState('');
+  const location = useLocation();
+  // Set by `sign-up.tsx` when its OWN password collision has no credential to
+  // hand `/link-provider` — going there anyway would just bounce straight
+  // back here with nothing shown. Landing here directly, with the reason
+  // carried in router state, is the one redirect instead of two.
+  const linkEmail = (location.state as { linkEmail?: string } | null)?.linkEmail;
+  const [email, setEmail] = React.useState(linkEmail ?? '');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
@@ -61,10 +71,6 @@ export default function SignIn() {
     const decision = decideFromAuthError(failure);
     if (decision.kind === 'link-required') {
       navigate('/link-provider');
-      return;
-    }
-    if (decision.kind === 'abandoned') {
-      // The person closed the popup on purpose; there is nothing to say.
       return;
     }
     setError(messageFor(t, decision));
@@ -107,6 +113,18 @@ export default function SignIn() {
           <h1 className="text-lg font-bold tracking-tight">{t('auth.title')}</h1>
         </div>
         <p className="text-xs text-muted-foreground">{t('auth.subtitle')}</p>
+
+        {linkEmail ? (
+          <div
+            className="space-y-1 rounded-md border border-border bg-muted/30 p-2"
+            data-testid="banner-link-required"
+          >
+            <p className="text-xs font-medium">{t('auth.link.title')}</p>
+            <p className="text-xs text-muted-foreground">
+              {t('auth.link.explain', { email: linkEmail })}
+            </p>
+          </div>
+        ) : null}
 
         <label className="block space-y-1">
           <span className="text-xs font-medium">{t('auth.email')}</span>
