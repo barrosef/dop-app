@@ -33,6 +33,7 @@ import Home from '@/pages/home';
 import WorkspaceWizard from '@/pages/workspace-wizard';
 import WorkspaceCockpit from '@/pages/workspace-cockpit';
 import NotFound from '@/pages/not-found';
+import Onboarding from '@/pages/onboarding';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -206,6 +207,7 @@ function App() {
               <Routes>
                 <Route element={<AuthenticatedShell />}>
                   <Route path="/" element={<Start />} />
+                  <Route path="/onboarding" element={<><Start /><Onboarding /></>} />
                   <Route path="/projects/:projectId" element={<Project />} />
                   <Route path="/demands/:demandId" element={<Demand />} />
                   <Route path="/account" element={<Account />} />
