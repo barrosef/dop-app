@@ -11,6 +11,7 @@ import {
   GithubAuthProvider,
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
   linkWithCredential,
   onIdTokenChanged,
   sendEmailVerification,
@@ -47,6 +48,12 @@ function credentialFromError(provider: keyof typeof providers, err: unknown) {
     : GithubAuthProvider.credentialFromError(e);
 }
 
+// The identifiers `fetchSignInMethodsForEmail` returns — 'password' proves
+// itself with a password, 'google.com'/'github.com' prove themselves by
+// signing in through that provider's popup again. Both are stronger than
+// matching a verified e-mail: a demonstration, not a claim.
+type LinkMethod = 'password' | 'google.com' | 'github.com';
+
 type Session = {
   user: User | null;
   loading: boolean;
@@ -54,10 +61,15 @@ type Session = {
   signOut: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signInWith: (provider: 'google' | 'github') => Promise<void>;
-  linkPending: (email: string, password: string) => Promise<void>;
+  linkPending: (method: LinkMethod, email: string, password?: string) => Promise<void>;
   sendVerification: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  pendingLink: { email: string } | null;
+  // `methods` is what `fetchSignInMethodsForEmail` returned. An EMPTY array is
+  // a normal answer, not a failure — it is what a project with e-mail
+  // enumeration protection always returns, protection being a console setting
+  // this code cannot see. The screen must treat empty as "offer every way in
+  // and let the person pick", never as broken.
+  pendingLink: { email: string; methods: LinkMethod[] } | null;
 };
 
 const SessionContext = React.createContext<Session | null>(null);
@@ -75,7 +87,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   // it is a bearer credential and writing it to disk would outlive the moment
   // it is good for.
   const pending = React.useRef<AuthCredential | null>(null);
-  const [pendingLink, setPendingLink] = React.useState<{ email: string } | null>(null);
+  const [pendingLink, setPendingLink] = React.useState<Session['pendingLink']>(null);
 
   React.useEffect(() => {
     return onIdTokenChanged(auth, (next) => {
@@ -97,9 +109,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       },
       signUp: async (email, password) => {
         const created = await createUserWithEmailAndPassword(auth, email, password);
-        // Sent immediately, not on the next screen: if the person closes the tab
-        // here, the account exists and nothing has told them what to do next.
-        await sendEmailVerification(created.user);
+        // The account existing is what succeeded; the message is best-effort
+        // on top of it. Letting a failed send reject this call would strand a
+        // created account with nobody told what to do next — and signing up
+        // again would then fail as already-in-use, with no way back in. On a
+        // failed send the verification screen still says "we sent a link"
+        // when we did not; the resend button already on that screen is the
+        // person's actual recourse, not a retry of this call.
+        try {
+          await sendEmailVerification(created.user);
+        } catch {
+          // Swallowed deliberately — see comment above.
+        }
       },
       signInWith: async (provider) => {
         try {
@@ -108,16 +129,33 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           const decision = decideFromAuthError(failure);
           if (decision.kind === 'link-required') {
             pending.current = credentialFromError(provider, failure);
-            setPendingLink({ email: decision.email });
+            // An empty array here is not a failed lookup — it is what a
+            // project with e-mail enumeration protection always returns. The
+            // screen is told to treat it as "offer every way in", so this
+            // layer does not need to special-case it further.
+            const methods = (await fetchSignInMethodsForEmail(
+              auth,
+              decision.email,
+            )) as LinkMethod[];
+            setPendingLink({ email: decision.email, methods });
           }
           throw failure;
         }
       },
-      linkPending: async (email, password) => {
-        // Signing in with the provider they ALREADY have is the proof of
-        // possession. Firebase gives us that for free here, and it is stronger
-        // than matching a verified e-mail: it is a demonstration, not a claim.
-        const existing = await signInWithEmailAndPassword(auth, email, password);
+      linkPending: async (method, email, password) => {
+        // Proof of possession takes the shape of whichever provider the
+        // person already has: a password account proves it by re-entering the
+        // password, a federated one by signing in through that provider's
+        // popup again. Either is stronger than matching a verified e-mail —
+        // a demonstration, not a claim — and this is Firebase's own check,
+        // not ours.
+        const existing =
+          method === 'password'
+            ? await signInWithEmailAndPassword(auth, email, password ?? '')
+            : await signInWithPopup(
+                auth,
+                providers[method === 'google.com' ? 'google' : 'github'](),
+              );
         if (pending.current) {
           await linkWithCredential(existing.user, pending.current);
           pending.current = null;
