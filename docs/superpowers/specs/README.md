@@ -38,3 +38,4 @@ thrown away. `RAILS.md` §1 says why.
 |---|---|
 | [`2026-09-06-visual-language.md`](2026-09-06-visual-language.md) | no — buildable now |
 | [`2026-09-06-profile-onboarding-wizard.md`](2026-09-06-profile-onboarding-wizard.md) | yes — blocked, operations listed in §7 |
+| [`2026-09-09-account-role-in-the-selector.md`](2026-09-09-account-role-in-the-selector.md) | no — the API already ships it, and the contract did not change |
