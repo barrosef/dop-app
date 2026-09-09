@@ -39,3 +39,17 @@ thrown away. `RAILS.md` §1 says why.
 | [`2026-09-06-visual-language.md`](2026-09-06-visual-language.md) | no — buildable now |
 | [`2026-09-06-profile-onboarding-wizard.md`](2026-09-06-profile-onboarding-wizard.md) | yes — blocked, operations listed in §7 |
 | [`2026-09-09-account-role-in-the-selector.md`](2026-09-09-account-role-in-the-selector.md) | no — the API already ships it, and the contract did not change |
+| [`2026-09-09-api-server-artifact-cleanup.md`](2026-09-09-api-server-artifact-cleanup.md) | no — one file, no API involved |
+| [`2026-09-09-retire-the-mock-client.md`](2026-09-09-retire-the-mock-client.md) | the API is there; the generated hooks are not yet — slice 0 creates them |
+
+## Commit subjects
+
+The umbrella repository asks for subjects in Portuguese that describe the
+**finding**, not the edit, with a conventional prefix:
+
+    fix(cockpit): a tela de execução lia um "card" que a API nunca teve
+
+`Update internationalization logic and dependencies` says what a diff already
+shows. What a subject is for is the thing the diff cannot say — what was wrong,
+or what was learned. Whoever presses the button owns the subject; it is worth
+the twenty seconds.
