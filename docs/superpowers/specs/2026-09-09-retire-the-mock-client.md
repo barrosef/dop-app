@@ -24,17 +24,34 @@ The code is honest about it — the comments say "the old screens, which still
 talk to the MOCK client" — so this is a known transitional state and not a
 deviation somebody slipped in.
 
-## Two things that make this bigger than an import swap
+## Correction to an earlier version of this document
 
-**There are no generated hooks.** RAILS.md §1 says every call to the backend
-goes through one. Today nothing generates them: `lib/api-spec/openapi.json` is
-committed and `fetch-spec.mjs` exists, but there is no Orval configuration, no
-`generated/` directory, and no `orval` in any `package.json`. So the target of
-this migration does not exist yet — it has to be created first.
+An earlier version said the generated hooks did not exist and made "set up
+Orval" the first slice. **That was wrong**, and it was wrong in the expensive
+direction: acting on it would have meant building a second client beside a
+working one.
+
+What is actually there, verified file by file:
+
+- Orval is configured at `lib/api-spec/orval.config.ts`, with a transformer that
+  turns FastAPI's `get_cockpit_api_v1_demands__demand_id__cockpit_get` back into
+  `useGetCockpit` — so the hook names match the BFF's own function names.
+- `lib/api-client-react/src/generated/` holds **81** query and mutation hooks.
+- `lib/platform/backend.ts` wires them to the BFF: base URL from the
+  environment, `Authorization: Bearer <Firebase ID token>`, and `x-account-id`
+  read from the store on **every** request.
+- **Twelve files already use them**, including `pages/demand.tsx`,
+  `pages/account.tsx`, `pages/invite.tsx`, `pages/project.tsx`,
+  `pages/onboarding.tsx` and the attention box.
+
+So there is no groundwork slice. The target exists, it works, and most of the
+cockpit is already on it.
+
+## What is actually left, and why it is not an import swap
 
 **The mock models a product that is not this one.** `lib/api/client.ts` declares
 `listCards`, `getCard`, `sendChatMessage`, `listWorkspaces`. The real contract
-has **no `card` anywhere in its 64 paths**. The concept is called a **demand**:
+has **no `card` anywhere in its 65 paths**. The concept is called a **demand**:
 
 | the mock says | the API says |
 |---|---|
@@ -44,35 +61,40 @@ has **no `card` anywhere in its 64 paths**. The concept is called a **demand**:
 | `sendChatMessage(cardId, text)` | `POST /api/v1/demands/{demand_id}/threads/{thread_id}/turns` |
 | `streamLogs(...)` | the SSE stream, not a method on a client |
 
-So `card-execution.tsx` is not one import away from working. It is written
-against invented names, invented shapes and an invented call pattern, and
-pointing it at the real API is a rewrite of what it asks for — even when the
-screen ends up looking the same.
+**And the screen already exists twice.** Both are routed in `App.tsx`:
 
-This is precisely what §2 warns about: "do not invent a path that looks like"
-one. It happened before the rails were written, which is why the rails were
-written.
+| | lines | fed by | route |
+|---|---|---|---|
+| `pages/demand.tsx` | 318 | generated hooks | `/demands/:demandId` |
+| `pages/card-execution.tsx` | 2236 | `mockClient` | `/workspaces/:id/demands/:demandId` |
+
+The big one is the mock one. That is the normal shape of this situation and it
+is worth naming: a mockup can show anything, so it grows; a screen wired to a
+real API can only show what the API answers, so it stays honest and small.
+
+**So the question for `card-execution.tsx` is not "how do I migrate it".** It is:
+*what does it show that `demand.tsx` does not, and which of those things are real?*
+Go through it panel by panel and sort each one into three piles — already in
+`demand.tsx`; available from the API and worth adding to `demand.tsx`; or
+invented, in which case it is a product conversation and not a coding task. Then
+delete the old screen and its route. Rewriting 2236 lines of mock against the
+real API would be porting the invention along with the rest.
 
 ## How to do it
 
 **Do not do it all at once.** A six-file sweep against a vocabulary change is a
 pull request nobody can review and a week where nothing works.
 
-**Slice 0 — make the target exist.** Add Orval, configured against
-`lib/api-spec/openapi.json`, generating react-query hooks and Zod schemas into a
-`generated/` directory that is committed and never hand-edited (§1). Nothing
-else in this slice. Prove it by generating and building, with no screen changed.
+**One screen per slice**, easiest first so the pattern is established before the
+judgement call:
 
-**Then one screen per slice**, in this order, easiest first so the pattern is
-established before the hard one:
-
-1. `app-sidebar.tsx` — reads little; mostly counts and names.
+1. `app-sidebar.tsx` — reads little; mostly counts and names. The hooks it needs
+   already exist.
 2. `workspace-cockpit.tsx` — resources and the terminal. `/api/v1/resources` is
    real and close to what the mock pretends.
-3. `card-execution.tsx` — the rewrite. Demands, stages, threads and turns. Read
-   `/api/v1/demands/{id}/cockpit` before deciding anything about the layout: it
-   returns the stage view assembled, and the screen should render what arrives
-   rather than assemble it here.
+3. `card-execution.tsx` — the panel-by-panel sort described above, then delete.
+   Read `/api/v1/demands/{id}/cockpit` first: it returns the stage view already
+   assembled, so the screen renders what arrives instead of assembling it here.
 
 `test-stage-view.tsx` and `App.tsx` follow whichever screen owns them.
 
