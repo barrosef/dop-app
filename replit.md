@@ -30,6 +30,38 @@ The attention box only fills up if the core's **worker** is running: it is what
 consumes the events and builds the projection. With no worker, the API answers
 `200` with an empty box — which looks like "nothing pending" and is not.
 
+## Against QA — the environment this cockpit integrates with
+
+Everything above is the local cluster, and none of it is reachable from Replit.
+What Replit talks to is **QA**: a GCP project (`dop-qa`) with the whole backend
+deployed. It is real — real Firebase, real BFF, real Postgres. An account
+created from here is a row in a database.
+
+Point the cockpit at it with the "Against QA" block in
+`artifacts/dop/.env.example`. Nothing there is a secret.
+
+What is up, and what it answers today:
+
+| piece | where | state |
+|---|---|---|
+| BFF (`dop-api`) | `https://dop-api-7zftn2aydq-uc.a.run.app`, later `api.qa.dop-t.com` | public; CORS allows this repl's preview origin |
+| core (`dop-core`) | private Cloud Run | reachable only through the BFF |
+| identity | Firebase Auth on `dop-qa` | e-mail/password and Google enabled; GitHub not yet |
+| database, events, worker | one VM | up; the attention box fills |
+
+**The one thing to know before building sign-up screens.** An e-mail/password
+account is refused by the backend (`412`, "this e-mail has not been verified
+yet") until its address is verified — that is a rule, not a bug. The
+verification message exists (`POST /api/v1/verification/email`, hook
+`useSendEmailVerification`) but the e-mail channel is not enabled on the
+provider yet, so **no message arrives**. Until it does, **sign in with Google is
+the path that works end to end**: a social account needs no verification, and
+it creates the user and the personal account in one step.
+
+The contract in `lib/api-spec/openapi.json` was fetched from QA and matches it
+route for route. When it stops matching, `fetch-spec` + `codegen` — never a
+hand edit.
+
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9, React 19 + Vite
