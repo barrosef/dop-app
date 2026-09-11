@@ -835,6 +835,16 @@ export interface ValidationReport {
   warnings?: string[];
 }
 
+/**
+ * What came back is the address it went to, and nothing else.
+
+Deliberately not "whether the account exists": answering that would turn
+this endpoint into a way of asking whether an address is registered here.
+ */
+export interface VerificationRequested {
+  email: string;
+}
+
 export interface VerifyRequest {
   challenge_id: string;
   /**

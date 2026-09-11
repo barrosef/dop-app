@@ -30,6 +30,18 @@ export const MeApiV1MeGetResponse = zod.object({
 
 
 /**
+ * Sends the message that proves this credential's e-mail.
+
+It takes NO body: the address comes from the verified token. See the use
+case for why that is not a convenience.
+ * @summary Send Email Verification
+ */
+export const SendEmailVerificationApiV1VerificationEmailPostResponse = zod.object({
+  "email": zod.string()
+}).describe('What came back is the address it went to, and nothing else.\n\nDeliberately not \"whether the account exists\": answering that would turn\nthis endpoint into a way of asking whether an address is registered here.')
+
+
+/**
  * The user's accounts — it feeds the cockpit's active-account selector.
  * @summary List Accounts
  */
@@ -2058,10 +2070,10 @@ export const SummarizeCostApiV1CostSummaryGetResponse = zod.object({
 **`min_tier` is MANDATORY** — `hardware`, `kernel_emulated` or `namespace`.
 Omitting it is a 422, and it is a 422 on purpose: the platform does not
 choose the isolation of code it did not write, and a default would choose
-downwards. If the substrate does not offer the requested level, the core
+downwards. If the executor does not offer the requested level, the core
 REFUSES with a message — it never silently delivers a lower one.
 
-The response's `tier` is what the substrate DELIVERED, not what was asked
+The response's `tier` is what the executor DELIVERED, not what was asked
 for.
  * @summary Provision Sandbox
  */

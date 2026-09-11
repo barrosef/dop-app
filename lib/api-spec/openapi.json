@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "DOP \u2014 BFF",
+    "title": "DOP — BFF",
     "description": "The DOP platform's edge. REST+SSE for the cockpit, gRPC for the CLI and the agents. All state lives in dop-core.",
     "version": "0.1.0"
   },
@@ -51,13 +51,35 @@
         }
       }
     },
+    "/api/v1/verification/email": {
+      "post": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Send Email Verification",
+        "description": "Sends the message that proves this credential's e-mail.\n\nIt takes NO body: the address comes from the verified token. See the use\ncase for why that is not a convenience.",
+        "operationId": "send_email_verification_api_v1_verification_email_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationRequested"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/accounts": {
       "get": {
         "tags": [
           "identity"
         ],
         "summary": "List Accounts",
-        "description": "The user's accounts \u2014 it feeds the cockpit's active-account selector.",
+        "description": "The user's accounts — it feeds the cockpit's active-account selector.",
         "operationId": "list_accounts_api_v1_accounts_get",
         "responses": {
           "200": {
@@ -123,7 +145,7 @@
           "identity"
         ],
         "summary": "List Members",
-        "description": "The active account's members \u2014 it requires a selected account AND a management role.",
+        "description": "The active account's members — it requires a selected account AND a management role.",
         "operationId": "list_members_api_v1_accounts_current_members_get",
         "responses": {
           "200": {
@@ -149,7 +171,7 @@
           "identity"
         ],
         "summary": "List Invites",
-        "description": "The active account's invites \u2014 the history, not only the pending ones.",
+        "description": "The active account's invites — the history, not only the pending ones.",
         "operationId": "list_invites_api_v1_invites_get",
         "responses": {
           "200": {
@@ -215,7 +237,7 @@
           "identity"
         ],
         "summary": "Get Invite",
-        "description": "The preview of whoever OPENS the e-mail's link.\n\nIt is the one identity route with no active account: whoever opens an invite\nmay not be a member of anything yet. It is where `/invites/:id` in the\ncockpit lands, and it is what closes P-32 \u2014 until today the link led to a\n404.",
+        "description": "The preview of whoever OPENS the e-mail's link.\n\nIt is the one identity route with no active account: whoever opens an invite\nmay not be a member of anything yet. It is where `/invites/:id` in the\ncockpit lands, and it is what closes P-32 — until today the link led to a\n404.",
         "operationId": "get_invite_api_v1_invites__invite_id__get",
         "parameters": [
           {
@@ -754,7 +776,7 @@
           "hierarchy"
         ],
         "summary": "Get Tree",
-        "description": "The active account's tree \u2014 what the cockpit's sidebar draws.",
+        "description": "The active account's tree — what the cockpit's sidebar draws.",
         "operationId": "get_tree_api_v1_tree_get",
         "responses": {
           "200": {
@@ -1525,7 +1547,7 @@
           "workflow"
         ],
         "summary": "Validate Flow",
-        "description": "A dry run: it returns the report, not an error \u2014 the screen marks the stages.",
+        "description": "A dry run: it returns the report, not an error — the screen marks the stages.",
         "operationId": "validate_flow_api_v1_flows_validate_post",
         "requestBody": {
           "content": {
@@ -1773,7 +1795,7 @@
           "demand"
         ],
         "summary": "Start Demand",
-        "description": "Starts the demand from the provider's card \u2014 it resolves and freezes the flow.",
+        "description": "Starts the demand from the provider's card — it resolves and freezes the flow.",
         "operationId": "start_demand_api_v1_demands_post",
         "parameters": [
           {
@@ -1983,7 +2005,7 @@
           "demand"
         ],
         "summary": "Decide Gate",
-        "description": "The human gate's decision \u2014 approving finishes it, rejecting blocks it.",
+        "description": "The human gate's decision — approving finishes it, rejecting blocks it.",
         "operationId": "decide_gate_api_v1_demands__demand_id__stages__stage_key__gate_post",
         "parameters": [
           {
@@ -2285,7 +2307,7 @@
           "delivery"
         ],
         "summary": "Get Board",
-        "description": "The project's PRs and directives in one response \u2014 the delivery screen.",
+        "description": "The project's PRs and directives in one response — the delivery screen.",
         "operationId": "get_board_api_v1_delivery_board_get",
         "parameters": [
           {
@@ -2385,7 +2407,7 @@
           "delivery"
         ],
         "summary": "Get Merge Queue",
-        "description": "ONE repository's queue \u2014 it is the repository that serializes (ADR-0008).",
+        "description": "ONE repository's queue — it is the repository that serializes (ADR-0008).",
         "operationId": "get_merge_queue_api_v1_repos__repo_id__merge_queue_get",
         "parameters": [
           {
@@ -2430,7 +2452,7 @@
           "delivery"
         ],
         "summary": "Enqueue Merge",
-        "description": "Asks to enter the repository's queue.\n\nA refusal for want of green comes out as a 412 \u2014 the same thing the core's\nFAILED_PRECONDITION becomes on any other route (`app/platform/errors.py`) \u2014\nbut with the body carrying `missing` item by item, instead of a single\nsentence. It is that list that tells the dev what to arrange in order to get\nin (ADR-0007).",
+        "description": "Asks to enter the repository's queue.\n\nA refusal for want of green comes out as a 412 — the same thing the core's\nFAILED_PRECONDITION becomes on any other route (`app/platform/errors.py`) —\nbut with the body carrying `missing` item by item, instead of a single\nsentence. It is that list that tells the dev what to arrange in order to get\nin (ADR-0007).",
         "operationId": "enqueue_merge_api_v1_repos__repo_id__merge_queue_post",
         "parameters": [
           {
@@ -2603,7 +2625,7 @@
           "knowledge"
         ],
         "summary": "Get Context Package",
-        "description": "The agent's carry-on luggage for this demand (ADR-0009 \u00a73).\n\n`dropped` is the field that matters in this response: **`null` means the core\ndid not report the drops** (today the `dop.v1` contract does not carry them),\nand not \"nothing was dropped\". When it comes filled in, `dropped.truncated`\nsays in a single field whether the context fitted whole \u2014 the screen has to be\nable to warn that it did not (ADR-0012).",
+        "description": "The agent's carry-on luggage for this demand (ADR-0009 §3).\n\n`dropped` is the field that matters in this response: **`null` means the core\ndid not report the drops** (today the `dop.v1` contract does not carry them),\nand not \"nothing was dropped\". When it comes filled in, `dropped.truncated`\nsays in a single field whether the context fitted whole — the screen has to be\nable to warn that it did not (ADR-0012).",
         "operationId": "get_context_package_api_v1_demands__demand_id__context_package_get",
         "parameters": [
           {
@@ -2694,7 +2716,7 @@
           "knowledge"
         ],
         "summary": "Search Memory",
-        "description": "Searches the memory. An empty `project_id` searches the ACCOUNT's memory.\n\nEach result comes with the artifact and its score PAIRED \u2014 `score: null` when\nthe core did not score it (a lexical search), which is different from zero.",
+        "description": "Searches the memory. An empty `project_id` searches the ACCOUNT's memory.\n\nEach result comes with the artifact and its score PAIRED — `score: null` when\nthe core did not score it (a lexical search), which is different from zero.",
         "operationId": "search_memory_api_v1_knowledge_memory_get",
         "parameters": [
           {
@@ -2762,7 +2784,7 @@
           "knowledge"
         ],
         "summary": "Read Index",
-        "description": "The repository's map. With no index it is a 404 \u2014 and a 404 is the useful answer.",
+        "description": "The repository's map. With no index it is a 404 — and a 404 is the useful answer.",
         "operationId": "read_index_api_v1_knowledge_index_get",
         "parameters": [
           {
@@ -2870,7 +2892,7 @@
           "cost"
         ],
         "summary": "Route Model",
-        "description": "Which model and which effort for this kind of work \u2014 and WHY.\n\n`reason` comes whole, with the policy's provenance up front (\"ADR-0011 \u00a73\n(draft \u2014 calibrate with telemetry, P-7): \u2026\"). It is not noise: it is what\nmakes auditing the choice and recalibrating the table possible. A client that\ntruncates that string is throwing away the only auditable part of the answer.\n\nIt is a `GET` because the decision is PURE \u2014 the same input, the same output,\nno effect.",
+        "description": "Which model and which effort for this kind of work — and WHY.\n\n`reason` comes whole, with the policy's provenance up front (\"ADR-0011 §3\n(draft — calibrate with telemetry, P-7): …\"). It is not noise: it is what\nmakes auditing the choice and recalibrating the table possible. A client that\ntruncates that string is throwing away the only auditable part of the answer.\n\nIt is a `GET` because the decision is PURE — the same input, the same output,\nno effect.",
         "operationId": "route_model_api_v1_cost_routing_get",
         "parameters": [
           {
@@ -2924,7 +2946,7 @@
           "cost"
         ],
         "summary": "Get Budget",
-        "description": "The scope's budget. Empty = the active account.\n\n`remaining: null` means a scope with NO CEILING \u2014 not \"the money ran out\".\nValues in micros (10\u207b\u2076 of the currency), integers, with the currency\nalongside.",
+        "description": "The scope's budget. Empty = the active account.\n\n`remaining: null` means a scope with NO CEILING — not \"the money ran out\".\nValues in micros (10⁻⁶ of the currency), integers, with the currency\nalongside.",
         "operationId": "get_budget_api_v1_cost_budget_get",
         "parameters": [
           {
@@ -2976,7 +2998,7 @@
           "cost"
         ],
         "summary": "Set Budget",
-        "description": "Sets the ceiling (owner/admin \u2014 a budget is governance).\n\nA `PUT` because it writes an ABSOLUTE value: repeating the call writes the\nsame ceiling, and that is why this write carries no `Idempotency-Key`.",
+        "description": "Sets the ceiling (owner/admin — a budget is governance).\n\nA `PUT` because it writes an ABSOLUTE value: repeating the call writes the\nsame ceiling, and that is why this write carries no `Idempotency-Key`.",
         "operationId": "set_budget_api_v1_cost_budget_put",
         "requestBody": {
           "required": true,
@@ -3018,7 +3040,7 @@
           "cost"
         ],
         "summary": "Record Usage",
-        "description": "Records model consumption.\n\n**A blown budget answers 200, not a 4xx.** ADR-0011 \u00a72's cut is soft: the\ndemand pauses and asks, and consumption keeps being measured. The response\nbrings `budget_exceeded`, the `notice` ready for the attention box and the\nblown budgets with the decision's numbers.",
+        "description": "Records model consumption.\n\n**A blown budget answers 200, not a 4xx.** ADR-0011 §2's cut is soft: the\ndemand pauses and asks, and consumption keeps being measured. The response\nbrings `budget_exceeded`, the `notice` ready for the attention box and the\nblown budgets with the decision's numbers.",
         "operationId": "record_usage_api_v1_cost_usage_post",
         "parameters": [
           {
@@ -3126,7 +3148,7 @@
           "execution"
         ],
         "summary": "Provision Sandbox",
-        "description": "Provisions the demand's sandbox.\n\n**`min_tier` is MANDATORY** \u2014 `hardware`, `kernel_emulated` or `namespace`.\nOmitting it is a 422, and it is a 422 on purpose: the platform does not\nchoose the isolation of code it did not write, and a default would choose\ndownwards. If the substrate does not offer the requested level, the core\nREFUSES with a message \u2014 it never silently delivers a lower one.\n\nThe response's `tier` is what the substrate DELIVERED, not what was asked\nfor.",
+        "description": "Provisions the demand's sandbox.\n\n**`min_tier` is MANDATORY** — `hardware`, `kernel_emulated` or `namespace`.\nOmitting it is a 422, and it is a 422 on purpose: the platform does not\nchoose the isolation of code it did not write, and a default would choose\ndownwards. If the executor does not offer the requested level, the core\nREFUSES with a message — it never silently delivers a lower one.\n\nThe response's `tier` is what the executor DELIVERED, not what was asked\nfor.",
         "operationId": "provision_sandbox_api_v1_sandboxes_post",
         "parameters": [
           {
@@ -3221,7 +3243,7 @@
           "execution"
         ],
         "summary": "Destroy Sandbox",
-        "description": "**IRREVERSIBLE: it erases the execution AND the demand's workspace.**\n\nIt is not the inverse of `/suspend`. What is lost here is the branches'\nworktree, the build already done and everything the agent had on disk \u2014 and a\ndestroyed sandbox does NOT resume: the only way forward becomes provisioning\nanother, from scratch. To save resources without losing the work, use\n`/suspend`.\n\nIt returns 200 with `{\"destroyed\": true}` rather than a 204: an act with no\nway back deserves a confirmation the client can show, not a silence it has to\ndeduce.",
+        "description": "**IRREVERSIBLE: it erases the execution AND the demand's workspace.**\n\nIt is not the inverse of `/suspend`. What is lost here is the branches'\nworktree, the build already done and everything the agent had on disk — and a\ndestroyed sandbox does NOT resume: the only way forward becomes provisioning\nanother, from scratch. To save resources without losing the work, use\n`/suspend`.\n\nIt returns 200 with `{\"destroyed\": true}` rather than a 204: an act with no\nway back deserves a confirmation the client can show, not a silence it has to\ndeduce.",
         "operationId": "destroy_sandbox_api_v1_sandboxes__sandbox_id__delete",
         "parameters": [
           {
@@ -3350,7 +3372,7 @@
           "runtime"
         ],
         "summary": "Run Turn",
-        "description": "Runs one agent turn on this thread.\n\n**It answers 200 even when the budget is blown.** ADR-0011 \u00a72's cut is soft:\nthe demand pauses and becomes an item in the attention box, and the turn that\nalready ran comes back whole \u2014 the reply was published on the thread and so\nwas the finding. `paused` and `notice` bring what the human needs to decide.\n\n**Live following does not come out through here.** The published messages\nare events (ADR-0006) and arrive through the SSE that already exists\n(`GET /api/v1/stream/demands/{demand_id}`). This route returns the\nconsolidated result; a second streaming path would be a second source of\ntruth for the same timeline.\n\n**`Idempotency-Key` is mandatory**, and the edge does NOT generate one. An\nagent turn spends money: a key invented here would turn a network retry into\ndouble consumption with nobody asking. It is the client that knows whether\nit is retrying or asking again.\n\nAn unavailable provider, a refused credential and an account with no agent\nintegration arrive from the core with the right status, through the usual\ntranslator \u2014 there is no special handling here, and there must not be.",
+        "description": "Runs one agent turn on this thread.\n\n**It answers 200 even when the budget is blown.** ADR-0011 §2's cut is soft:\nthe demand pauses and becomes an item in the attention box, and the turn that\nalready ran comes back whole — the reply was published on the thread and so\nwas the finding. `paused` and `notice` bring what the human needs to decide.\n\n**Live following does not come out through here.** The published messages\nare events (ADR-0006) and arrive through the SSE that already exists\n(`GET /api/v1/stream/demands/{demand_id}`). This route returns the\nconsolidated result; a second streaming path would be a second source of\ntruth for the same timeline.\n\n**`Idempotency-Key` is mandatory**, and the edge does NOT generate one. An\nagent turn spends money: a key invented here would turn a network retry into\ndouble consumption with nobody asking. It is the client that knows whether\nit is retrying or asking again.\n\nAn unavailable provider, a refused credential and an account with no agent\nintegration arrive from the core with the right status, through the usual\ntranslator — there is no special handling here, and there must not be.",
         "operationId": "run_turn_api_v1_demands__demand_id__threads__thread_id__turns_post",
         "parameters": [
           {
@@ -3486,7 +3508,7 @@
           "attention"
         ],
         "summary": "Stream Attention",
-        "description": "The box live \u2014 what opened and what closed.\n\nThe use case is called HERE, outside the generator, on purpose: it is that\ncall that fires `@account_scoped`. A refusal with no active account comes out\nas a real 400, with a JSON body, and not as a 200 that dies at the first\nframe.",
+        "description": "The box live — what opened and what closed.\n\nThe use case is called HERE, outside the generator, on purpose: it is that\ncall that fires `@account_scoped`. A refusal with no active account comes out\nas a real 400, with a JSON body, and not as a 200 that dies at the first\nframe.",
         "operationId": "stream_attention_api_v1_stream_attention_get",
         "parameters": [
           {
@@ -3538,7 +3560,7 @@
           "streaming"
         ],
         "summary": "Stream Account Events",
-        "description": "The active account's events \u2014 the cockpit's timeline and attention box.\n\nThe use case is called HERE, outside the generator, on purpose: it is that\ncall that fires `@account_scoped`. A refusal with no active account comes out\nas a real 400, with a JSON body, and not as a 200 that dies at the first\nframe.",
+        "description": "The active account's events — the cockpit's timeline and attention box.\n\nThe use case is called HERE, outside the generator, on purpose: it is that\ncall that fires `@account_scoped`. A refusal with no active account comes out\nas a real 400, with a JSON body, and not as a 200 that dies at the first\nframe.",
         "operationId": "stream_account_events_api_v1_stream_events_get",
         "parameters": [
           {
@@ -3628,7 +3650,7 @@
           "streaming"
         ],
         "summary": "Stream Demand",
-        "description": "One demand's events \u2014 what makes its chat and its timeline live.\n\nNo cursor: `dop.v1.WatchDemandRequest` has no `since_event_id`, so this\nstream does not accept `Last-Event-ID` \u2014 and, consistently, emits no `id:`.\nPretending to resume here would give the cockpit the impression that nothing\nwas lost in a reconnection. Whoever reconnects rereads the demand's dossier.",
+        "description": "One demand's events — what makes its chat and its timeline live.\n\nNo cursor: `dop.v1.WatchDemandRequest` has no `since_event_id`, so this\nstream does not accept `Last-Event-ID` — and, consistently, emits no `id:`.\nPretending to resume here would give the cockpit the impression that nothing\nwas lost in a reconnection. Whoever reconnects rereads the demand's dossier.",
         "operationId": "stream_demand_api_v1_stream_demands__demand_id__get",
         "parameters": [
           {
@@ -4216,7 +4238,7 @@
           "cache_hit_ratio": {
             "type": "number",
             "title": "Cache Hit Ratio",
-            "default": 0.0
+            "default": 0
           },
           "recent": {
             "items": {
@@ -4465,7 +4487,7 @@
         },
         "type": "object",
         "title": "DroppedCounts",
-        "description": "What was LEFT OUT of the package, per layer (ADR-0012).\n\n`truncated` is derived \u2014 it is the only field the screen has to consult to\nsay \"the context was truncated\". It is derived here, and not in each client,\nbecause three clients deriving the same thing is how two of them get it\nwrong."
+        "description": "What was LEFT OUT of the package, per layer (ADR-0012).\n\n`truncated` is derived — it is the only field the screen has to consult to\nsay \"the context was truncated\". It is derived here, and not in each client,\nbecause three clients deriving the same thing is how two of them get it\nwrong."
       },
       "EffectiveFlow": {
         "properties": {
@@ -5082,7 +5104,7 @@
         },
         "type": "object",
         "title": "Money",
-        "description": "A monetary value: an integer in micros (10\u207b\u2076 of the currency) PLUS the currency.\n\nThe two together, always. A number with no currency is a number somebody will\nadd to another currency one day, and nobody will notice until the invoice."
+        "description": "A monetary value: an integer in micros (10⁻⁶ of the currency) PLUS the currency.\n\nThe two together, always. A number with no currency is a number somebody will\nadd to another currency one day, and nobody will notice until the invoice."
       },
       "NewAccount": {
         "properties": {
@@ -5144,7 +5166,7 @@
           "content_base64"
         ],
         "title": "NewArtifact",
-        "description": "A write into the knowledge base \u2014 the cycle's way back (ADR-0009 \u00a74).\n\nThe content arrives in base64 because in the core's contract it is `bytes`:\na knowledge artifact is markdown, JSON or a generated map, in UTF-8 or not,\nand pretending it is a `str` would silently transcode whatever is not."
+        "description": "A write into the knowledge base — the cycle's way back (ADR-0009 §4).\n\nThe content arrives in base64 because in the core's contract it is `bytes`:\na knowledge artifact is markdown, JSON or a generated map, in UTF-8 or not,\nand pretending it is a `str` would silently transcode whatever is not."
       },
       "NewBudget": {
         "properties": {
@@ -5161,7 +5183,7 @@
           },
           "limit_micros": {
             "type": "integer",
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Limit Micros",
             "default": 0
           }
@@ -5182,7 +5204,7 @@
           "secret_base64"
         ],
         "title": "NewCredential",
-        "description": "The secret arrives in base64 \u2014 bytes in the core's contract.\n\nA separate model on purpose: that way the value never touches the model the\nedge returns, and there is no way for anybody to accidentally serialize it\nback."
+        "description": "The secret arrives in base64 — bytes in the core's contract.\n\nA separate model on purpose: that way the value never touches the model the\nedge returns, and there is no way for anybody to accidentally serialize it\nback."
       },
       "NewDemand": {
         "properties": {
@@ -5290,7 +5312,7 @@
           "owner_scope"
         ],
         "title": "NewFlow",
-        "description": "The flow goes in whole \u2014 v1 has no per-stage editing (ADR-0014 \u00a72)."
+        "description": "The flow goes in whole — v1 has no per-stage editing (ADR-0014 §2)."
       },
       "NewGrant": {
         "properties": {
@@ -5441,7 +5463,7 @@
           "min_tier"
         ],
         "title": "NewSandbox",
-        "description": "A provisioning request.\n\n`min_tier` has NO default, and that is what makes the rule hold: an optional\nfield with a default value would be the presumption coming back in through\nthe back door. Without it, validation refuses right here \u2014 a 422 in REST,\nINVALID_ARGUMENT in gRPC \u2014 and the core is never even called."
+        "description": "A provisioning request.\n\n`min_tier` has NO default, and that is what makes the rule hold: an optional\nfield with a default value would be the presumption coming back in through\nthe back door. Without it, validation refuses right here — a 422 in REST,\nINVALID_ARGUMENT in gRPC — and the core is never even called."
       },
       "NewThread": {
         "properties": {
@@ -5486,31 +5508,31 @@
           },
           "input_tokens": {
             "type": "integer",
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Input Tokens",
             "default": 0
           },
           "output_tokens": {
             "type": "integer",
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Output Tokens",
             "default": 0
           },
           "cache_read_tokens": {
             "type": "integer",
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Cache Read Tokens",
             "default": 0
           },
           "cache_creation_tokens": {
             "type": "integer",
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Cache Creation Tokens",
             "default": 0
           },
           "cost_micros": {
             "type": "integer",
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Cost Micros",
             "default": 0
           },
@@ -5622,7 +5644,7 @@
           "target_scope"
         ],
         "title": "PromotionTarget",
-        "description": "The level the flow moves up to (demand \u2192 project \u2192 workspace \u2192 account)."
+        "description": "The level the flow moves up to (demand → project → workspace → account)."
       },
       "Provenance": {
         "properties": {
@@ -5653,7 +5675,7 @@
         },
         "type": "object",
         "title": "Provenance",
-        "description": "The chain's trail, structured \u2014 see the module's docstring."
+        "description": "The chain's trail, structured — see the module's docstring."
       },
       "PullRequest": {
         "properties": {
@@ -5898,7 +5920,7 @@
         },
         "type": "object",
         "title": "RoutingView",
-        "description": "The core's decision, with the WHOLE justification (ADR-0011 \u00a73)."
+        "description": "The core's decision, with the WHOLE justification (ADR-0011 §3)."
       },
       "RunTurn": {
         "properties": {
@@ -5925,8 +5947,8 @@
           },
           "max_output_tokens": {
             "type": "integer",
-            "maximum": 64000.0,
-            "minimum": 256.0,
+            "maximum": 64000,
+            "minimum": 256,
             "title": "Max Output Tokens",
             "default": 8192
           }
@@ -6193,7 +6215,7 @@
           "status"
         ],
         "title": "StageTransition",
-        "description": "Where the stage goes. The vocabulary is closed and validated HERE, in the\nuse case: that way the refusal of an invented status holds on both\ntransports \u2014 a 422 in REST, INVALID_ARGUMENT in gRPC \u2014 with no repeated check\nin the adapter."
+        "description": "Where the stage goes. The vocabulary is closed and validated HERE, in the\nuse case: that way the refusal of an invented status holds on both\ntransports — a 422 in REST, INVALID_ARGUMENT in gRPC — with no repeated check\nin the adapter."
       },
       "StepUpResponse": {
         "properties": {
@@ -6253,7 +6275,7 @@
           "integration_id"
         ],
         "title": "TaskManagerBinding",
-        "description": "The project's binding to the provider's board.\n\n`external_space_id` is THEIR space, never our word workspace. `card_types`\ncomes from the provider and is dynamic \u2014 the platform imposes no card\nvocabulary."
+        "description": "The project's binding to the provider's board.\n\n`external_space_id` is THEIR space, never our word workspace. `card_types`\ncomes from the provider and is dynamic — the platform imposes no card\nvocabulary."
       },
       "Thread": {
         "properties": {
@@ -6546,6 +6568,20 @@
         ],
         "title": "ValidationReport",
         "description": "A report, not an error: the screen marks the problematic stages with the list."
+      },
+      "VerificationRequested": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "VerificationRequested",
+        "description": "What came back is the address it went to, and nothing else.\n\nDeliberately not \"whether the account exists\": answering that would turn\nthis endpoint into a way of asking whether an address is registered here."
       },
       "VerifyRequest": {
         "properties": {

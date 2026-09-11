@@ -110,6 +110,7 @@ import type {
   TreeNode,
   TurnOutcome,
   ValidationReport,
+  VerificationRequested,
   VerifyRequest,
   WorkspaceSummary
 } from './api.schemas';
@@ -280,6 +281,80 @@ export function useMe<TData = Awaited<ReturnType<typeof me>>, TError = ErrorType
 
 
 
+
+export const getSendEmailVerificationUrl = () => {
+
+
+
+
+  return `/api/v1/verification/email`
+}
+
+/**
+ * Sends the message that proves this credential's e-mail.
+
+It takes NO body: the address comes from the verified token. See the use
+case for why that is not a convenience.
+ * @summary Send Email Verification
+ */
+export const sendEmailVerification = async ( options?: RequestInit): Promise<VerificationRequested> => {
+
+  return customFetch<VerificationRequested>(getSendEmailVerificationUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSendEmailVerificationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendEmailVerification>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendEmailVerification>>, TError,void, TContext> => {
+
+const mutationKey = ['sendEmailVerification'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendEmailVerification>>, void> = () => {
+
+
+          return  sendEmailVerification(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendEmailVerificationMutationResult = NonNullable<Awaited<ReturnType<typeof sendEmailVerification>>>
+
+    export type SendEmailVerificationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Send Email Verification
+ */
+export const useSendEmailVerification = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendEmailVerification>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendEmailVerification>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSendEmailVerificationMutationOptions(options));
+    }
 
 export const getListAccountsUrl = () => {
 
@@ -5363,10 +5438,10 @@ export const getProvisionSandboxUrl = () => {
 **`min_tier` is MANDATORY** — `hardware`, `kernel_emulated` or `namespace`.
 Omitting it is a 422, and it is a 422 on purpose: the platform does not
 choose the isolation of code it did not write, and a default would choose
-downwards. If the substrate does not offer the requested level, the core
+downwards. If the executor does not offer the requested level, the core
 REFUSES with a message — it never silently delivers a lower one.
 
-The response's `tier` is what the substrate DELIVERED, not what was asked
+The response's `tier` is what the executor DELIVERED, not what was asked
 for.
  * @summary Provision Sandbox
  */

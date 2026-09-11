@@ -124,5 +124,6 @@ export * from './usageEventSummary';
 export * from './validationError';
 export * from './validationErrorCtx';
 export * from './validationReport';
+export * from './verificationRequested';
 export * from './verifyRequest';
 export * from './workspaceSummary';
