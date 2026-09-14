@@ -38,8 +38,23 @@ function emailOf(err: unknown): string {
   return '';
 }
 
+function statusOf(err: unknown): number | null {
+  if (typeof err !== 'object' || err === null || !('status' in err)) return null;
+  const status = (err as { status: unknown }).status;
+  return typeof status === 'number' ? status : null;
+}
+
 export function decideFromAuthError(err: unknown): AuthDecision {
+  // The BFF's verification route is a generated-client call, so its
+  // rate-limit error has an HTTP status rather than a Firebase `code`.
+  const status = statusOf(err);
+  if (status === 429) return { kind: 'rate-limited' };
+
   const code = codeOf(err);
+  if (!code && status !== null) {
+    return { kind: 'unknown', code: `HTTP ${status}` };
+  }
+
   switch (code) {
     // Three codes, one answer. Which of them Firebase returns depends on the
     // project's e-mail-enumeration protection, and the person must not be able

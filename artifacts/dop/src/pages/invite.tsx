@@ -104,7 +104,10 @@ export default function Invite() {
                   // Switching to the account just joined: whoever accepts an
                   // invite wants to be inside, and the response already carries
                   // it so there is no second round trip.
-                  setActiveAccount(r.account_id);
+                  // Acceptance changes membership even when the accepted
+                  // account was already selected, so force the same central
+                  // cache boundary used by selector and session transitions.
+                  setActiveAccount(r.account_id, { force: true });
                   navigate('/');
                 },
                 onError: (e) => {

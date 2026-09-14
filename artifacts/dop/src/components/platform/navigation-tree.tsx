@@ -22,6 +22,7 @@ import { getGetTreeQueryKey, useGetTree } from '@workspace/api-client-react';
 
 import { useAccount } from '../../lib/platform/account';
 import { useI18n } from '../../lib/i18n';
+import { Button } from '../ui/button';
 
 export function NavigationTree() {
   const { activeAccount } = useAccount();
@@ -55,6 +56,9 @@ export function NavigationTree() {
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="navigation-tree">
       <div className="px-3 pb-2 pt-3">
+        <Button asChild variant="outline" size="sm" className="mb-2 w-full">
+          <NavLink to="/workspaces/new">{t('workspace.new')}</NavLink>
+        </Button>
         <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background/60 px-2">
           <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <input
@@ -110,6 +114,13 @@ export function NavigationTree() {
 
                 {!isCollapsed ? (
                   <div className="ml-4 border-l border-border/50 pl-2">
+                    <NavLink
+                      to={`/workspaces/${encodeURIComponent(node.workspace.id)}`}
+                      className="block rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      data-testid={`link-workspace-${node.workspace.id}`}
+                    >
+                      {t('cockpit.resources.title')}
+                    </NavLink>
                     {(node.projects ?? []).length === 0 ? (
                       <p className="px-2 py-1 text-[11px] italic text-muted-foreground/70">
                         {t('tree.noProjects')}

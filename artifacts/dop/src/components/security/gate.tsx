@@ -21,20 +21,30 @@ import {
 
 import { SecondFactorSettings } from './second-factor-settings';
 import { StepUp } from './step-up';
+import { useAccount } from '../../lib/platform/account';
 import { useI18n } from '../../lib/i18n';
 
 export function SecondFactorGate({ children }: { children: React.ReactNode }) {
   const t = useI18n((s) => s.t);
+  const { activeAccount, loading: accountLoading, error: accountError } = useAccount();
   const { data, isLoading, error, refetch } = useSecondFactorState({
-    query: { queryKey: getSecondFactorStateQueryKey(), retry: false },
+    query: {
+      queryKey: getSecondFactorStateQueryKey(),
+      enabled: Boolean(activeAccount),
+      retry: false,
+    },
   });
 
-  if (isLoading) {
+  if (accountLoading || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background text-xs text-muted-foreground">
         {t('auth.restoring')}
       </div>
     );
+  }
+
+  if (accountError) {
+    return <p role="alert" className="p-6 text-sm text-destructive">{(accountError as Error).message}</p>;
   }
 
   // A failure reading the state does NOT block the cockpit. The gate that

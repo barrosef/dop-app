@@ -71,6 +71,19 @@ describe('decideFromAuthError', () => {
     });
   });
 
+  it('recognizes the generated backend client’s HTTP rate limit', () => {
+    expect(decideFromAuthError({ status: 429 })).toEqual({
+      kind: 'rate-limited',
+    });
+  });
+
+  it('keeps a non-rate-limit backend status visible', () => {
+    expect(decideFromAuthError({ status: 503 })).toEqual({
+      kind: 'unknown',
+      code: 'HTTP 503',
+    });
+  });
+
   it('tells a browser-blocked popup apart from one the person closed', () => {
     // The person never saw anything to abandon — the fix is to allow popups,
     // which only makes sense if the message says so instead of reading as a

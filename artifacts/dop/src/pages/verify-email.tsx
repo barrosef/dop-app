@@ -18,6 +18,12 @@ import { useSession } from '../lib/platform/session';
 import { decideFromAuthError, type AuthDecision } from '../lib/platform/auth-errors';
 import { auth } from '../lib/platform/firebase';
 import { useI18n } from '../lib/i18n';
+import {
+  verificationErrorDetail,
+  isVerificationRateLimited,
+  verificationErrorCode,
+  verificationRetryAfterSeconds,
+} from '../lib/platform/verification-errors';
 
 type T = ReturnType<typeof useI18n.getState>['t'];
 
@@ -25,37 +31,89 @@ type T = ReturnType<typeof useI18n.getState>['t'];
 // kind is the one the person will realistically hit; anything else still
 // gets a real message instead of leaving the click looking like it did
 // nothing.
-function messageFor(t: T, decision: AuthDecision): string {
+function messageFor(t: T, decision: AuthDecision, failure: unknown): string {
+  if (isVerificationRateLimited(failure)) return t('auth.error.rateLimited');
   if (decision.kind === 'rate-limited') return t('auth.error.rateLimited');
   return t('auth.error.unknown', {
-    code: decision.kind === 'unknown' ? decision.code : decision.kind,
+    code: decision.kind === 'unknown' ? verificationErrorCode(failure) : decision.kind,
   });
 }
 
+function applyResendFailure(
+  t: T,
+  failure: unknown,
+  setResendError: (message: string) => void,
+  setResendDetail: (detail: string) => void,
+  setRetryAfterSeconds: (seconds: number | null) => void,
+) {
+  const rateLimited = isVerificationRateLimited(failure);
+  const detail = rateLimited ? verificationErrorDetail(failure) : null;
+  setResendError(messageFor(t, decideFromAuthError(failure), failure));
+  setResendDetail(detail ?? '');
+  setRetryAfterSeconds(verificationRetryAfterSeconds(failure));
+}
+
 export default function VerifyEmail() {
-  const { sendVerification, signOut } = useSession();
+  const {
+    sendVerification,
+    signOut,
+    verificationSent,
+    verificationEmail,
+    verificationError,
+  } = useSession();
   const navigate = useNavigate();
   const t = useI18n((s) => s.t);
   const [resent, setResent] = React.useState(false);
   const [resendError, setResendError] = React.useState('');
+  const [resendDetail, setResendDetail] = React.useState('');
+  const [retryAfterSeconds, setRetryAfterSeconds] = React.useState<number | null>(null);
   const [notYet, setNotYet] = React.useState(false);
   const [checking, setChecking] = React.useState(false);
 
   const user = auth.currentUser;
+
+  React.useEffect(() => {
+    if (!verificationError) {
+      setResendError('');
+      setResendDetail('');
+      setRetryAfterSeconds(null);
+      return;
+    }
+    setResent(false);
+    applyResendFailure(
+      t,
+      verificationError,
+      setResendError,
+      setResendDetail,
+      setRetryAfterSeconds,
+    );
+  }, [t, verificationError]);
+
   if (!user) return <Navigate to="/sign-in" replace />;
 
   async function onResend() {
     setResent(false);
     setResendError('');
+    setResendDetail('');
+    setRetryAfterSeconds(null);
     try {
-      await sendVerification();
-      setResent(true);
+      const response = await sendVerification();
+      // A null response means the Firebase identity changed while the
+      // request was in flight. Session state was discarded; do not claim a
+      // resend for the new identity.
+      if (response) setResent(true);
     } catch (failure) {
       // Unlike `signUp`'s own send, this button IS the person's recourse —
       // letting the rejection (routinely `auth/too-many-requests`, since the
       // resend is deliberately rate-limited) go unhandled would make that
       // recourse fail as silently as the thing it exists to fix.
-      setResendError(messageFor(t, decideFromAuthError(failure)));
+      applyResendFailure(
+        t,
+        failure,
+        setResendError,
+        setResendDetail,
+        setRetryAfterSeconds,
+      );
     }
   }
 
@@ -100,9 +158,18 @@ export default function VerifyEmail() {
           <MailCheck className="h-6 w-6 text-primary" />
           <h1 className="text-lg font-bold tracking-tight">{t('auth.verify.title')}</h1>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {t('auth.verify.sent', { email: user.email ?? '' })}
-        </p>
+        {verificationSent || resent ? (
+          <p
+            className="text-xs text-muted-foreground"
+            data-testid={resent ? 'text-verify-resent' : 'text-verify-sent'}
+          >
+            {resent
+              ? t('auth.verify.resent')
+              : t('auth.verify.sent', {
+                  email: verificationEmail ?? user.email ?? '',
+                })}
+          </p>
+        ) : null}
 
         {notYet ? (
           <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
@@ -114,14 +181,22 @@ export default function VerifyEmail() {
         {resendError ? (
           <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span data-testid="text-verify-resend-error">{resendError}</span>
+            <div className="space-y-1">
+              <span data-testid="text-verify-resend-error">{resendError}</span>
+              {resendDetail ? (
+                <span className="block" data-testid="text-verify-resend-detail">
+                  {resendDetail}
+                </span>
+              ) : null}
+              {retryAfterSeconds !== null ? (
+                <span className="block" data-testid="text-verify-retry-after">
+                  {t('wizard.onboarding.phone.retryAfter', {
+                    s: retryAfterSeconds,
+                  })}
+                </span>
+              ) : null}
+            </div>
           </div>
-        ) : null}
-
-        {resent ? (
-          <p className="text-xs text-muted-foreground" data-testid="text-verify-resent">
-            {t('auth.verify.resent')}
-          </p>
         ) : null}
 
         <button

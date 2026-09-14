@@ -1,7 +1,7 @@
 # Retiring the mock client
 
-**Type:** migration, in slices. **Needs the API?** It is already there — 64
-endpoints, in the committed spec. **Size:** larger than it looks. Read the
+**Type:** migration, in slices. **Needs the API?** It is already there — the
+committed spec defines the supported operations. **Size:** larger than it looks. Read the
 second section before planning anything.
 
 Read [`RAILS.md`](../../../RAILS.md) first. §1 and §2 are the whole reason this
@@ -36,7 +36,7 @@ What is actually there, verified file by file:
 - Orval is configured at `lib/api-spec/orval.config.ts`, with a transformer that
   turns FastAPI's `get_cockpit_api_v1_demands__demand_id__cockpit_get` back into
   `useGetCockpit` — so the hook names match the BFF's own function names.
-- `lib/api-client-react/src/generated/` holds **81** query and mutation hooks.
+- `lib/api-client-react/src/generated/` already holds the query and mutation hooks.
 - `lib/platform/backend.ts` wires them to the BFF: base URL from the
   environment, `Authorization: Bearer <Firebase ID token>`, and `x-account-id`
   read from the store on **every** request.
@@ -117,3 +117,26 @@ A missing field is backend work, and backend work here is fast.
 - [ ] No rule was reproduced: no permission computed from a role name, no
       ordering imposed on a list the API already ordered, no severity decided
       from a status string.
+
+## Integration report — retired card-execution panels
+
+The former `card-execution.tsx` was a mock-only product surface and has been
+retired rather than ported. Its panels were audited against the generated
+contract before removal:
+
+| panel | disposition |
+|---|---|
+| demand identity, effective-flow ruler, stage status and artifacts | available in `pages/demand.tsx`, rendered from `GET /demands/{id}/cockpit` |
+| threads and agent turns | available in `pages/demand.tsx`; `useRunTurn` calls `POST /demands/{id}/threads/{thread_id}/turns` with an idempotency key, displays the outcome and refreshes the cockpit |
+| provider card details and RFC/PRD document viewer | unsupported; the cockpit response has no provider-card body or document content |
+| plan editor and test-plan editor | unsupported; `Stage` exposes type/status/gate/artifacts only |
+| execution task/file progress and diffs | unsupported; no execution dossier or file/diff endpoint is in the contract |
+| test result filters, Allure report and live test logs | unsupported; no test result, Allure or test-log endpoint is in the contract |
+| human validation checklist and locally inferred pass/fail state | unsupported; a gate decision endpoint exists, but the client must not infer checklist state |
+| finalization animation, commit totals, branch/PR management and conflict resolution | unsupported in the demand cockpit; delivery APIs must be integrated in a separate slice |
+| runtime apps, services and service logs | unsupported by the resources contract; `/resources` returns account integrations, not runtime telemetry |
+
+The workspace route now reads the generated workspace/resource hooks and keeps
+the terminal as a separate **LOCAL preview** surface. It does not present
+account resources as GCP runtime resources, and the local terminal remains
+reachable when the real resource list is empty.

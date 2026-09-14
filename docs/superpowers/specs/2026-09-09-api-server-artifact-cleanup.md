@@ -17,9 +17,9 @@ Its `package.json`, however, declares:
 "@workspace/db": ...
 ```
 
-An ORM and a database package. **Neither is imported anywhere in `src/`** — this
-was checked file by file, not assumed — and `packages/` does not exist in this
-workspace, so `@workspace/db` does not even resolve.
+An ORM and a database package. **Neither is imported anywhere in `src/`**.
+The database package resolves from `lib/db`; the issue is its unused dependency
+in the terminal server, not workspace resolution.
 
 ## Why it is worth ten minutes
 

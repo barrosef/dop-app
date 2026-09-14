@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   BrowserRouter,
   Routes,
@@ -12,7 +11,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { Layout } from '@/components/layout';
 
 import { Shell } from '@/components/platform/shell';
 import { SecondFactorGate } from '@/components/security/gate';
@@ -29,9 +27,8 @@ import Demand from '@/pages/demand';
 import Invite from '@/pages/invite';
 import Account from '@/pages/account';
 
-import Home from '@/pages/home';
-import WorkspaceWizard from '@/pages/workspace-wizard';
 import WorkspaceCockpit from '@/pages/workspace-cockpit';
+import WorkspaceCreate from '@/pages/workspace-create';
 import NotFound from '@/pages/not-found';
 import Onboarding from '@/pages/onboarding';
 
@@ -129,15 +126,17 @@ function CardsRedirect() {
   return <Navigate to={`/workspaces/${id}`} replace />;
 }
 
+function WorkspaceEditRedirect() {
+  const { id } = useParams();
+  return <Navigate to={id ? `/workspaces/${id}` : '/'} replace />;
+}
+
 function CardRedirect() {
-  const { id, cardId, demandId } = useParams();
-  const selectedCardId = cardId ?? demandId;
-  return (
-    <Navigate
-      to={`/workspaces/${id}${selectedCardId ? `?card=${selectedCardId}` : ''}`}
-      replace
-    />
-  );
+  const { cardId, demandId } = useParams();
+  // A legacy card id is not a demand id. Do not silently send it to the
+  // cockpit and make the BFF request look like a valid demand lookup.
+  if (cardId) return <Navigate to="/" replace />;
+  return <Navigate to={demandId ? `/demands/${demandId}` : '/'} replace />;
 }
 
 /**
@@ -169,19 +168,6 @@ function AuthenticatedShell() {
 }
 
 /**
- * The old screens, which still talk to the MOCK client (`lib/api/mockClient`).
- * They stay under `/workspaces/*`, with the old shell, until they migrate to the
- * API — and their sidebar says, on the screen, that the data is an example.
- */
-function MockupShell() {
-  return (
-    <Layout>
-      <Outlet />
-    </Layout>
-  );
-}
-
-/**
  * The invite's route: it needs a SESSION (the core refuses to read an invite
  * without one) and it does NOT need an active account.
  */
@@ -207,10 +193,19 @@ function App() {
               <Routes>
                 <Route element={<AuthenticatedShell />}>
                   <Route path="/" element={<Start />} />
+                  <Route path="/workspaces" element={<Navigate to="/" replace />} />
+                  <Route path="/demands" element={<Navigate to="/" replace />} />
                   <Route path="/onboarding" element={<><Start /><Onboarding /></>} />
                   <Route path="/projects/:projectId" element={<Project />} />
                   <Route path="/demands/:demandId" element={<Demand />} />
                   <Route path="/account" element={<Account />} />
+                  <Route path="/workspaces/new" element={<WorkspaceCreate />} />
+                  <Route path="/workspaces/:id/edit" element={<WorkspaceEditRedirect />} />
+                  <Route path="/workspaces/:id" element={<WorkspaceCockpit />} />
+                  <Route path="/workspaces/:id/cards" element={<CardsRedirect />} />
+                  <Route path="/workspaces/:id/cards/:cardId" element={<CardRedirect />} />
+                  <Route path="/workspaces/:id/demands" element={<CardsRedirect />} />
+                  <Route path="/workspaces/:id/demands/:demandId" element={<CardRedirect />} />
                 </Route>
 
                 {/* The invite's link lands here, and it is OUTSIDE the shell:
@@ -227,35 +222,6 @@ function App() {
                 <Route path="/sign-in" element={<SignInRoute />} />
                 <Route path="/link-provider" element={<LinkProvider />} />
                 <Route path="/verify-email" element={<VerifyEmailRoute />} />
-
-                <Route element={<MockupShell />}>
-                  <Route path="/workspaces/new" element={<WorkspaceWizard />} />
-                  <Route
-                    path="/workspaces/:id/edit"
-                    element={<WorkspaceWizard />}
-                  />
-                  <Route
-                    path="/workspaces/:id"
-                    element={<WorkspaceCockpit />}
-                  />
-                  <Route
-                    path="/workspaces/:id/cards"
-                    element={<CardsRedirect />}
-                  />
-                  <Route
-                    path="/workspaces/:id/cards/:cardId"
-                    element={<CardRedirect />}
-                  />
-                  <Route
-                    path="/workspaces/:id/demands"
-                    element={<CardsRedirect />}
-                  />
-                  <Route
-                    path="/workspaces/:id/demands/:demandId"
-                    element={<CardRedirect />}
-                  />
-                  <Route path="/mockup" element={<Home />} />
-                </Route>
 
                 <Route path="*" element={<NotFound />} />
               </Routes>

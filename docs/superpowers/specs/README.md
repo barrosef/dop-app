@@ -40,7 +40,7 @@ thrown away. `RAILS.md` §1 says why.
 | [`2026-09-06-profile-onboarding-wizard.md`](2026-09-06-profile-onboarding-wizard.md) | yes — blocked, operations listed in §7 |
 | [`2026-09-09-account-role-in-the-selector.md`](2026-09-09-account-role-in-the-selector.md) | no — the API already ships it, and the contract did not change |
 | [`2026-09-09-api-server-artifact-cleanup.md`](2026-09-09-api-server-artifact-cleanup.md) | no — one file, no API involved |
-| [`2026-09-09-retire-the-mock-client.md`](2026-09-09-retire-the-mock-client.md) | the API is there; the generated hooks are not yet — slice 0 creates them |
+| [`2026-09-09-retire-the-mock-client.md`](2026-09-09-retire-the-mock-client.md) | the API and generated hooks already exist — migrate one screen per slice |
 
 ## Commit subjects
 

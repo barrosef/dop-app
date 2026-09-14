@@ -180,7 +180,7 @@ export function AttentionLiveProvider({
     queryClient.invalidateQueries({ queryKey: getListAttentionQueryKey() });
   }, [queryClient]);
 
-  const state = useAttentionStream(onUpdate, Boolean(activeAccount));
+  const state = useAttentionStream(onUpdate, activeAccount);
 
   return <LiveContext.Provider value={state}>{children}</LiveContext.Provider>;
 }

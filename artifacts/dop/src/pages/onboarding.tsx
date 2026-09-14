@@ -27,6 +27,7 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp';
 import { useI18n } from '@/lib/i18n';
+import { useAccount } from '@/lib/platform/account';
 
 const STEPS = [
   { id: 'phone', i18nKey: 'wizard.onboarding.rail.phone' },
@@ -145,6 +146,7 @@ function ErrorNotice({ error }: { error: unknown }) {
 export default function Onboarding() {
   const t = useI18n((state) => state.t);
   const navigate = useNavigate();
+  const { activeAccount } = useAccount();
   const [skipped, setSkipped] = useState(false);
   const skipTimer = useRef<number | null>(null);
 
@@ -154,6 +156,8 @@ export default function Onboarding() {
     },
     [],
   );
+
+  if (!activeAccount) return null;
 
   const handleSkip = () => {
     if (skipped) return;

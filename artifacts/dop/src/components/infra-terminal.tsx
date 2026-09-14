@@ -105,7 +105,11 @@ export function InfraTerminal({
 
       if (message.type === 'output') terminal.write(message.data);
       if (message.type === 'ready') {
-        terminal.writeln(`\x1b[90mConnected to ${message.resourceName} · ${message.cwd}\x1b[0m`);
+        const label =
+          message.resourceName === 'local-preview'
+            ? t('cockpit.infrastructure.localPreview')
+            : message.resourceName;
+        terminal.writeln(`\x1b[90m${label} · ${message.cwd}\x1b[0m`);
       }
       if (message.type === 'exit') {
         terminal.writeln(`\r\n\x1b[90mShell exited (${message.exitCode}).\x1b[0m`);
@@ -153,7 +157,7 @@ export function InfraTerminal({
           <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${status === 'connected' ? 'bg-emerald-400' : status === 'error' ? 'bg-red-400' : status === 'connecting' ? 'animate-pulse bg-amber-400' : 'bg-muted-foreground'}`} />
           <span className="truncate">{statusCopy[status]}</span>
         </span>
-        <span className="shrink-0 text-[9px] text-muted-foreground">{t('cockpit.infrastructure.terminalServerWarning')}</span>
+        <span className="shrink-0 text-[9px] text-muted-foreground">{t('cockpit.infrastructure.localPreview')}</span>
       </div>
       <div ref={terminalElementRef} onClick={() => terminalElementRef.current?.querySelector('textarea')?.focus()} className="min-h-0 flex-1 overflow-hidden p-2 sm:p-3" data-testid="infra-web-terminal" />
     </div>

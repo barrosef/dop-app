@@ -64,7 +64,7 @@ export default function Account() {
 
       <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-6 py-5">
         <section className="max-w-lg">
-          <SecondFactorSettings />
+          {activeAccount ? <SecondFactorSettings /> : null}
         </section>
 
         {activeAccount ? (

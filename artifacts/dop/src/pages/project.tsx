@@ -19,6 +19,7 @@ import {
 } from '@workspace/api-client-react';
 
 import { useI18n } from '../lib/i18n';
+import { useAccount } from '../lib/platform/account';
 
 function Tag({
   text,
@@ -82,10 +83,11 @@ function DemandRow({ demand }: { demand: Demand }) {
 export default function Project() {
   const { projectId = '' } = useParams();
   const t = useI18n((s) => s.t);
+  const { activeAccount } = useAccount();
   const project = useGetProject(projectId, {
     query: {
       queryKey: getGetProjectQueryKey(projectId),
-      enabled: Boolean(projectId),
+      enabled: Boolean(projectId && activeAccount),
     },
   });
   const demands = useListDemands(
@@ -93,7 +95,7 @@ export default function Project() {
     {
       query: {
         queryKey: getListDemandsQueryKey({ project_id: projectId }),
-        enabled: Boolean(projectId),
+        enabled: Boolean(projectId && activeAccount),
       },
     },
   );

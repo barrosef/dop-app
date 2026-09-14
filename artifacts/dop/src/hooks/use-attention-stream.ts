@@ -29,7 +29,6 @@
 import React from 'react';
 
 import { API_BASE_URL } from '../lib/platform/config';
-import { getActiveAccount } from '../lib/platform/active-account';
 import { currentIdToken } from '../lib/platform/firebase';
 
 export type StreamState = 'connecting' | 'live' | 'unavailable';
@@ -76,7 +75,7 @@ function splitFrames(buffer: string): { frames: Frame[]; rest: string } {
 
 export function useAttentionStream(
   onUpdate: (update: AttentionUpdateEvent) => void,
-  active: boolean,
+  activeAccount: string,
 ): StreamState {
   const [state, setState] = React.useState<StreamState>('connecting');
   const cursor = React.useRef<string>('');
@@ -90,11 +89,15 @@ export function useAttentionStream(
   }, [onUpdate]);
 
   React.useEffect(() => {
-    if (!active) {
+    // Cursors belong to one account's event log. A Boolean(activeAccount)
+    // dependency would keep replaying the previous account's cursor.
+    cursor.current = '';
+    if (!activeAccount) {
       setState('unavailable');
       return;
     }
 
+    const accountId = activeAccount;
     const controller = new AbortController();
     let alive = true;
     // A growing backoff: against a 401 or a core that is down, trying every
@@ -111,14 +114,14 @@ export function useAttentionStream(
           }
 
           const token = await currentIdToken();
-          const account = getActiveAccount();
+          if (!alive) return;
           const response = await fetch(url.toString(), {
             method: 'GET',
             signal: controller.signal,
             headers: {
               Accept: 'text/event-stream',
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
-              ...(account ? { 'x-account-id': account } : {}),
+              'x-account-id': accountId,
             },
           });
 
@@ -144,6 +147,7 @@ export function useAttentionStream(
             buffer = rest;
 
             for (const frame of frames) {
+              if (!alive) break;
               // Only a cursor the SERVER sent is kept.
               if (frame.id) cursor.current = frame.id;
 
@@ -191,7 +195,7 @@ export function useAttentionStream(
       alive = false;
       controller.abort();
     };
-  }, [active]);
+  }, [activeAccount]);
 
   return state;
 }

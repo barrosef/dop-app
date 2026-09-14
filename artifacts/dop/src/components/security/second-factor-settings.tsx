@@ -36,6 +36,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useI18n } from '../../lib/i18n';
+import { useAccount } from '../../lib/platform/account';
 
 const ICON = {
   totp: KeyRound,
@@ -46,7 +47,10 @@ const ICON = {
 export function SecondFactorSettings() {
   const t = useI18n((s) => s.t);
   const queryClient = useQueryClient();
-  const { data, isLoading, error } = useSecondFactorState();
+  const { activeAccount } = useAccount();
+  const { data, isLoading, error } = useSecondFactorState({
+    query: { queryKey: getSecondFactorStateQueryKey(), enabled: Boolean(activeAccount) },
+  });
 
   const [adding, setAdding] = React.useState(false);
   const [codes, setCodes] = React.useState<string[] | null>(null);

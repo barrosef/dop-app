@@ -80,7 +80,7 @@ hand edit.
 | The wiring to the BFF | `artifacts/dop/src/lib/platform/backend.ts` |
 | The session and the active account | `artifacts/dop/src/lib/platform/{session,account,active-account}.tsx` |
 | The screens wired to the real thing | `artifacts/dop/src/pages/{start,project,demand,sign-in}.tsx` |
-| The old screens, on MOCK data | `artifacts/dop/src/pages/{home,workspace-*}.tsx` (the `/workspaces/*` routes) |
+| Workspace creation and resources | `artifacts/dop/src/pages/{workspace-create,workspace-cockpit}.tsx` — generated BFF hooks; the terminal is explicitly local |
 
 ## Architecture decisions
 
@@ -98,6 +98,14 @@ hand edit.
 - **The `api-server` (Express) no longer serves an API.** After the BFF arrived,
   what was left in it is the local terminal's websocket (`/api/terminal`) and a
   process probe. See the integration slice's report for the recommendation.
+- **Mock-only screens have been retired.** The demand cockpit renders the BFF
+  projection and executes agent turns with an idempotency key. Unsupported
+  legacy panels are listed in the mock-retirement spec; do not recreate them
+  with simulated data.
+- **The local terminal is not a remote GCP shell.** Its existing development
+  WebSocket checks Origin but does not authorize the operator on the server.
+  Do not expose it as a shared remote terminal without explicit authentication,
+  operator authorization, and execution isolation.
 
 ## Gotchas
 

@@ -16,6 +16,14 @@ import { useUiStore } from '../../store/uiStore';
 import { useAccount } from '../../lib/platform/account';
 import { useSession } from '../../lib/platform/session';
 import { useI18n } from '../../lib/i18n';
+import { accountRoleTranslationKey } from './account-role';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 import { NavigationTree } from './navigation-tree';
 import { AttentionLiveProvider, AttentionBell } from './attention-box';
 
@@ -38,20 +46,49 @@ function AccountSelector() {
     );
   }
 
+  const selectedAccount = accounts.some((account) => account.id === activeAccount)
+    ? activeAccount
+    : accounts[0].id;
+
   return (
-    <select
-      value={activeAccount}
-      onChange={(e) => switchAccount(e.target.value)}
-      className="h-8 rounded-md border border-border bg-background px-2 text-xs outline-none"
-      title={t('shell.accounts.title')}
-      data-testid="account-selector"
+    <Select
+      value={selectedAccount}
+      onValueChange={switchAccount}
     >
-      {accounts.map((account) => (
-        <option key={account.id} value={account.id}>
-          {account.display_name || account.handle}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger
+        className="h-8 w-[220px] border-border bg-background text-xs"
+        title={t('shell.accounts.title')}
+        data-testid="account-selector"
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {accounts.map((account) => {
+          const roleKey = accountRoleTranslationKey(account.role);
+          const name = account.display_name || account.handle;
+
+          return (
+            <SelectItem
+              key={account.id}
+              value={account.id}
+              data-testid={`account-option-${account.id}`}
+            >
+              <span className="flex items-center gap-2">
+                <span>{name}</span>
+                {roleKey ? (
+                  <span
+                    className="text-[10px] text-muted-foreground"
+                    data-testid={`account-role-${account.id}`}
+                  >
+                    {t(roleKey)}
+                  </span>
+                ) : null}
+              </span>
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
   );
 }
 
