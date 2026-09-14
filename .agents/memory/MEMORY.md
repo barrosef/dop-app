@@ -1,2 +1,1 @@
-- [DOP phase boundary](dop-phase-boundary.md) — the IDE experience is validated with mocks first; real providers and mutations are separate follow-up phases.
 - [Terminal development environment](terminal-development-environment.md) — managed dev workflow env may be absent; the PTY uses its API cwd only with an explicit warning.
