@@ -7,7 +7,7 @@
  */
 
 /**
- * The core's decision, with the WHOLE justification (ADR-0011 §3).
+ * The core's decision, with the WHOLE justification (ADR-0008 §3).
  */
 export interface RoutingView {
   task_kind?: string;

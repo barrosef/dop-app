@@ -1,6 +1,6 @@
 /**
  * The second factor's challenge — the screen that stands between the sign-in and
- * the cockpit (ADR-0027).
+ * the cockpit (ADR-0020).
  *
  * The rule is NOT here. Which factor answers, how many attempts are left and
  * for how long the session stays stepped up are the core's answers; this screen

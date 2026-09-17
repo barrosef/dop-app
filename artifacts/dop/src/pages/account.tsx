@@ -226,7 +226,7 @@ function MemberRow({
  *
  * Only integrations appear: a credential is CLOSED by nature and access to it is
  * exactly what has to be handed out one by one. Skills and workflows are open
- * within the account by default (ADR-0014 §6), so listing them here would offer
+ * within the account by default (ADR-0010 §6), so listing them here would offer
  * a grant that changes nothing.
  */
 function MemberGrants({ userId }: { userId: string }) {

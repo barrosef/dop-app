@@ -9,7 +9,7 @@ import type { DirectiveDecisionDecision } from './directiveDecisionDecision';
 
 /**
  * The decision is a free payload: each directive kind's shape is the
-techlead's (ADR-0015), and typing it here would freeze what is still being
+techlead's (ADR-0011), and typing it here would freeze what is still being
 discovered.
  */
 export interface DirectiveDecision {

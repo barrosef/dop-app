@@ -1,5 +1,5 @@
 /**
- * The second factor's gate in the cockpit (ADR-0027 §5).
+ * The second factor's gate in the cockpit (ADR-0020 §5).
  *
  * It decides between three screens, and the decision is NOT its own: the core
  * answers `required`, `enrolled` and `stepped_up` in one call, precisely so the

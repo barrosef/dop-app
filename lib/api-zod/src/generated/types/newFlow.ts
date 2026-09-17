@@ -8,7 +8,7 @@
 import type { StageSpec } from './stageSpec';
 
 /**
- * The flow goes in whole — v1 has no per-stage editing (ADR-0014 §2).
+ * The flow goes in whole — v1 has no per-stage editing (ADR-0010 §2).
  */
 export interface NewFlow {
   /** @minLength 1 */

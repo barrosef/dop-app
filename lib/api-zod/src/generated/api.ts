@@ -138,7 +138,7 @@ export const GetInviteApiV1InvitesInviteIdGetResponse = zod.object({
   "status": zod.string(),
   "expires_at": zod.union([zod.string(),zod.null()]).optional(),
   "usable": zod.boolean()
-}).describe('What whoever OPENS the link sees.\n\nIt does NOT carry the invitee\'s e-mail: whoever finds the link must not\nlearn an address from it (ADR-0026).')
+}).describe('What whoever OPENS the link sees.\n\nIt does NOT carry the invitee\'s e-mail: whoever finds the link must not\nlearn an address from it (ADR-0019).')
 
 
 /**
@@ -755,7 +755,7 @@ export const CreateFlowApiV1FlowsPostBody = zod.object({
   "gate": zod.string().default(createFlowApiV1FlowsPostBodyStagesItemGateDefault),
   "subtypes": zod.array(zod.string()).optional()
 })).optional()
-}).describe('The flow goes in whole — v1 has no per-stage editing (ADR-0014 §2).')
+}).describe('The flow goes in whole — v1 has no per-stage editing (ADR-0010 §2).')
 
 
 /**
@@ -834,7 +834,7 @@ export const ValidateFlowApiV1FlowsValidatePostBody = zod.object({
   "gate": zod.string().default(validateFlowApiV1FlowsValidatePostBodyStagesItemGateDefault),
   "subtypes": zod.array(zod.string()).optional()
 })).optional()
-}).describe('The flow goes in whole — v1 has no per-stage editing (ADR-0014 §2).')
+}).describe('The flow goes in whole — v1 has no per-stage editing (ADR-0010 §2).')
 
 export const ValidateFlowApiV1FlowsValidatePostResponse = zod.object({
   "valid": zod.boolean(),
@@ -906,7 +906,7 @@ export const UpdateFlowApiV1FlowsFlowIdPutBody = zod.object({
   "gate": zod.string().default(updateFlowApiV1FlowsFlowIdPutBodyStagesItemGateDefault),
   "subtypes": zod.array(zod.string()).optional()
 })).optional()
-}).describe('The flow goes in whole — v1 has no per-stage editing (ADR-0014 §2).')
+}).describe('The flow goes in whole — v1 has no per-stage editing (ADR-0010 §2).')
 
 export const updateFlowApiV1FlowsFlowIdPutResponseIdDefault = ``;
 export const updateFlowApiV1FlowsFlowIdPutResponseNameDefault = ``;
@@ -1522,7 +1522,7 @@ export const ListPullRequestsApiV1PullRequestsGetResponse = zod.array(ListPullRe
 
 
 /**
- * ONE repository's queue — it is the repository that serializes (ADR-0008).
+ * ONE repository's queue — it is the repository that serializes (ADR-0005).
  * @summary Get Merge Queue
  */
 export const GetMergeQueueApiV1ReposRepoIdMergeQueueGetParams = zod.object({
@@ -1552,7 +1552,7 @@ A refusal for want of green comes out as a 412 — the same thing the core's
 FAILED_PRECONDITION becomes on any other route (`app/platform/errors.py`) —
 but with the body carrying `missing` item by item, instead of a single
 sentence. It is that list that tells the dev what to arrange in order to get
-in (ADR-0007).
+in (ADR-0005).
  * @summary Enqueue Merge
  */
 export const EnqueueMergeApiV1ReposRepoIdMergeQueuePostParams = zod.object({
@@ -1597,7 +1597,7 @@ export const ListDirectivesApiV1DirectivesGetResponse = zod.array(ListDirectives
 
 
 /**
- * The coordination decision is the dev's; the techlead recommends (ADR-0015).
+ * The coordination decision is the dev's; the techlead recommends (ADR-0011).
  * @summary Decide Directive
  */
 export const DecideDirectiveApiV1DirectivesDirectiveIdDecisionPostParams = zod.object({
@@ -1612,7 +1612,7 @@ export const DecideDirectiveApiV1DirectivesDirectiveIdDecisionPostHeader = zod.o
 
 export const DecideDirectiveApiV1DirectivesDirectiveIdDecisionPostBody = zod.object({
   "decision": zod.record(zod.string(), zod.unknown()).optional()
-}).describe('The decision is a free payload: each directive kind\'s shape is the\ntechlead\'s (ADR-0015), and typing it here would freeze what is still being\ndiscovered.')
+}).describe('The decision is a free payload: each directive kind\'s shape is the\ntechlead\'s (ADR-0011), and typing it here would freeze what is still being\ndiscovered.')
 
 export const decideDirectiveApiV1DirectivesDirectiveIdDecisionPostResponseProjectIdDefault = ``;
 export const decideDirectiveApiV1DirectivesDirectiveIdDecisionPostResponseKindDefault = ``;
@@ -1630,13 +1630,13 @@ export const DecideDirectiveApiV1DirectivesDirectiveIdDecisionPostResponse = zod
 
 
 /**
- * The agent's carry-on luggage for this demand (ADR-0009 §3).
+ * The agent's carry-on luggage for this demand (ADR-0006 §3).
 
 `dropped` is the field that matters in this response: **`null` means the core
 did not report the drops** (today the `dop.v1` contract does not carry them),
 and not "nothing was dropped". When it comes filled in, `dropped.truncated`
 says in a single field whether the context fitted whole — the screen has to be
-able to warn that it did not (ADR-0012).
+able to warn that it did not (ADR-0008).
  * @summary Get Context Package
  */
 export const GetContextPackageApiV1DemandsDemandIdContextPackageGetParams = zod.object({
@@ -1700,7 +1700,7 @@ export const GetContextPackageApiV1DemandsDemandIdContextPackageGetResponse = zo
   "index": zod.number().default(getContextPackageApiV1DemandsDemandIdContextPackageGetResponseDroppedOneIndexDefault),
   "memories": zod.number().default(getContextPackageApiV1DemandsDemandIdContextPackageGetResponseDroppedOneMemoriesDefault),
   "truncated": zod.boolean().default(getContextPackageApiV1DemandsDemandIdContextPackageGetResponseDroppedOneTruncatedDefault)
-}).describe('What was LEFT OUT of the package, per layer (ADR-0012).\n\n`truncated` is derived — it is the only field the screen has to consult to\nsay \"the context was truncated\". It is derived here, and not in each client,\nbecause three clients deriving the same thing is how two of them get it\nwrong.'),zod.null()]).optional()
+}).describe('What was LEFT OUT of the package, per layer (ADR-0008).\n\n`truncated` is derived — it is the only field the screen has to consult to\nsay \"the context was truncated\". It is derived here, and not in each client,\nbecause three clients deriving the same thing is how two of them get it\nwrong.'),zod.null()]).optional()
 })
 
 
@@ -1814,13 +1814,13 @@ export const PutArtifactApiV1KnowledgeArtifactsPostBody = zod.object({
   "project_id": zod.string().default(putArtifactApiV1KnowledgeArtifactsPostBodyProjectIdDefault),
   "content_base64": zod.string().min(1),
   "meta": zod.record(zod.string(), zod.unknown()).optional()
-}).describe('A write into the knowledge base — the cycle\'s way back (ADR-0009 §4).\n\nThe content arrives in base64 because in the core\'s contract it is `bytes`:\na knowledge artifact is markdown, JSON or a generated map, in UTF-8 or not,\nand pretending it is a `str` would silently transcode whatever is not.')
+}).describe('A write into the knowledge base — the cycle\'s way back (ADR-0006 §4).\n\nThe content arrives in base64 because in the core\'s contract it is `bytes`:\na knowledge artifact is markdown, JSON or a generated map, in UTF-8 or not,\nand pretending it is a `str` would silently transcode whatever is not.')
 
 
 /**
  * Which model and which effort for this kind of work — and WHY.
 
-`reason` comes whole, with the policy's provenance up front ("ADR-0011 §3
+`reason` comes whole, with the policy's provenance up front ("ADR-0008 §3
 (draft — calibrate with telemetry, P-7): …"). It is not noise: it is what
 makes auditing the choice and recalibrating the table possible. A client that
 truncates that string is throwing away the only auditable part of the answer.
@@ -1937,7 +1937,7 @@ export const SetBudgetApiV1CostBudgetPutResponse = zod.object({
 /**
  * Records model consumption.
 
-**A blown budget answers 200, not a 4xx.** ADR-0011 §2's cut is soft: the
+**A blown budget answers 200, not a 4xx.** ADR-0008 §2's cut is soft: the
 demand pauses and asks, and consumption keeps being measured. The response
 brings `budget_exceeded`, the `notice` ready for the attention box and the
 blown budgets with the decision's numbers.
@@ -2215,13 +2215,13 @@ export const ResumeSandboxApiV1SandboxesSandboxIdResumePostResponse = zod.object
 /**
  * Runs one agent turn on this thread.
 
-**It answers 200 even when the budget is blown.** ADR-0011 §2's cut is soft:
+**It answers 200 even when the budget is blown.** ADR-0008 §2's cut is soft:
 the demand pauses and becomes an item in the attention box, and the turn that
 already ran comes back whole — the reply was published on the thread and so
 was the finding. `paused` and `notice` bring what the human needs to decide.
 
 **Live following does not come out through here.** The published messages
-are events (ADR-0006) and arrive through the SSE that already exists
+are events (ADR-0004) and arrive through the SSE that already exists
 (`GET /api/v1/stream/demands/{demand_id}`). This route returns the
 consolidated result; a second streaming path would be a second source of
 truth for the same timeline.
@@ -2300,7 +2300,7 @@ export const RunTurnApiV1DemandsDemandIdThreadsThreadIdTurnsPostResponse = zod.o
   "effort_applied": zod.string().default(runTurnApiV1DemandsDemandIdThreadsThreadIdTurnsPostResponseRoutingEffortAppliedDefault),
   "reason": zod.string().default(runTurnApiV1DemandsDemandIdThreadsThreadIdTurnsPostResponseRoutingReasonDefault),
   "from_agent_card": zod.boolean().default(runTurnApiV1DemandsDemandIdThreadsThreadIdTurnsPostResponseRoutingFromAgentCardDefault)
-}).optional().describe('The core\'s decision, with the WHOLE justification (ADR-0011 §3).'),
+}).optional().describe('The core\'s decision, with the WHOLE justification (ADR-0008 §3).'),
   "reply": zod.string().default(runTurnApiV1DemandsDemandIdThreadsThreadIdTurnsPostResponseReplyDefault),
   "message_ids": zod.array(zod.string()).optional(),
   "concluded": zod.boolean().default(runTurnApiV1DemandsDemandIdThreadsThreadIdTurnsPostResponseConcludedDefault),

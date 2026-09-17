@@ -1,10 +1,10 @@
 /**
- * Accepting an invite — the screen the e-mail's link leads to (P-32, ADR-0026).
+ * Accepting an invite — the screen the e-mail's link leads to (P-32, ADR-0019).
  *
  * Until today the link led to a 404: the acceptance existed in the core and
  * nothing reached it. This screen is the missing end.
  *
- * Two properties of ADR-0026 show up here as UI:
+ * Two properties of ADR-0019 show up here as UI:
  *
  *   - the preview does NOT say who the invite was for, so it can be opened by
  *     whoever holds the link without leaking an address;
