@@ -10,11 +10,12 @@
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, Moon, ShieldCheck, Sun, TerminalSquare } from 'lucide-react';
+import { Menu, TerminalSquare } from 'lucide-react';
 
 import { useUiStore } from '../../store/uiStore';
 import { useAccount } from '../../lib/platform/account';
-import { useSession } from '../../lib/platform/session';
+import { ProfileMenu } from './profile-menu';
+import { Button } from '../ui/button';
 import { useI18n } from '../../lib/i18n';
 import { accountRoleTranslationKey } from './account-role';
 import {
@@ -56,7 +57,8 @@ function AccountSelector() {
       onValueChange={switchAccount}
     >
       <SelectTrigger
-        className="h-8 w-[220px] border-border bg-background text-xs"
+        className="h-8 w-full min-w-0 border-border bg-background text-xs sm:w-[220px] [&>span]:truncate"
+        aria-label={t('shell.accounts.title')}
         title={t('shell.accounts.title')}
         data-testid="account-selector"
       >
@@ -73,8 +75,8 @@ function AccountSelector() {
               value={account.id}
               data-testid={`account-option-${account.id}`}
             >
-              <span className="flex items-center gap-2">
-                <span>{name}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="truncate">{name}</span>
                 {roleKey ? (
                   <span
                     className="text-[10px] text-muted-foreground"
@@ -93,67 +95,35 @@ function AccountSelector() {
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const { user, signOut } = useSession();
-  const { theme, setTheme } = useUiStore();
+  const { sidebarOpen, toggleSidebar } = useUiStore();
   const t = useI18n((s) => s.t);
 
   return (
     <AttentionLiveProvider>
       <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
-        <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border bg-card px-3">
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-card px-2 sm:gap-3 sm:px-3">
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 md:hidden"
+            onClick={toggleSidebar} aria-expanded={sidebarOpen} aria-controls="shell-navigation"
+            aria-label={t(sidebarOpen ? 'sidebar.collapse' : 'sidebar.expand')}>
+            <Menu className="h-4 w-4" />
+          </Button>
           <Link to="/" className="flex items-center gap-2">
             <TerminalSquare className="h-5 w-5 text-primary" />
-            <span className="text-sm font-bold tracking-tight">DOP</span>
+            <span className="hidden text-sm font-bold tracking-tight sm:inline">DOP</span>
           </Link>
 
-          <div className="ml-2">
+          <div className="min-w-0 flex-1 sm:ml-2 sm:flex-none">
             <AccountSelector />
           </div>
 
           <div className="ml-auto flex items-center gap-2">
             <AttentionBell />
-            <Link
-              to="/account"
-              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
-              title={t('account.title')}
-              data-testid="link-account"
-            >
-              <ShieldCheck className="h-4 w-4" />
-            </Link>
-            <button
-              type="button"
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
-              title={
-                theme === 'dark' ? t('shell.theme.light') : t('shell.theme.dark')
-              }
-            >
-              {theme === 'dark' ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </button>
-            <span
-              className="hidden text-xs text-muted-foreground sm:inline"
-              data-testid="text-user"
-            >
-              {user?.email}
-            </span>
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
-              title={t('shell.signOut')}
-              data-testid="button-sign-out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            <ProfileMenu />
           </div>
         </header>
 
-        <div className="flex min-h-0 flex-1">
-          <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-card">
+        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+          <aside id="shell-navigation" className={`${sidebarOpen ? 'flex' : 'hidden'} max-h-[35vh] w-full shrink-0 flex-col overflow-y-auto border-b border-border bg-card md:flex md:max-h-none md:w-64 md:border-b-0 md:border-r`}>
             <NavigationTree />
           </aside>
           <main className="flex min-w-0 flex-1 flex-col overflow-hidden">

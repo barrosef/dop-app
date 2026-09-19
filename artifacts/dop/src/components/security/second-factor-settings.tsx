@@ -37,6 +37,16 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { useI18n } from '../../lib/i18n';
 import { useAccount } from '../../lib/platform/account';
+import { Button } from '../ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Input } from '../ui/input';
 
 const ICON = {
   totp: KeyRound,
@@ -94,7 +104,7 @@ export function SecondFactorSettings() {
         </ul>
       )}
 
-      {adding ? (
+      {adding && allowed.length > 0 ? (
         <EnrollFactor
           allowed={allowed}
           onDone={(newCodes) => {
@@ -105,15 +115,19 @@ export function SecondFactorSettings() {
           onCancel={() => setAdding(false)}
         />
       ) : (
-        <button
+        <Button
           type="button"
           onClick={() => setAdding(true)}
-          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted/50"
+          disabled={allowed.length === 0}
+          variant="outline"
+          size="sm"
+          className="shadow-none"
           data-testid="add-factor"
         >
           {t('twofa.settings.add')}
-        </button>
+        </Button>
       )}
+      {allowed.length === 0 ? <p className="text-xs text-muted-foreground">{t('twofa.settings.noMethods')}</p> : null}
 
       {/* The recovery codes only make sense once there IS a factor: they are the
           way back from it, and offering them before would be offering a key to a
@@ -143,7 +157,10 @@ function FactorRow({
   const Icon = ICON[factor.kind as keyof typeof ICON] ?? KeyRound;
 
   return (
-    <li className="rounded-md border border-border/60 bg-card/60 px-3 py-2">
+    <li
+      className="rounded-md border border-border/60 bg-card/60 px-3 py-2"
+      data-testid={`factor-row-${factor.id}`}
+    >
       <div className="flex items-center gap-2">
         <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
@@ -158,22 +175,33 @@ function FactorRow({
             {factor.status === 'pending' ? ` · ${t('twofa.settings.pending')}` : ''}
           </p>
         </div>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={t('twofa.settings.remove')}
           title={t('twofa.settings.remove')}
+          disabled={revoke.isPending}
+          aria-busy={revoke.isPending}
           onClick={() => {
             if (!window.confirm(t('twofa.settings.confirmRemove'))) return;
+            setError('');
             revoke.mutate(
               { factorId: factor.id },
               { onSuccess: onChanged, onError: (e) => setError((e as Error).message) },
             );
           }}
-          className="rounded p-1 text-muted-foreground hover:bg-muted/50 hover:text-destructive"
+          className="text-muted-foreground hover:text-destructive"
+          data-testid={`remove-factor-${factor.id}`}
         >
           <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        </Button>
       </div>
-      {error ? <p className="mt-1 text-[11px] text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="mt-1 text-[11px] text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
     </li>
   );
 }
@@ -188,7 +216,7 @@ function EnrollFactor({
   onCancel: () => void;
 }) {
   const t = useI18n((s) => s.t);
-  const [kind, setKind] = React.useState(allowed[0] ?? 'totp');
+  const [kind, setKind] = React.useState(allowed[0] ?? '');
   const [label, setLabel] = React.useState('');
   const [destination, setDestination] = React.useState('');
   const [enrolled, setEnrolled] = React.useState<EnrollResponse | null>(null);
@@ -202,6 +230,7 @@ function EnrollFactor({
     return (
       <form
         className="space-y-3 rounded-md border border-border p-3"
+        aria-busy={confirm.isPending}
         onSubmit={(e) => {
           e.preventDefault();
           setError('');
@@ -234,6 +263,7 @@ function EnrollFactor({
             <a
               href={enrolled.uri}
               className="inline-block text-[11px] text-primary underline"
+              data-testid="open-authenticator"
             >
               {t('twofa.enroll.totp.open')}
             </a>
@@ -247,34 +277,48 @@ function EnrollFactor({
           <label className="text-xs font-medium" htmlFor="enroll-code">
             {t('twofa.enroll.confirm')}
           </label>
-          <input
+          <Input
             id="enroll-code"
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            onChange={(e) => {
+              setCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+              if (error) setError('');
+            }}
             inputMode="numeric"
             autoComplete="one-time-code"
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-center font-mono text-lg tracking-[0.4em]"
-            placeholder="000000"
+            disabled={confirm.isPending}
+            aria-invalid={Boolean(error)}
+            className="text-center font-mono text-lg tracking-[0.4em] shadow-none"
+            data-testid="input-enroll-code"
           />
         </div>
 
-        {error ? <p className="text-[11px] text-destructive">{error}</p> : null}
+        {error ? (
+          <p className="text-[11px] text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
 
         <div className="flex gap-2">
-          <button
+          <Button
             type="submit"
             disabled={confirm.isPending || code.length < 6}
-            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+            size="sm"
+            data-testid="button-confirm-factor"
           >
-            {t('twofa.verify')}
-          </button>
-          <button
+            {confirm.isPending ? t('twofa.verifying') : t('twofa.verify')}
+          </Button>
+          <Button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-border px-3 py-1.5 text-xs"
+            variant="outline"
+            size="sm"
+            className="shadow-none"
+            disabled={confirm.isPending}
+            data-testid="button-cancel-factor-confirmation"
           >
             {t('twofa.useFactor')}
-          </button>
+          </Button>
         </div>
       </form>
     );
@@ -283,8 +327,10 @@ function EnrollFactor({
   return (
     <form
       className="space-y-3 rounded-md border border-border p-3"
+      aria-busy={enroll.isPending}
       onSubmit={(e) => {
         e.preventDefault();
+        if (!allowed.includes(kind)) return;
         setError('');
         enroll.mutate(
           { data: { kind, label, destination } },
@@ -296,24 +342,30 @@ function EnrollFactor({
       }}
     >
       <div className="space-y-1.5">
-        <label className="text-xs font-medium">{t('twofa.enroll.kind')}</label>
-        <div className="flex gap-1.5">
+        <p id="factor-kind-label" className="text-xs font-medium">
+          {t('twofa.enroll.kind')}
+        </p>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby="factor-kind-label">
           {/* Only what the ACCOUNT accepts. An account that disabled SMS does
               not see it here — the policy is not repeated on the screen, it is
               read from the core. */}
           {allowed.map((k) => (
-            <button
+            <Button
               key={k}
               type="button"
-              onClick={() => setKind(k)}
-              className={`rounded-md border px-2.5 py-1.5 text-xs ${
-                kind === k
-                  ? 'border-primary/40 bg-primary/10 text-primary'
-                  : 'border-border text-muted-foreground'
-              }`}
+              onClick={() => {
+                setKind(k);
+                if (error) setError('');
+              }}
+              variant={kind === k ? 'secondary' : 'outline'}
+              size="sm"
+              className={kind === k ? '' : 'shadow-none text-muted-foreground'}
+              disabled={enroll.isPending}
+              aria-pressed={kind === k}
+              data-testid={`button-factor-kind-${k}`}
             >
               {t(`twofa.method.${k}` as never)}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -322,12 +374,18 @@ function EnrollFactor({
         <label className="text-xs font-medium" htmlFor="factor-label">
           {t('twofa.enroll.label')}
         </label>
-        <input
+        <Input
           id="factor-label"
           value={label}
-          onChange={(e) => setLabel(e.target.value)}
+          onChange={(e) => {
+            setLabel(e.target.value);
+            if (error) setError('');
+          }}
           placeholder={t('twofa.enroll.labelPlaceholder')}
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+          disabled={enroll.isPending}
+          aria-invalid={Boolean(error)}
+          className="shadow-none"
+          data-testid="input-factor-label"
         />
       </div>
 
@@ -336,40 +394,51 @@ function EnrollFactor({
           <label className="text-xs font-medium" htmlFor="factor-destination">
             {t(`twofa.enroll.destination.${kind}` as never)}
           </label>
-          <input
+          <Input
             id="factor-destination"
             value={destination}
-            onChange={(e) => setDestination(e.target.value)}
+            onChange={(e) => {
+              setDestination(e.target.value);
+              if (error) setError('');
+            }}
             placeholder={
               kind === 'sms' ? t('twofa.enroll.destination.smsPlaceholder') : ''
             }
-            className="w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-sm"
+            disabled={enroll.isPending}
+            aria-invalid={Boolean(error)}
+            className="font-mono shadow-none"
+            data-testid="input-factor-destination"
           />
         </div>
       ) : null}
 
       {error ? (
-        <p className="flex items-start gap-1.5 text-[11px] text-destructive">
+        <p className="flex items-start gap-1.5 text-[11px] text-destructive" role="alert">
           <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
           {error}
         </p>
       ) : null}
 
       <div className="flex gap-2">
-        <button
+        <Button
           type="submit"
-          disabled={enroll.isPending || !label}
-          className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+          disabled={enroll.isPending || !label || !allowed.includes(kind)}
+          size="sm"
+          data-testid="button-start-enrollment"
         >
-          {t('twofa.enroll.start')}
-        </button>
-        <button
+          {enroll.isPending ? t('common.loading') : t('twofa.enroll.start')}
+        </Button>
+        <Button
           type="button"
           onClick={onCancel}
-          className="rounded-md border border-border px-3 py-1.5 text-xs"
+          variant="outline"
+          size="sm"
+          className="shadow-none"
+          disabled={enroll.isPending}
+          data-testid="button-cancel-enrollment"
         >
           {t('twofa.useFactor')}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -387,13 +456,16 @@ function RecoveryCodes({
   const [error, setError] = React.useState('');
 
   return (
-    <div className="rounded-md border border-border/60 px-3 py-2">
+    <div
+      className="rounded-md border border-border/60 px-3 py-2"
+      data-testid="recovery-codes-settings"
+    >
       <p className="text-xs">
         {left > 0
           ? t('twofa.settings.recoveryLeft', { n: left })
           : t('twofa.settings.recoveryNone')}
       </p>
-      <button
+      <Button
         type="button"
         onClick={() => {
           setError('');
@@ -402,11 +474,20 @@ function RecoveryCodes({
             onError: (e) => setError((e as Error).message),
           });
         }}
-        className="mt-1.5 text-[11px] text-primary underline"
+        variant="link"
+        size="sm"
+        disabled={regenerate.isPending}
+        aria-busy={regenerate.isPending}
+        className="mt-1.5 h-auto min-h-0 px-0 py-0 text-[11px]"
+        data-testid="button-regenerate-recovery-codes"
       >
-        {t('twofa.settings.regenerate')}
-      </button>
-      {error ? <p className="mt-1 text-[11px] text-destructive">{error}</p> : null}
+        {regenerate.isPending ? t('common.loading') : t('twofa.settings.regenerate')}
+      </Button>
+      {error ? (
+        <p className="mt-1 text-[11px] text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -418,41 +499,89 @@ function RecoveryCodes({
 function CodesDialog({ codes, onClose }: { codes: string[]; onClose: () => void }) {
   const t = useI18n((s) => s.t);
   const [copied, setCopied] = React.useState(false);
+  const [copying, setCopying] = React.useState(false);
+  const [copyError, setCopyError] = React.useState('');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-6">
-      <div className="w-full max-w-sm space-y-3 rounded-lg border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold">{t('twofa.recoveryCodes.title')}</h3>
-        <p className="text-[11px] text-muted-foreground">{t('twofa.recoveryCodes.hint')}</p>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent
+        closeLabel={t('twofa.recoveryCodes.done')}
+        overlayClassName="bg-background/70"
+        className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-sm overflow-y-auto shadow-none"
+        data-testid="recovery-codes-dialog"
+      >
+        <DialogHeader>
+          <DialogTitle>{t('twofa.recoveryCodes.title')}</DialogTitle>
+          <DialogDescription>{t('twofa.recoveryCodes.hint')}</DialogDescription>
+        </DialogHeader>
         <p className="text-[11px] text-muted-foreground">{t('twofa.recoveryCodes.why')}</p>
-        <ul className="grid grid-cols-2 gap-1 rounded bg-muted/40 p-2 font-mono text-xs">
+        <ul
+          className="grid max-h-[min(50vh,20rem)] grid-cols-1 gap-1 overflow-y-auto rounded bg-muted/40 p-2 font-mono text-xs sm:grid-cols-2"
+          data-testid="recovery-codes-list"
+        >
           {codes.map((c) => (
-            <li key={c} className="select-all">
+            <li key={c} className="select-all break-all" data-testid={`recovery-code-${c}`}>
               {c}
             </li>
           ))}
         </ul>
-        <div className="flex gap-2">
-          <button
+        {copyError ? (
+          <p className="text-[11px] text-destructive" role="alert">
+            {copyError}
+          </p>
+        ) : null}
+        <DialogFooter className="flex-col gap-2 sm:flex-row">
+          <Button
             type="button"
-            onClick={() => {
-              void navigator.clipboard?.writeText(codes.join('\n'));
-              setCopied(true);
+            variant="outline"
+            size="sm"
+            disabled={copying}
+            aria-busy={copying}
+            onClick={async () => {
+              setCopied(false);
+              setCopyError('');
+              setCopying(true);
+              try {
+                await navigator.clipboard.writeText(codes.join('\n'));
+                setCopied(true);
+              } catch (error) {
+                setCopied(false);
+                setCopyError(
+                  t('account.error', {
+                    reason: error instanceof Error ? error.message : String(error),
+                  }),
+                );
+              } finally {
+                setCopying(false);
+              }
             }}
-            className="flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs"
+            className="w-full shadow-none sm:w-auto"
+            data-testid="button-copy-recovery-codes"
           >
             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-            {copied ? t('twofa.recoveryCodes.copied') : t('twofa.recoveryCodes.copy')}
-          </button>
-          <button
+            {copying
+              ? t('common.loading')
+              : copied
+                ? t('twofa.recoveryCodes.copied')
+                : t('twofa.recoveryCodes.copy')}
+          </Button>
+          <Button
             type="button"
             onClick={onClose}
-            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+            size="sm"
+            disabled={copying}
+            className="w-full sm:w-auto"
+            data-testid="button-close-recovery-codes"
           >
             {t('twofa.recoveryCodes.done')}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
