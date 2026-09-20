@@ -1,7 +1,7 @@
 # Profile onboarding — the wizard after sign-up
 
 - **Date:** 2026-09-06
-- **Status:** **superseded on 2026-09-20** by [the onboarding journey](../../../../../docs/superpowers/specs/2026-09-20-onboarding-journey-design.md). The phone step lives on in the security screen; tools, social networks and referral are retired; plans are absorbed by the journey. Kept for the record.
+- **Status:** **superseded on 2026-09-20** by [the onboarding journey](../../../../../docs/superpowers/specs/2026-09-20-onboarding-journey-design.md). The phone step is reborn as the journey's optional contact step; tools, social networks and referral are retired; plans are absorbed by the journey. Kept for the record.
 - **Needs the API:** **partly.** US-1 is buildable today; US-2 to US-5 are
   blocked on operations that do not exist yet — see §7.
 - **Rails:** [`RAILS.md`](../../../RAILS.md). §1 (the API contract) governs §7 of
