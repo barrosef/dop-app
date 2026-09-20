@@ -150,7 +150,7 @@ export interface FindingSummary {
 }
 
 /**
- * What was LEFT OUT of the package, per layer (ADR-0012).
+ * What was LEFT OUT of the package, per layer (ADR-0008).
 
 `truncated` is derived — it is the only field the screen has to consult to
 say "the context was truncated". It is derived here, and not in each client,
@@ -299,7 +299,7 @@ export type DirectiveDecisionDecision = { [key: string]: unknown };
 
 /**
  * The decision is a free payload: each directive kind's shape is the
-techlead's (ADR-0015), and typing it here would freeze what is still being
+techlead's (ADR-0011), and typing it here would freeze what is still being
 discovered.
  */
 export interface DirectiveDecision {
@@ -400,7 +400,7 @@ export interface HTTPValidationError {
  * What whoever OPENS the link sees.
 
 It does NOT carry the invitee's e-mail: whoever finds the link must not
-learn an address from it (ADR-0026).
+learn an address from it (ADR-0019).
  */
 export interface InvitePreview {
   id: string;
@@ -474,7 +474,7 @@ export interface NewAccount {
 export type NewArtifactMeta = { [key: string]: unknown };
 
 /**
- * A write into the knowledge base — the cycle's way back (ADR-0009 §4).
+ * A write into the knowledge base — the cycle's way back (ADR-0006 §4).
 
 The content arrives in base64 because in the core's contract it is `bytes`:
 a knowledge artifact is markdown, JSON or a generated map, in UTF-8 or not,
@@ -539,7 +539,7 @@ export interface NewFinding {
 }
 
 /**
- * The flow goes in whole — v1 has no per-stage editing (ADR-0014 §2).
+ * The flow goes in whole — v1 has no per-stage editing (ADR-0010 §2).
  */
 export interface NewFlow {
   /** @minLength 1 */
@@ -719,7 +719,7 @@ export interface RoutingDecision {
 }
 
 /**
- * The core's decision, with the WHOLE justification (ADR-0011 §3).
+ * The core's decision, with the WHOLE justification (ADR-0008 §3).
  */
 export interface RoutingView {
   task_kind?: string;

@@ -157,7 +157,7 @@ function AuthenticatedShell() {
       {/* The second factor stands BETWEEN the session and the cockpit: a
           stepped-up session goes through, one that has not answered sees the
           challenge, and somebody with no factor in an account that requires one
-          is sent to register it (ADR-0027 §5). */}
+          is sent to register it (ADR-0020 §5). */}
       <SecondFactorGate>
         <Shell>
           <Outlet />

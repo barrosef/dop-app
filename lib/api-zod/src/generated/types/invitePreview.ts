@@ -10,7 +10,7 @@
  * What whoever OPENS the link sees.
 
 It does NOT carry the invitee's e-mail: whoever finds the link must not
-learn an address from it (ADR-0026).
+learn an address from it (ADR-0019).
  */
 export interface InvitePreview {
   id: string;

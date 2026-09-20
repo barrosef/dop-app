@@ -2407,7 +2407,7 @@
           "delivery"
         ],
         "summary": "Get Merge Queue",
-        "description": "ONE repository's queue — it is the repository that serializes (ADR-0008).",
+        "description": "ONE repository's queue — it is the repository that serializes (ADR-0005).",
         "operationId": "get_merge_queue_api_v1_repos__repo_id__merge_queue_get",
         "parameters": [
           {
@@ -2452,7 +2452,7 @@
           "delivery"
         ],
         "summary": "Enqueue Merge",
-        "description": "Asks to enter the repository's queue.\n\nA refusal for want of green comes out as a 412 — the same thing the core's\nFAILED_PRECONDITION becomes on any other route (`app/platform/errors.py`) —\nbut with the body carrying `missing` item by item, instead of a single\nsentence. It is that list that tells the dev what to arrange in order to get\nin (ADR-0007).",
+        "description": "Asks to enter the repository's queue.\n\nA refusal for want of green comes out as a 412 — the same thing the core's\nFAILED_PRECONDITION becomes on any other route (`app/platform/errors.py`) —\nbut with the body carrying `missing` item by item, instead of a single\nsentence. It is that list that tells the dev what to arrange in order to get\nin (ADR-0005).",
         "operationId": "enqueue_merge_api_v1_repos__repo_id__merge_queue_post",
         "parameters": [
           {
@@ -2562,7 +2562,7 @@
           "delivery"
         ],
         "summary": "Decide Directive",
-        "description": "The coordination decision is the dev's; the techlead recommends (ADR-0015).",
+        "description": "The coordination decision is the dev's; the techlead recommends (ADR-0011).",
         "operationId": "decide_directive_api_v1_directives__directive_id__decision_post",
         "parameters": [
           {
@@ -2625,7 +2625,7 @@
           "knowledge"
         ],
         "summary": "Get Context Package",
-        "description": "The agent's carry-on luggage for this demand (ADR-0009 §3).\n\n`dropped` is the field that matters in this response: **`null` means the core\ndid not report the drops** (today the `dop.v1` contract does not carry them),\nand not \"nothing was dropped\". When it comes filled in, `dropped.truncated`\nsays in a single field whether the context fitted whole — the screen has to be\nable to warn that it did not (ADR-0012).",
+        "description": "The agent's carry-on luggage for this demand (ADR-0006 §3).\n\n`dropped` is the field that matters in this response: **`null` means the core\ndid not report the drops** (today the `dop.v1` contract does not carry them),\nand not \"nothing was dropped\". When it comes filled in, `dropped.truncated`\nsays in a single field whether the context fitted whole — the screen has to be\nable to warn that it did not (ADR-0008).",
         "operationId": "get_context_package_api_v1_demands__demand_id__context_package_get",
         "parameters": [
           {
@@ -2892,7 +2892,7 @@
           "cost"
         ],
         "summary": "Route Model",
-        "description": "Which model and which effort for this kind of work — and WHY.\n\n`reason` comes whole, with the policy's provenance up front (\"ADR-0011 §3\n(draft — calibrate with telemetry, P-7): …\"). It is not noise: it is what\nmakes auditing the choice and recalibrating the table possible. A client that\ntruncates that string is throwing away the only auditable part of the answer.\n\nIt is a `GET` because the decision is PURE — the same input, the same output,\nno effect.",
+        "description": "Which model and which effort for this kind of work — and WHY.\n\n`reason` comes whole, with the policy's provenance up front (\"ADR-0008 §3\n(draft — calibrate with telemetry, P-7): …\"). It is not noise: it is what\nmakes auditing the choice and recalibrating the table possible. A client that\ntruncates that string is throwing away the only auditable part of the answer.\n\nIt is a `GET` because the decision is PURE — the same input, the same output,\nno effect.",
         "operationId": "route_model_api_v1_cost_routing_get",
         "parameters": [
           {
@@ -3040,7 +3040,7 @@
           "cost"
         ],
         "summary": "Record Usage",
-        "description": "Records model consumption.\n\n**A blown budget answers 200, not a 4xx.** ADR-0011 §2's cut is soft: the\ndemand pauses and asks, and consumption keeps being measured. The response\nbrings `budget_exceeded`, the `notice` ready for the attention box and the\nblown budgets with the decision's numbers.",
+        "description": "Records model consumption.\n\n**A blown budget answers 200, not a 4xx.** ADR-0008 §2's cut is soft: the\ndemand pauses and asks, and consumption keeps being measured. The response\nbrings `budget_exceeded`, the `notice` ready for the attention box and the\nblown budgets with the decision's numbers.",
         "operationId": "record_usage_api_v1_cost_usage_post",
         "parameters": [
           {
@@ -3372,7 +3372,7 @@
           "runtime"
         ],
         "summary": "Run Turn",
-        "description": "Runs one agent turn on this thread.\n\n**It answers 200 even when the budget is blown.** ADR-0011 §2's cut is soft:\nthe demand pauses and becomes an item in the attention box, and the turn that\nalready ran comes back whole — the reply was published on the thread and so\nwas the finding. `paused` and `notice` bring what the human needs to decide.\n\n**Live following does not come out through here.** The published messages\nare events (ADR-0006) and arrive through the SSE that already exists\n(`GET /api/v1/stream/demands/{demand_id}`). This route returns the\nconsolidated result; a second streaming path would be a second source of\ntruth for the same timeline.\n\n**`Idempotency-Key` is mandatory**, and the edge does NOT generate one. An\nagent turn spends money: a key invented here would turn a network retry into\ndouble consumption with nobody asking. It is the client that knows whether\nit is retrying or asking again.\n\nAn unavailable provider, a refused credential and an account with no agent\nintegration arrive from the core with the right status, through the usual\ntranslator — there is no special handling here, and there must not be.",
+        "description": "Runs one agent turn on this thread.\n\n**It answers 200 even when the budget is blown.** ADR-0008 §2's cut is soft:\nthe demand pauses and becomes an item in the attention box, and the turn that\nalready ran comes back whole — the reply was published on the thread and so\nwas the finding. `paused` and `notice` bring what the human needs to decide.\n\n**Live following does not come out through here.** The published messages\nare events (ADR-0004) and arrive through the SSE that already exists\n(`GET /api/v1/stream/demands/{demand_id}`). This route returns the\nconsolidated result; a second streaming path would be a second source of\ntruth for the same timeline.\n\n**`Idempotency-Key` is mandatory**, and the edge does NOT generate one. An\nagent turn spends money: a key invented here would turn a network retry into\ndouble consumption with nobody asking. It is the client that knows whether\nit is retrying or asking again.\n\nAn unavailable provider, a refused credential and an account with no agent\nintegration arrive from the core with the right status, through the usual\ntranslator — there is no special handling here, and there must not be.",
         "operationId": "run_turn_api_v1_demands__demand_id__threads__thread_id__turns_post",
         "parameters": [
           {
@@ -4455,7 +4455,7 @@
         },
         "type": "object",
         "title": "DirectiveDecision",
-        "description": "The decision is a free payload: each directive kind's shape is the\ntechlead's (ADR-0015), and typing it here would freeze what is still being\ndiscovered."
+        "description": "The decision is a free payload: each directive kind's shape is the\ntechlead's (ADR-0011), and typing it here would freeze what is still being\ndiscovered."
       },
       "DroppedCounts": {
         "properties": {
@@ -4487,7 +4487,7 @@
         },
         "type": "object",
         "title": "DroppedCounts",
-        "description": "What was LEFT OUT of the package, per layer (ADR-0012).\n\n`truncated` is derived — it is the only field the screen has to consult to\nsay \"the context was truncated\". It is derived here, and not in each client,\nbecause three clients deriving the same thing is how two of them get it\nwrong."
+        "description": "What was LEFT OUT of the package, per layer (ADR-0008).\n\n`truncated` is derived — it is the only field the screen has to consult to\nsay \"the context was truncated\". It is derived here, and not in each client,\nbecause three clients deriving the same thing is how two of them get it\nwrong."
       },
       "EffectiveFlow": {
         "properties": {
@@ -4853,7 +4853,7 @@
           "usable"
         ],
         "title": "InvitePreview",
-        "description": "What whoever OPENS the link sees.\n\nIt does NOT carry the invitee's e-mail: whoever finds the link must not\nlearn an address from it (ADR-0026)."
+        "description": "What whoever OPENS the link sees.\n\nIt does NOT carry the invitee's e-mail: whoever finds the link must not\nlearn an address from it (ADR-0019)."
       },
       "InviteSummary": {
         "properties": {
@@ -5166,7 +5166,7 @@
           "content_base64"
         ],
         "title": "NewArtifact",
-        "description": "A write into the knowledge base — the cycle's way back (ADR-0009 §4).\n\nThe content arrives in base64 because in the core's contract it is `bytes`:\na knowledge artifact is markdown, JSON or a generated map, in UTF-8 or not,\nand pretending it is a `str` would silently transcode whatever is not."
+        "description": "A write into the knowledge base — the cycle's way back (ADR-0006 §4).\n\nThe content arrives in base64 because in the core's contract it is `bytes`:\na knowledge artifact is markdown, JSON or a generated map, in UTF-8 or not,\nand pretending it is a `str` would silently transcode whatever is not."
       },
       "NewBudget": {
         "properties": {
@@ -5312,7 +5312,7 @@
           "owner_scope"
         ],
         "title": "NewFlow",
-        "description": "The flow goes in whole — v1 has no per-stage editing (ADR-0014 §2)."
+        "description": "The flow goes in whole — v1 has no per-stage editing (ADR-0010 §2)."
       },
       "NewGrant": {
         "properties": {
@@ -5920,7 +5920,7 @@
         },
         "type": "object",
         "title": "RoutingView",
-        "description": "The core's decision, with the WHOLE justification (ADR-0011 §3)."
+        "description": "The core's decision, with the WHOLE justification (ADR-0008 §3)."
       },
       "RunTurn": {
         "properties": {

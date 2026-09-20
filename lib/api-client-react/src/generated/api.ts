@@ -4284,7 +4284,7 @@ export const getGetMergeQueueUrl = (repoId: string,) => {
 }
 
 /**
- * ONE repository's queue — it is the repository that serializes (ADR-0008).
+ * ONE repository's queue — it is the repository that serializes (ADR-0005).
  * @summary Get Merge Queue
  */
 export const getMergeQueue = async (repoId: string, options?: RequestInit): Promise<MergeQueueEntry[]> => {
@@ -4368,7 +4368,7 @@ A refusal for want of green comes out as a 412 — the same thing the core's
 FAILED_PRECONDITION becomes on any other route (`app/platform/errors.py`) —
 but with the body carrying `missing` item by item, instead of a single
 sentence. It is that list that tells the dev what to arrange in order to get
-in (ADR-0007).
+in (ADR-0005).
  * @summary Enqueue Merge
  */
 export const enqueueMerge = async (repoId: string,
@@ -4525,7 +4525,7 @@ export const getDecideDirectiveUrl = (directiveId: string,) => {
 }
 
 /**
- * The coordination decision is the dev's; the techlead recommends (ADR-0015).
+ * The coordination decision is the dev's; the techlead recommends (ADR-0011).
  * @summary Decide Directive
  */
 export const decideDirective = async (directiveId: string,
@@ -4598,13 +4598,13 @@ export const getGetContextPackageUrl = (demandId: string,) => {
 }
 
 /**
- * The agent's carry-on luggage for this demand (ADR-0009 §3).
+ * The agent's carry-on luggage for this demand (ADR-0006 §3).
 
 `dropped` is the field that matters in this response: **`null` means the core
 did not report the drops** (today the `dop.v1` contract does not carry them),
 and not "nothing was dropped". When it comes filled in, `dropped.truncated`
 says in a single field whether the context fitted whole — the screen has to be
-able to warn that it did not (ADR-0012).
+able to warn that it did not (ADR-0008).
  * @summary Get Context Package
  */
 export const getContextPackage = async (demandId: string, options?: RequestInit): Promise<ContextPackageSummary> => {
@@ -5023,7 +5023,7 @@ export const getRouteModelUrl = (params: RouteModelParams,) => {
 /**
  * Which model and which effort for this kind of work — and WHY.
 
-`reason` comes whole, with the policy's provenance up front ("ADR-0011 §3
+`reason` comes whole, with the policy's provenance up front ("ADR-0008 §3
 (draft — calibrate with telemetry, P-7): …"). It is not noise: it is what
 makes auditing the choice and recalibrating the table possible. A client that
 truncates that string is throwing away the only auditable part of the answer.
@@ -5273,7 +5273,7 @@ export const getRecordUsageUrl = () => {
 /**
  * Records model consumption.
 
-**A blown budget answers 200, not a 4xx.** ADR-0011 §2's cut is soft: the
+**A blown budget answers 200, not a 4xx.** ADR-0008 §2's cut is soft: the
 demand pauses and asks, and consumption keeps being measured. The response
 brings `budget_exceeded`, the `notice` ready for the attention box and the
 blown budgets with the decision's numbers.
@@ -5818,13 +5818,13 @@ export const getRunTurnUrl = (demandId: string,
 /**
  * Runs one agent turn on this thread.
 
-**It answers 200 even when the budget is blown.** ADR-0011 §2's cut is soft:
+**It answers 200 even when the budget is blown.** ADR-0008 §2's cut is soft:
 the demand pauses and becomes an item in the attention box, and the turn that
 already ran comes back whole — the reply was published on the thread and so
 was the finding. `paused` and `notice` bring what the human needs to decide.
 
 **Live following does not come out through here.** The published messages
-are events (ADR-0006) and arrive through the SSE that already exists
+are events (ADR-0004) and arrive through the SSE that already exists
 (`GET /api/v1/stream/demands/{demand_id}`). This route returns the
 consolidated result; a second streaming path would be a second source of
 truth for the same timeline.

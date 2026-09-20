@@ -10,7 +10,7 @@
  * There were three ways out. A session cookie and a short-lived ticket both
  * solve it, and both create a SECOND authentication path for the same
  * credential. A signed ticket would still require a signing key in the BFF,
- * which is precisely what ADR-0023 forbids: **the BFF holds no secret**.
+ * which is precisely what ADR-0016 forbids: **the BFF holds no secret**.
  *
  * So: a single path. The reader sends the same headers as every call, and the
  * resume — which was the reason to use the native one — becomes ~40 lines here,

@@ -1,6 +1,6 @@
 /**
  * Managing the second factor: the list, the enrolment and the recovery codes
- * (ADR-0027).
+ * (ADR-0020).
  *
  * Three things this screen never does, and each absence is the design:
  *

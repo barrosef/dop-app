@@ -7,7 +7,7 @@
  */
 
 /**
- * What was LEFT OUT of the package, per layer (ADR-0012).
+ * What was LEFT OUT of the package, per layer (ADR-0008).
 
 `truncated` is derived — it is the only field the screen has to consult to
 say "the context was truncated". It is derived here, and not in each client,

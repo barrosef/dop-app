@@ -8,7 +8,7 @@
 import type { NewArtifactMeta } from './newArtifactMeta';
 
 /**
- * A write into the knowledge base — the cycle's way back (ADR-0009 §4).
+ * A write into the knowledge base — the cycle's way back (ADR-0006 §4).
 
 The content arrives in base64 because in the core's contract it is `bytes`:
 a knowledge artifact is markdown, JSON or a generated map, in UTF-8 or not,
