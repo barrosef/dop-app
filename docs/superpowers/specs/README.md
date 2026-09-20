@@ -37,7 +37,8 @@ thrown away. `RAILS.md` §1 says why.
 | spec | needs the API? |
 |---|---|
 | [`2026-09-06-visual-language.md`](2026-09-06-visual-language.md) | no — buildable now |
-| [`2026-09-06-profile-onboarding-wizard.md`](2026-09-06-profile-onboarding-wizard.md) | yes — blocked, operations listed in §7 |
+| [`2026-09-06-profile-onboarding-wizard.md`](2026-09-06-profile-onboarding-wizard.md) | superseded by the journey below |
+| [`2026-09-20-onboarding-journey.md`](2026-09-20-onboarding-journey.md) | yes — **in the generated client** since the `chore(api-spec)` commit of 2026-09-20 |
 | [`2026-09-09-account-role-in-the-selector.md`](2026-09-09-account-role-in-the-selector.md) | no — the API already ships it, and the contract did not change |
 | [`2026-09-09-api-server-artifact-cleanup.md`](2026-09-09-api-server-artifact-cleanup.md) | no — one file, no API involved |
 | [`2026-09-09-retire-the-mock-client.md`](2026-09-09-retire-the-mock-client.md) | the API and generated hooks already exist — migrate one screen per slice |
