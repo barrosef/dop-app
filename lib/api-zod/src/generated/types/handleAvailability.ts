@@ -6,11 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AccountSummary {
-  id: string;
+export interface HandleAvailability {
   handle: string;
-  display_name: string;
-  kind: string;
-  role: string;
-  plan_key?: string;
+  available: boolean;
+  suggestion?: string;
 }

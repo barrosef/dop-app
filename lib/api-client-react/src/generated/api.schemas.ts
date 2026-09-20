@@ -15,12 +15,18 @@ export interface AcceptedInvite {
   role: string;
 }
 
+export interface AccountPatch {
+  handle?: string;
+  display_name?: string;
+}
+
 export interface AccountSummary {
   id: string;
   handle: string;
   display_name: string;
   kind: string;
   role: string;
+  plan_key?: string;
 }
 
 export interface AgentCard {
@@ -114,6 +120,20 @@ export interface ChallengeResponse {
   kind: string;
   masked_destination?: string;
   expires_at?: string | null;
+}
+
+/**
+ * What checking a credential answers.
+
+`operated` false is the honest case: the platform has no adapter for that
+provider yet, the credential is stored, nothing was tried. `ok` means
+something only when `operated` is true.
+ */
+export interface CheckResult {
+  operated: boolean;
+  ok?: boolean;
+  identity?: string;
+  message?: string;
 }
 
 export interface ConfirmFactor {
@@ -396,6 +416,12 @@ export interface HTTPValidationError {
   detail?: ValidationError[];
 }
 
+export interface HandleAvailability {
+  handle: string;
+  available: boolean;
+  suggestion?: string;
+}
+
 /**
  * What whoever OPENS the link sees.
 
@@ -427,6 +453,14 @@ export interface MeResponse {
   providers: string[];
   account_id: string;
   role: string;
+  avatar_url?: string;
+  locale?: string;
+  timezone?: string;
+  phone?: string;
+  phone_verified?: boolean;
+  email_verified?: boolean;
+  birth_date?: string;
+  onboarded?: boolean;
 }
 
 export interface MemberRole {
@@ -649,6 +683,51 @@ export interface NewWorkspace {
   tags?: string[];
 }
 
+export interface OnboardingStep {
+  step: string;
+  status: string;
+}
+
+export interface OnboardingState {
+  steps: OnboardingStep[];
+  current: string;
+  complete: boolean;
+  email_verified: boolean;
+  phone: string;
+  phone_verified: boolean;
+  code_connections: number;
+  task_connections: number;
+  plan_key: string;
+  personal_account_id: string;
+}
+
+export interface PlanChoice {
+  /** @minLength 1 */
+  plan_key: string;
+}
+
+export interface PlanSummary {
+  key: string;
+  name: string;
+  tagline?: string;
+  features?: string[];
+}
+
+/**
+ * A partial update: an absent field is untouched.
+
+An empty string clears phone, locale and timezone and is refused for the
+name; an empty birth_date clears it. The rules are the core's — this model
+only carries the shape.
+ */
+export interface ProfilePatch {
+  name?: string | null;
+  birth_date?: string | null;
+  locale?: string | null;
+  timezone?: string | null;
+  phone?: string | null;
+}
+
 /**
  * The project's binding to the provider's board.
 
@@ -679,6 +758,18 @@ export interface PromotionTarget {
   /** @minLength 1 */
   target_scope: string;
   target_id?: string;
+}
+
+export interface ProviderSummary {
+  key: string;
+  category: string;
+  name: string;
+  credential_kind?: string;
+  permissions?: string[];
+  needs_base_url?: boolean;
+  operated?: boolean;
+  docs_url?: string;
+  brand_color?: string;
 }
 
 export interface RecordUsageOutcome {
@@ -783,6 +874,11 @@ export interface StepUpResponse {
   method: string;
   recovery?: boolean;
   expires_at?: string | null;
+}
+
+export interface StepUpdate {
+  /** @pattern ^(done|skipped)$ */
+  status: string;
 }
 
 export interface WorkspaceSummary {

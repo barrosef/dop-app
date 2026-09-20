@@ -18,6 +18,15 @@ export const HealthzHealthzGetResponse = zod.record(zod.string(), zod.unknown())
  * Who I am, in the active account.
  * @summary Me
  */
+export const meApiV1MeGetResponseAvatarUrlDefault = ``;
+export const meApiV1MeGetResponseLocaleDefault = ``;
+export const meApiV1MeGetResponseTimezoneDefault = ``;
+export const meApiV1MeGetResponsePhoneDefault = ``;
+export const meApiV1MeGetResponsePhoneVerifiedDefault = false;
+export const meApiV1MeGetResponseEmailVerifiedDefault = false;
+export const meApiV1MeGetResponseBirthDateDefault = ``;
+export const meApiV1MeGetResponseOnboardedDefault = false;
+
 export const MeApiV1MeGetResponse = zod.object({
   "subject": zod.string(),
   "user_id": zod.string(),
@@ -25,7 +34,193 @@ export const MeApiV1MeGetResponse = zod.object({
   "name": zod.string(),
   "providers": zod.array(zod.string()),
   "account_id": zod.string(),
-  "role": zod.string()
+  "role": zod.string(),
+  "avatar_url": zod.string().default(meApiV1MeGetResponseAvatarUrlDefault),
+  "locale": zod.string().default(meApiV1MeGetResponseLocaleDefault),
+  "timezone": zod.string().default(meApiV1MeGetResponseTimezoneDefault),
+  "phone": zod.string().default(meApiV1MeGetResponsePhoneDefault),
+  "phone_verified": zod.boolean().default(meApiV1MeGetResponsePhoneVerifiedDefault),
+  "email_verified": zod.boolean().default(meApiV1MeGetResponseEmailVerifiedDefault),
+  "birth_date": zod.string().default(meApiV1MeGetResponseBirthDateDefault),
+  "onboarded": zod.boolean().default(meApiV1MeGetResponseOnboardedDefault)
+})
+
+
+/**
+ * Edits my profile (onboarding spec 2026-09-20 §3.1). Absent fields stay.
+ * @summary Update Profile
+ */
+export const UpdateProfileApiV1MePatchBody = zod.object({
+  "name": zod.union([zod.string(),zod.null()]).optional(),
+  "birth_date": zod.union([zod.string(),zod.null()]).optional(),
+  "locale": zod.union([zod.string(),zod.null()]).optional(),
+  "timezone": zod.union([zod.string(),zod.null()]).optional(),
+  "phone": zod.union([zod.string(),zod.null()]).optional()
+}).describe('A partial update: an absent field is untouched.\n\nAn empty string clears phone, locale and timezone and is refused for the\nname; an empty birth_date clears it. The rules are the core\'s — this model\nonly carries the shape.')
+
+export const updateProfileApiV1MePatchResponseAvatarUrlDefault = ``;
+export const updateProfileApiV1MePatchResponseLocaleDefault = ``;
+export const updateProfileApiV1MePatchResponseTimezoneDefault = ``;
+export const updateProfileApiV1MePatchResponsePhoneDefault = ``;
+export const updateProfileApiV1MePatchResponsePhoneVerifiedDefault = false;
+export const updateProfileApiV1MePatchResponseEmailVerifiedDefault = false;
+export const updateProfileApiV1MePatchResponseBirthDateDefault = ``;
+export const updateProfileApiV1MePatchResponseOnboardedDefault = false;
+
+export const UpdateProfileApiV1MePatchResponse = zod.object({
+  "subject": zod.string(),
+  "user_id": zod.string(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "providers": zod.array(zod.string()),
+  "account_id": zod.string(),
+  "role": zod.string(),
+  "avatar_url": zod.string().default(updateProfileApiV1MePatchResponseAvatarUrlDefault),
+  "locale": zod.string().default(updateProfileApiV1MePatchResponseLocaleDefault),
+  "timezone": zod.string().default(updateProfileApiV1MePatchResponseTimezoneDefault),
+  "phone": zod.string().default(updateProfileApiV1MePatchResponsePhoneDefault),
+  "phone_verified": zod.boolean().default(updateProfileApiV1MePatchResponsePhoneVerifiedDefault),
+  "email_verified": zod.boolean().default(updateProfileApiV1MePatchResponseEmailVerifiedDefault),
+  "birth_date": zod.string().default(updateProfileApiV1MePatchResponseBirthDateDefault),
+  "onboarded": zod.boolean().default(updateProfileApiV1MePatchResponseOnboardedDefault)
+})
+
+
+/**
+ * Where I am in the journey, and what the closing screen lists (D-2).
+ * @summary Onboarding
+ */
+export const OnboardingApiV1MeOnboardingGetResponse = zod.object({
+  "steps": zod.array(zod.object({
+  "step": zod.string(),
+  "status": zod.string()
+})),
+  "current": zod.string(),
+  "complete": zod.boolean(),
+  "email_verified": zod.boolean(),
+  "phone": zod.string(),
+  "phone_verified": zod.boolean(),
+  "code_connections": zod.number(),
+  "task_connections": zod.number(),
+  "plan_key": zod.string(),
+  "personal_account_id": zod.string()
+})
+
+
+/**
+ * Records a step as done or skipped; the core decides whether it may be.
+ * @summary Record Step
+ */
+export const RecordStepApiV1MeOnboardingStepsStepPostParams = zod.object({
+  "step": zod.coerce.string()
+})
+
+export const recordStepApiV1MeOnboardingStepsStepPostBodyStatusRegExp = new RegExp('^(done|skipped)$');
+
+
+export const RecordStepApiV1MeOnboardingStepsStepPostBody = zod.object({
+  "status": zod.string().regex(recordStepApiV1MeOnboardingStepsStepPostBodyStatusRegExp)
+})
+
+export const RecordStepApiV1MeOnboardingStepsStepPostResponse = zod.object({
+  "steps": zod.array(zod.object({
+  "step": zod.string(),
+  "status": zod.string()
+})),
+  "current": zod.string(),
+  "complete": zod.boolean(),
+  "email_verified": zod.boolean(),
+  "phone": zod.string(),
+  "phone_verified": zod.boolean(),
+  "code_connections": zod.number(),
+  "task_connections": zod.number(),
+  "plan_key": zod.string(),
+  "personal_account_id": zod.string()
+})
+
+
+/**
+ * Finishes the journey; refused naming the required step still undone.
+ * @summary Complete Onboarding
+ */
+export const CompleteOnboardingApiV1MeOnboardingCompletePostResponse = zod.object({
+  "steps": zod.array(zod.object({
+  "step": zod.string(),
+  "status": zod.string()
+})),
+  "current": zod.string(),
+  "complete": zod.boolean(),
+  "email_verified": zod.boolean(),
+  "phone": zod.string(),
+  "phone_verified": zod.boolean(),
+  "code_connections": zod.number(),
+  "task_connections": zod.number(),
+  "plan_key": zod.string(),
+  "personal_account_id": zod.string()
+})
+
+
+/**
+ * As typed: is this handle free, and if not, a suggestion.
+ * @summary Handle Availability
+ */
+export const HandleAvailabilityApiV1AccountsHandlesHandleAvailabilityGetParams = zod.object({
+  "handle": zod.coerce.string()
+})
+
+export const handleAvailabilityApiV1AccountsHandlesHandleAvailabilityGetResponseSuggestionDefault = ``;
+
+export const HandleAvailabilityApiV1AccountsHandlesHandleAvailabilityGetResponse = zod.object({
+  "handle": zod.string(),
+  "available": zod.boolean(),
+  "suggestion": zod.string().default(handleAvailabilityApiV1AccountsHandlesHandleAvailabilityGetResponseSuggestionDefault)
+})
+
+
+/**
+ * Edits my PERSONAL account's handle and display name.
+ * @summary Update Personal Account
+ */
+export const updatePersonalAccountApiV1AccountsCurrentPatchBodyHandleDefault = ``;
+export const updatePersonalAccountApiV1AccountsCurrentPatchBodyDisplayNameDefault = ``;
+
+export const UpdatePersonalAccountApiV1AccountsCurrentPatchBody = zod.object({
+  "handle": zod.string().default(updatePersonalAccountApiV1AccountsCurrentPatchBodyHandleDefault),
+  "display_name": zod.string().default(updatePersonalAccountApiV1AccountsCurrentPatchBodyDisplayNameDefault)
+})
+
+export const updatePersonalAccountApiV1AccountsCurrentPatchResponsePlanKeyDefault = ``;
+
+export const UpdatePersonalAccountApiV1AccountsCurrentPatchResponse = zod.object({
+  "id": zod.string(),
+  "handle": zod.string(),
+  "display_name": zod.string(),
+  "kind": zod.string(),
+  "role": zod.string(),
+  "plan_key": zod.string().default(updatePersonalAccountApiV1AccountsCurrentPatchResponsePlanKeyDefault)
+})
+
+
+/**
+ * Records the chosen plan on my personal account (D-6). No price, no billing.
+ * @summary Set Plan
+ */
+
+
+
+export const SetPlanApiV1AccountsCurrentPlanPutBody = zod.object({
+  "plan_key": zod.string().min(1)
+})
+
+export const setPlanApiV1AccountsCurrentPlanPutResponsePlanKeyDefault = ``;
+
+export const SetPlanApiV1AccountsCurrentPlanPutResponse = zod.object({
+  "id": zod.string(),
+  "handle": zod.string(),
+  "display_name": zod.string(),
+  "kind": zod.string(),
+  "role": zod.string(),
+  "plan_key": zod.string().default(setPlanApiV1AccountsCurrentPlanPutResponsePlanKeyDefault)
 })
 
 
@@ -45,12 +240,15 @@ export const SendEmailVerificationApiV1VerificationEmailPostResponse = zod.objec
  * The user's accounts — it feeds the cockpit's active-account selector.
  * @summary List Accounts
  */
+export const listAccountsApiV1AccountsGetResponsePlanKeyDefault = ``;
+
 export const ListAccountsApiV1AccountsGetResponseItem = zod.object({
   "id": zod.string(),
   "handle": zod.string(),
   "display_name": zod.string(),
   "kind": zod.string(),
-  "role": zod.string()
+  "role": zod.string(),
+  "plan_key": zod.string().default(listAccountsApiV1AccountsGetResponsePlanKeyDefault)
 })
 export const ListAccountsApiV1AccountsGetResponse = zod.array(ListAccountsApiV1AccountsGetResponseItem)
 
@@ -199,6 +397,45 @@ export const UpdateMemberApiV1MembersMembershipIdPatchResponse = zod.object({
 export const RemoveMemberApiV1MembersMembershipIdDeleteParams = zod.object({
   "membership_id": zod.coerce.string()
 })
+
+
+/**
+ * The plans, without a price — the absence is deliberate (spec D-6).
+ * @summary List Plans
+ */
+export const listPlansApiV1CatalogPlansGetResponseTaglineDefault = ``;
+
+export const ListPlansApiV1CatalogPlansGetResponseItem = zod.object({
+  "key": zod.string(),
+  "name": zod.string(),
+  "tagline": zod.string().default(listPlansApiV1CatalogPlansGetResponseTaglineDefault),
+  "features": zod.array(zod.string()).optional()
+})
+export const ListPlansApiV1CatalogPlansGetResponse = zod.array(ListPlansApiV1CatalogPlansGetResponseItem)
+
+
+/**
+ * The providers a connection may point at, with the honest `operated` flag.
+ * @summary List Providers
+ */
+export const listProvidersApiV1CatalogProvidersGetResponseCredentialKindDefault = `token`;
+export const listProvidersApiV1CatalogProvidersGetResponseNeedsBaseUrlDefault = false;
+export const listProvidersApiV1CatalogProvidersGetResponseOperatedDefault = false;
+export const listProvidersApiV1CatalogProvidersGetResponseDocsUrlDefault = ``;
+export const listProvidersApiV1CatalogProvidersGetResponseBrandColorDefault = ``;
+
+export const ListProvidersApiV1CatalogProvidersGetResponseItem = zod.object({
+  "key": zod.string(),
+  "category": zod.string(),
+  "name": zod.string(),
+  "credential_kind": zod.string().default(listProvidersApiV1CatalogProvidersGetResponseCredentialKindDefault),
+  "permissions": zod.array(zod.string()).optional(),
+  "needs_base_url": zod.boolean().default(listProvidersApiV1CatalogProvidersGetResponseNeedsBaseUrlDefault),
+  "operated": zod.boolean().default(listProvidersApiV1CatalogProvidersGetResponseOperatedDefault),
+  "docs_url": zod.string().default(listProvidersApiV1CatalogProvidersGetResponseDocsUrlDefault),
+  "brand_color": zod.string().default(listProvidersApiV1CatalogProvidersGetResponseBrandColorDefault)
+})
+export const ListProvidersApiV1CatalogProvidersGetResponse = zod.array(ListProvidersApiV1CatalogProvidersGetResponseItem)
 
 
 /**
@@ -684,6 +921,26 @@ export const GrantResourceApiV1GrantsPostBody = zod.object({
 export const RevokeGrantApiV1GrantsGrantIdDeleteParams = zod.object({
   "grant_id": zod.coerce.string()
 })
+
+
+/**
+ * Tests the credential with the provider — or says the provider is not operated yet.
+ * @summary Check Resource
+ */
+export const CheckResourceApiV1ResourcesResourceIdCheckPostParams = zod.object({
+  "resource_id": zod.coerce.string()
+})
+
+export const checkResourceApiV1ResourcesResourceIdCheckPostResponseOkDefault = false;
+export const checkResourceApiV1ResourcesResourceIdCheckPostResponseIdentityDefault = ``;
+export const checkResourceApiV1ResourcesResourceIdCheckPostResponseMessageDefault = ``;
+
+export const CheckResourceApiV1ResourcesResourceIdCheckPostResponse = zod.object({
+  "operated": zod.boolean(),
+  "ok": zod.boolean().default(checkResourceApiV1ResourcesResourceIdCheckPostResponseOkDefault),
+  "identity": zod.string().default(checkResourceApiV1ResourcesResourceIdCheckPostResponseIdentityDefault),
+  "message": zod.string().default(checkResourceApiV1ResourcesResourceIdCheckPostResponseMessageDefault)
+}).describe('What checking a credential answers.\n\n`operated` false is the honest case: the platform has no adapter for that\nprovider yet, the credential is stored, nothing was tried. `ok` means\nsomething only when `operated` is true.')
 
 
 /**

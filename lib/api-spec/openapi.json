@@ -49,6 +49,270 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Update Profile",
+        "description": "Edits my profile (onboarding spec 2026-09-20 §3.1). Absent fields stay.",
+        "operationId": "update_profile_api_v1_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/onboarding": {
+      "get": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Onboarding",
+        "description": "Where I am in the journey, and what the closing screen lists (D-2).",
+        "operationId": "onboarding_api_v1_me_onboarding_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/onboarding/steps/{step}": {
+      "post": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Record Step",
+        "description": "Records a step as done or skipped; the core decides whether it may be.",
+        "operationId": "record_step_api_v1_me_onboarding_steps__step__post",
+        "parameters": [
+          {
+            "name": "step",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StepUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/onboarding/complete": {
+      "post": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Complete Onboarding",
+        "description": "Finishes the journey; refused naming the required step still undone.",
+        "operationId": "complete_onboarding_api_v1_me_onboarding_complete_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/handles/{handle}/availability": {
+      "get": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Handle Availability",
+        "description": "As typed: is this handle free, and if not, a suggestion.",
+        "operationId": "handle_availability_api_v1_accounts_handles__handle__availability_get",
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Handle"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandleAvailability"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/current": {
+      "patch": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Update Personal Account",
+        "description": "Edits my PERSONAL account's handle and display name.",
+        "operationId": "update_personal_account_api_v1_accounts_current_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/current/plan": {
+      "put": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Set Plan",
+        "description": "Records the chosen plan on my personal account (D-6). No price, no billing.",
+        "operationId": "set_plan_api_v1_accounts_current_plan_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanChoice"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/verification/email": {
@@ -438,6 +702,58 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/plans": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "List Plans",
+        "description": "The plans, without a price — the absence is deliberate (spec D-6).",
+        "operationId": "list_plans_api_v1_catalog_plans_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PlanSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Plans Api V1 Catalog Plans Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/providers": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "List Providers",
+        "description": "The providers a connection may point at, with the honest `operated` flag.",
+        "operationId": "list_providers_api_v1_catalog_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Providers Api V1 Catalog Providers Get"
                 }
               }
             }
@@ -1366,6 +1682,49 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resources/{resource_id}/check": {
+      "post": {
+        "tags": [
+          "resources"
+        ],
+        "summary": "Check Resource",
+        "description": "Tests the credential with the provider — or says the provider is not operated yet.",
+        "operationId": "check_resource_api_v1_resources__resource_id__check_post",
+        "parameters": [
+          {
+            "name": "resource_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resource Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckResult"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -3783,6 +4142,22 @@
         "title": "AcceptedInvite",
         "description": "The account just joined, so the cockpit can switch to it with no second\nround trip: whoever accepts an invite wants to be inside."
       },
+      "AccountPatch": {
+        "properties": {
+          "handle": {
+            "type": "string",
+            "title": "Handle",
+            "default": ""
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "AccountPatch"
+      },
       "AccountSummary": {
         "properties": {
           "id": {
@@ -3804,6 +4179,11 @@
           "role": {
             "type": "string",
             "title": "Role"
+          },
+          "plan_key": {
+            "type": "string",
+            "title": "Plan Key",
+            "default": ""
           }
         },
         "type": "object",
@@ -4130,6 +4510,35 @@
           "kind"
         ],
         "title": "ChallengeResponse"
+      },
+      "CheckResult": {
+        "properties": {
+          "operated": {
+            "type": "boolean",
+            "title": "Operated"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": false
+          },
+          "identity": {
+            "type": "string",
+            "title": "Identity",
+            "default": ""
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "operated"
+        ],
+        "title": "CheckResult",
+        "description": "What checking a credential answers.\n\n`operated` false is the honest case: the platform has no adapter for that\nprovider yet, the credential is stored, nothing was tried. `ok` means\nsomething only when `operated` is true."
       },
       "ConfirmFactor": {
         "properties": {
@@ -4810,6 +5219,29 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HandleAvailability": {
+        "properties": {
+          "handle": {
+            "type": "string",
+            "title": "Handle"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "suggestion": {
+            "type": "string",
+            "title": "Suggestion",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "handle",
+          "available"
+        ],
+        "title": "HandleAvailability"
+      },
       "InvitePreview": {
         "properties": {
           "id": {
@@ -4926,6 +5358,46 @@
           "role": {
             "type": "string",
             "title": "Role"
+          },
+          "avatar_url": {
+            "type": "string",
+            "title": "Avatar Url",
+            "default": ""
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale",
+            "default": ""
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "default": ""
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone",
+            "default": ""
+          },
+          "phone_verified": {
+            "type": "boolean",
+            "title": "Phone Verified",
+            "default": false
+          },
+          "email_verified": {
+            "type": "boolean",
+            "title": "Email Verified",
+            "default": false
+          },
+          "birth_date": {
+            "type": "string",
+            "title": "Birth Date",
+            "default": ""
+          },
+          "onboarded": {
+            "type": "boolean",
+            "title": "Onboarded",
+            "default": false
           }
         },
         "type": "object",
@@ -5581,6 +6053,191 @@
         ],
         "title": "NewWorkspace"
       },
+      "OnboardingState": {
+        "properties": {
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingStep"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "current": {
+            "type": "string",
+            "title": "Current"
+          },
+          "complete": {
+            "type": "boolean",
+            "title": "Complete"
+          },
+          "email_verified": {
+            "type": "boolean",
+            "title": "Email Verified"
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone"
+          },
+          "phone_verified": {
+            "type": "boolean",
+            "title": "Phone Verified"
+          },
+          "code_connections": {
+            "type": "integer",
+            "title": "Code Connections"
+          },
+          "task_connections": {
+            "type": "integer",
+            "title": "Task Connections"
+          },
+          "plan_key": {
+            "type": "string",
+            "title": "Plan Key"
+          },
+          "personal_account_id": {
+            "type": "string",
+            "title": "Personal Account Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "steps",
+          "current",
+          "complete",
+          "email_verified",
+          "phone",
+          "phone_verified",
+          "code_connections",
+          "task_connections",
+          "plan_key",
+          "personal_account_id"
+        ],
+        "title": "OnboardingState"
+      },
+      "OnboardingStep": {
+        "properties": {
+          "step": {
+            "type": "string",
+            "title": "Step"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "step",
+          "status"
+        ],
+        "title": "OnboardingStep"
+      },
+      "PlanChoice": {
+        "properties": {
+          "plan_key": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Plan Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_key"
+        ],
+        "title": "PlanChoice"
+      },
+      "PlanSummary": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "tagline": {
+            "type": "string",
+            "title": "Tagline",
+            "default": ""
+          },
+          "features": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Features"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name"
+        ],
+        "title": "PlanSummary"
+      },
+      "ProfilePatch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Date"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "type": "object",
+        "title": "ProfilePatch",
+        "description": "A partial update: an absent field is untouched.\n\nAn empty string clears phone, locale and timezone and is refused for the\nname; an empty birth_date clears it. The rules are the core's — this model\nonly carries the shape."
+      },
       "ProjectSummary": {
         "properties": {
           "id": {
@@ -5676,6 +6333,61 @@
         "type": "object",
         "title": "Provenance",
         "description": "The chain's trail, structured — see the module's docstring."
+      },
+      "ProviderSummary": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "credential_kind": {
+            "type": "string",
+            "title": "Credential Kind",
+            "default": "token"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Permissions"
+          },
+          "needs_base_url": {
+            "type": "boolean",
+            "title": "Needs Base Url",
+            "default": false
+          },
+          "operated": {
+            "type": "boolean",
+            "title": "Operated",
+            "default": false
+          },
+          "docs_url": {
+            "type": "string",
+            "title": "Docs Url",
+            "default": ""
+          },
+          "brand_color": {
+            "type": "string",
+            "title": "Brand Color",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "category",
+          "name"
+        ],
+        "title": "ProviderSummary"
       },
       "PullRequest": {
         "properties": {
@@ -6245,6 +6957,20 @@
           "method"
         ],
         "title": "StepUpResponse"
+      },
+      "StepUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "pattern": "^(done|skipped)$",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StepUpdate"
       },
       "TaskManagerBinding": {
         "properties": {

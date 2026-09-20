@@ -14,4 +14,12 @@ export interface MeResponse {
   providers: string[];
   account_id: string;
   role: string;
+  avatar_url?: string;
+  locale?: string;
+  timezone?: string;
+  phone?: string;
+  phone_verified?: boolean;
+  email_verified?: boolean;
+  birth_date?: string;
+  onboarded?: boolean;
 }

@@ -21,12 +21,14 @@ import type {
 
 import type {
   AcceptedInvite,
+  AccountPatch,
   AccountSummary,
   ArtifactSummary,
   AttentionBox,
   BudgetView,
   ChallengeRequest,
   ChallengeResponse,
+  CheckResult,
   ConfirmFactor,
   ConfirmResponse,
   ContextPackageSummary,
@@ -48,6 +50,7 @@ import type {
   GetBudgetParams,
   GrantSummary,
   HTTPValidationError,
+  HandleAvailability,
   Healthz200,
   InvitePreview,
   InviteSummary,
@@ -83,8 +86,13 @@ import type {
   NewThread,
   NewUsage,
   NewWorkspace,
+  OnboardingState,
+  PlanChoice,
+  PlanSummary,
+  ProfilePatch,
   ProjectSummary,
   PromotionTarget,
+  ProviderSummary,
   PullRequest,
   ReadIndexParams,
   RecordUsageOutcome,
@@ -101,6 +109,7 @@ import type {
   Stage,
   StageTransition,
   StepUpResponse,
+  StepUpdate,
   StreamAccountEventsParams,
   StreamAttentionParams,
   StreamSandboxLogsParams,
@@ -281,6 +290,522 @@ export function useMe<TData = Awaited<ReturnType<typeof me>>, TError = ErrorType
 
 
 
+
+export const getUpdateProfileUrl = () => {
+
+
+
+
+  return `/api/v1/me`
+}
+
+/**
+ * Edits my profile (onboarding spec 2026-09-20 §3.1). Absent fields stay.
+ * @summary Update Profile
+ */
+export const updateProfile = async (profilePatch: ProfilePatch, options?: RequestInit): Promise<MeResponse> => {
+
+  return customFetch<MeResponse>(getUpdateProfileUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      profilePatch,)
+  }
+);}
+
+
+
+
+export const getUpdateProfileMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProfile>>, TError,{data: BodyType<ProfilePatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateProfile>>, TError,{data: BodyType<ProfilePatch>}, TContext> => {
+
+const mutationKey = ['updateProfile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProfile>>, {data: BodyType<ProfilePatch>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateProfile>>>
+    export type UpdateProfileMutationBody = BodyType<ProfilePatch>
+    export type UpdateProfileMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Update Profile
+ */
+export const useUpdateProfile = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProfile>>, TError,{data: BodyType<ProfilePatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateProfile>>,
+        TError,
+        {data: BodyType<ProfilePatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateProfileMutationOptions(options));
+    }
+
+export const getOnboardingUrl = () => {
+
+
+
+
+  return `/api/v1/me/onboarding`
+}
+
+/**
+ * Where I am in the journey, and what the closing screen lists (D-2).
+ * @summary Onboarding
+ */
+export const onboarding = async ( options?: RequestInit): Promise<OnboardingState> => {
+
+  return customFetch<OnboardingState>(getOnboardingUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getOnboardingQueryKey = () => {
+    return [
+    `/api/v1/me/onboarding`
+    ] as const;
+    }
+
+
+export const getOnboardingQueryOptions = <TData = Awaited<ReturnType<typeof onboarding>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof onboarding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getOnboardingQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof onboarding>>> = ({ signal }) => onboarding({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof onboarding>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type OnboardingQueryResult = NonNullable<Awaited<ReturnType<typeof onboarding>>>
+export type OnboardingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Onboarding
+ */
+
+export function useOnboarding<TData = Awaited<ReturnType<typeof onboarding>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof onboarding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getOnboardingQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getRecordStepUrl = (step: string,) => {
+
+
+
+
+  return `/api/v1/me/onboarding/steps/${step}`
+}
+
+/**
+ * Records a step as done or skipped; the core decides whether it may be.
+ * @summary Record Step
+ */
+export const recordStep = async (step: string,
+    stepUpdate: StepUpdate, options?: RequestInit): Promise<OnboardingState> => {
+
+  return customFetch<OnboardingState>(getRecordStepUrl(step),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      stepUpdate,)
+  }
+);}
+
+
+
+
+export const getRecordStepMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordStep>>, TError,{step: string;data: BodyType<StepUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordStep>>, TError,{step: string;data: BodyType<StepUpdate>}, TContext> => {
+
+const mutationKey = ['recordStep'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordStep>>, {step: string;data: BodyType<StepUpdate>}> = (props) => {
+          const {step,data} = props ?? {};
+
+          return  recordStep(step,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordStepMutationResult = NonNullable<Awaited<ReturnType<typeof recordStep>>>
+    export type RecordStepMutationBody = BodyType<StepUpdate>
+    export type RecordStepMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Record Step
+ */
+export const useRecordStep = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordStep>>, TError,{step: string;data: BodyType<StepUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordStep>>,
+        TError,
+        {step: string;data: BodyType<StepUpdate>},
+        TContext
+      > => {
+      return useMutation(getRecordStepMutationOptions(options));
+    }
+
+export const getCompleteOnboardingUrl = () => {
+
+
+
+
+  return `/api/v1/me/onboarding/complete`
+}
+
+/**
+ * Finishes the journey; refused naming the required step still undone.
+ * @summary Complete Onboarding
+ */
+export const completeOnboarding = async ( options?: RequestInit): Promise<OnboardingState> => {
+
+  return customFetch<OnboardingState>(getCompleteOnboardingUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCompleteOnboardingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeOnboarding>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeOnboarding>>, TError,void, TContext> => {
+
+const mutationKey = ['completeOnboarding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeOnboarding>>, void> = () => {
+
+
+          return  completeOnboarding(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteOnboardingMutationResult = NonNullable<Awaited<ReturnType<typeof completeOnboarding>>>
+
+    export type CompleteOnboardingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Complete Onboarding
+ */
+export const useCompleteOnboarding = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeOnboarding>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeOnboarding>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCompleteOnboardingMutationOptions(options));
+    }
+
+export const getHandleAvailabilityUrl = (handle: string,) => {
+
+
+
+
+  return `/api/v1/accounts/handles/${handle}/availability`
+}
+
+/**
+ * As typed: is this handle free, and if not, a suggestion.
+ * @summary Handle Availability
+ */
+export const handleAvailability = async (handle: string, options?: RequestInit): Promise<HandleAvailability> => {
+
+  return customFetch<HandleAvailability>(getHandleAvailabilityUrl(handle),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getHandleAvailabilityQueryKey = (handle: string,) => {
+    return [
+    `/api/v1/accounts/handles/${handle}/availability`
+    ] as const;
+    }
+
+
+export const getHandleAvailabilityQueryOptions = <TData = Awaited<ReturnType<typeof handleAvailability>>, TError = ErrorType<HTTPValidationError>>(handle: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof handleAvailability>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getHandleAvailabilityQueryKey(handle);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof handleAvailability>>> = ({ signal }) => handleAvailability(handle, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(handle), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof handleAvailability>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type HandleAvailabilityQueryResult = NonNullable<Awaited<ReturnType<typeof handleAvailability>>>
+export type HandleAvailabilityQueryError = ErrorType<HTTPValidationError>
+
+
+/**
+ * @summary Handle Availability
+ */
+
+export function useHandleAvailability<TData = Awaited<ReturnType<typeof handleAvailability>>, TError = ErrorType<HTTPValidationError>>(
+ handle: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof handleAvailability>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getHandleAvailabilityQueryOptions(handle,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdatePersonalAccountUrl = () => {
+
+
+
+
+  return `/api/v1/accounts/current`
+}
+
+/**
+ * Edits my PERSONAL account's handle and display name.
+ * @summary Update Personal Account
+ */
+export const updatePersonalAccount = async (accountPatch: AccountPatch, options?: RequestInit): Promise<AccountSummary> => {
+
+  return customFetch<AccountSummary>(getUpdatePersonalAccountUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      accountPatch,)
+  }
+);}
+
+
+
+
+export const getUpdatePersonalAccountMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePersonalAccount>>, TError,{data: BodyType<AccountPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePersonalAccount>>, TError,{data: BodyType<AccountPatch>}, TContext> => {
+
+const mutationKey = ['updatePersonalAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePersonalAccount>>, {data: BodyType<AccountPatch>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updatePersonalAccount(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePersonalAccountMutationResult = NonNullable<Awaited<ReturnType<typeof updatePersonalAccount>>>
+    export type UpdatePersonalAccountMutationBody = BodyType<AccountPatch>
+    export type UpdatePersonalAccountMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Update Personal Account
+ */
+export const useUpdatePersonalAccount = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePersonalAccount>>, TError,{data: BodyType<AccountPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePersonalAccount>>,
+        TError,
+        {data: BodyType<AccountPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdatePersonalAccountMutationOptions(options));
+    }
+
+export const getSetPlanUrl = () => {
+
+
+
+
+  return `/api/v1/accounts/current/plan`
+}
+
+/**
+ * Records the chosen plan on my personal account (D-6). No price, no billing.
+ * @summary Set Plan
+ */
+export const setPlan = async (planChoice: PlanChoice, options?: RequestInit): Promise<AccountSummary> => {
+
+  return customFetch<AccountSummary>(getSetPlanUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      planChoice,)
+  }
+);}
+
+
+
+
+export const getSetPlanMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setPlan>>, TError,{data: BodyType<PlanChoice>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setPlan>>, TError,{data: BodyType<PlanChoice>}, TContext> => {
+
+const mutationKey = ['setPlan'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setPlan>>, {data: BodyType<PlanChoice>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  setPlan(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetPlanMutationResult = NonNullable<Awaited<ReturnType<typeof setPlan>>>
+    export type SetPlanMutationBody = BodyType<PlanChoice>
+    export type SetPlanMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Set Plan
+ */
+export const useSetPlan = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setPlan>>, TError,{data: BodyType<PlanChoice>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setPlan>>,
+        TError,
+        {data: BodyType<PlanChoice>},
+        TContext
+      > => {
+      return useMutation(getSetPlanMutationOptions(options));
+    }
 
 export const getSendEmailVerificationUrl = () => {
 
@@ -1105,6 +1630,162 @@ export const useRemoveMember = <TError = ErrorType<HTTPValidationError>,
       > => {
       return useMutation(getRemoveMemberMutationOptions(options));
     }
+
+export const getListPlansUrl = () => {
+
+
+
+
+  return `/api/v1/catalog/plans`
+}
+
+/**
+ * The plans, without a price — the absence is deliberate (spec D-6).
+ * @summary List Plans
+ */
+export const listPlans = async ( options?: RequestInit): Promise<PlanSummary[]> => {
+
+  return customFetch<PlanSummary[]>(getListPlansUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlansQueryKey = () => {
+    return [
+    `/api/v1/catalog/plans`
+    ] as const;
+    }
+
+
+export const getListPlansQueryOptions = <TData = Awaited<ReturnType<typeof listPlans>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlans>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlansQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlans>>> = ({ signal }) => listPlans({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlans>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlansQueryResult = NonNullable<Awaited<ReturnType<typeof listPlans>>>
+export type ListPlansQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List Plans
+ */
+
+export function useListPlans<TData = Awaited<ReturnType<typeof listPlans>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlans>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlansQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListProvidersUrl = () => {
+
+
+
+
+  return `/api/v1/catalog/providers`
+}
+
+/**
+ * The providers a connection may point at, with the honest `operated` flag.
+ * @summary List Providers
+ */
+export const listProviders = async ( options?: RequestInit): Promise<ProviderSummary[]> => {
+
+  return customFetch<ProviderSummary[]>(getListProvidersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProvidersQueryKey = () => {
+    return [
+    `/api/v1/catalog/providers`
+    ] as const;
+    }
+
+
+export const getListProvidersQueryOptions = <TData = Awaited<ReturnType<typeof listProviders>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProviders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProvidersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProviders>>> = ({ signal }) => listProviders({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProviders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProvidersQueryResult = NonNullable<Awaited<ReturnType<typeof listProviders>>>
+export type ListProvidersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List Providers
+ */
+
+export function useListProviders<TData = Awaited<ReturnType<typeof listProviders>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProviders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProvidersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getSecondFactorStateUrl = () => {
 
@@ -2817,6 +3498,77 @@ export const useRevokeGrant = <TError = ErrorType<HTTPValidationError>,
         TContext
       > => {
       return useMutation(getRevokeGrantMutationOptions(options));
+    }
+
+export const getCheckResourceUrl = (resourceId: string,) => {
+
+
+
+
+  return `/api/v1/resources/${resourceId}/check`
+}
+
+/**
+ * Tests the credential with the provider — or says the provider is not operated yet.
+ * @summary Check Resource
+ */
+export const checkResource = async (resourceId: string, options?: RequestInit): Promise<CheckResult> => {
+
+  return customFetch<CheckResult>(getCheckResourceUrl(resourceId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCheckResourceMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkResource>>, TError,{resourceId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof checkResource>>, TError,{resourceId: string}, TContext> => {
+
+const mutationKey = ['checkResource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkResource>>, {resourceId: string}> = (props) => {
+          const {resourceId} = props ?? {};
+
+          return  checkResource(resourceId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CheckResourceMutationResult = NonNullable<Awaited<ReturnType<typeof checkResource>>>
+
+    export type CheckResourceMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Check Resource
+ */
+export const useCheckResource = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkResource>>, TError,{resourceId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof checkResource>>,
+        TError,
+        {resourceId: string},
+        TContext
+      > => {
+      return useMutation(getCheckResourceMutationOptions(options));
     }
 
 export const getListFlowsUrl = (params?: ListFlowsParams,) => {

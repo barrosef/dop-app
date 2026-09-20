@@ -6,11 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AccountSummary {
-  id: string;
-  handle: string;
-  display_name: string;
-  kind: string;
-  role: string;
-  plan_key?: string;
+export interface PlanChoice {
+  /** @minLength 1 */
+  plan_key: string;
 }
