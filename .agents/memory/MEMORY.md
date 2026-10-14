@@ -1,1 +1,2 @@
 - [Terminal development environment](terminal-development-environment.md) — managed dev workflow env may be absent; the PTY uses its API cwd only with an explicit warning.
+- [Cadastro guiado](onboarding-expectations.md) — cadastro social inicia a configuração; por enquanto oferecer somente Community.

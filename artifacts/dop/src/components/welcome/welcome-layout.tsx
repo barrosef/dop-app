@@ -15,7 +15,7 @@ import { useI18n } from '@/lib/i18n';
 import { useAccount } from '@/lib/platform/account';
 import { getActiveAccount } from '@/lib/platform/active-account';
 import { useSession } from '@/lib/platform/session';
-import { safeJourneyExit, welcomePathFor } from '@/lib/platform/welcome';
+import { onboardingComplete, safeJourneyExit, welcomePathFor } from '@/lib/platform/welcome';
 import { useJourneyExit } from './journey-exit';
 import { useJourney } from '@/hooks/use-welcome-step';
 import { ApiErrorNotice } from './api-error';
@@ -96,6 +96,7 @@ export function PersonalAccountGuard({ children }: { children: ReactNode }) {
 export function WelcomeGate({ children }: { children: ReactNode }) {
   const { activeAccount } = useAccount();
   const me = useMe({ query: { queryKey: getMeQueryKey(), enabled: Boolean(activeAccount) } });
+  const journey = useJourney();
   const exitStore = useJourneyExit();
 
   if (me.error) {
@@ -106,9 +107,19 @@ export function WelcomeGate({ children }: { children: ReactNode }) {
     );
   }
   if (me.isLoading || !me.data) return <WelcomeSkeleton />;
-  // `/me` is the one authority: the ready screen refetches it after
-  // `complete` is accepted, and only then does this gate reverse.
-  if (me.data.onboarded === true) {
+  if (me.data.onboarded === undefined && journey.error) {
+    return (
+      <CenteredState>
+        <ApiErrorNotice error={journey.error} onRetry={() => void journey.refetch()} />
+      </CenteredState>
+    );
+  }
+  if (onboardingComplete(me.data.onboarded, journey.data?.complete) === undefined) {
+    return <WelcomeSkeleton />;
+  }
+  // Prefer the explicit profile flag; older responses may omit it, in which
+  // case the journey's server-owned completion is authoritative.
+  if (onboardingComplete(me.data.onboarded, journey.data?.complete) === true) {
     const exit = safeJourneyExit(exitStore.get());
     return <Navigate to={exit.path} state={exit.state} replace />;
   }

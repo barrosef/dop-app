@@ -4,6 +4,14 @@
  */
 import type { MeResponse, ProfilePatch } from '@workspace/api-client-react';
 
+/** Missing optional profile flags must not silently bypass onboarding. */
+export function onboardingComplete(
+  onboarded: boolean | undefined,
+  journeyComplete: boolean | undefined,
+): boolean | undefined {
+  return onboarded ?? journeyComplete;
+}
+
 /** The route of one of the API's steps. An empty `current` means the end. */
 export function welcomePathFor(current: string | null | undefined): string {
   const step = (current ?? '').trim();

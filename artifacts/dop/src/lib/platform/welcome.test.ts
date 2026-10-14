@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { MeResponse } from '@workspace/api-client-react';
 import {
   accountPatchFrom, profilePatchFrom, providerInitials, resendDelaySeconds,
-  toBase64, welcomePathFor,
+  toBase64, welcomePathFor, onboardingComplete,
 } from './welcome';
 
 const me: MeResponse = {
@@ -15,6 +15,15 @@ const draft = {
 };
 
 describe('welcome presentation and request helpers', () => {
+  it('does not bypass the journey when the optional profile flag is absent', () => {
+    expect(onboardingComplete(undefined, false)).toBe(false);
+    expect(onboardingComplete(undefined, undefined)).toBeUndefined();
+    expect(onboardingComplete(undefined, true)).toBe(true);
+  });
+  it('honors explicit profile completion flags in both route gates', () => {
+    expect(onboardingComplete(false, true)).toBe(false);
+    expect(onboardingComplete(true, false)).toBe(true);
+  });
   it('uses the API current step without imposing an order', () => {
     expect(welcomePathFor('code')).toBe('/welcome/code');
     expect(welcomePathFor('future-step')).toBe('/welcome/future-step');

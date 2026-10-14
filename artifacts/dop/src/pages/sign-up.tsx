@@ -169,7 +169,7 @@ export default function SignUp() {
     setProviderPending(provider);
     try {
       await signInWith(provider);
-      navigate('/');
+      navigate('/welcome');
     } catch (failure) {
       handleFailure(failure, true);
     } finally {

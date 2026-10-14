@@ -49,7 +49,7 @@ import { ApiErrorNotice } from '@/components/welcome/api-error';
 import { JourneyExitScope } from '@/components/welcome/journey-exit';
 import { useJourney } from '@/hooks/use-welcome-step';
 import { useAccount } from '@/lib/platform/account';
-import { welcomePathFor } from '@/lib/platform/welcome';
+import { onboardingComplete, welcomePathFor } from '@/lib/platform/welcome';
 import { getMeQueryKey, useMe } from '@workspace/api-client-react';
 
 const queryClient = new QueryClient({
@@ -162,15 +162,16 @@ function CardRedirect() {
 /**
  * The onboarding gate, in the same place as the session gate: an account whose
  * `/me` says `onboarded === false` sees only the journey, at the step the API
- * calls `current`. With no active account there is nothing to ask `/me` (it
+ * calls `current`. If the optional flag is absent, use the journey's completion.
+ * With no active account there is nothing to ask `/me` (it
  * needs one) and nothing to onboard into, so the shell decides as before.
  */
 function OnboardingGate({ children }: { children: React.ReactNode }) {
-  const { activeAccount } = useAccount();
+  const { activeAccount, loading } = useAccount();
   const me = useMe({ query: { queryKey: getMeQueryKey(), enabled: Boolean(activeAccount) } });
-  const pending = me.data?.onboarded === false;
   const journey = useJourney();
 
+  if (loading) return <WelcomeSkeleton />;
   if (!activeAccount) return <>{children}</>;
   if (me.error) {
     return (
@@ -182,7 +183,7 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
     );
   }
   if (me.isLoading || !me.data) return <WelcomeSkeleton />;
-  if (!pending) return <>{children}</>;
+  if (onboardingComplete(me.data.onboarded, journey.data?.complete) === true) return <>{children}</>;
   if (journey.error) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6">

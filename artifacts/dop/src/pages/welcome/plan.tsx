@@ -43,16 +43,18 @@ export default function WelcomePlan() {
   const setPlan = useSetPlan();
   const step = useWelcomeStep('plan');
   const [selected, setSelected] = useState('');
+  // Current product scope: only the API's Community plan is offered.
+  const availablePlans = plans.data?.filter((plan) => plan.key === 'community');
 
   useEffect(() => {
-    if (selected || !plans.data?.length) return;
+    if (selected || !availablePlans?.length) return;
     const recorded = journey.data?.plan_key;
     setSelected(
-      recorded && plans.data.some((p) => p.key === recorded) ? recorded : plans.data[0].key,
+      recorded && availablePlans.some((p) => p.key === recorded) ? recorded : availablePlans[0].key,
     );
-  }, [plans.data, journey.data?.plan_key, selected]);
+  }, [availablePlans, journey.data?.plan_key, selected]);
 
-  const chosen = plans.data?.find((p) => p.key === selected);
+  const chosen = availablePlans?.find((p) => p.key === selected);
 
   async function choose() {
     if (!chosen) return;
@@ -81,7 +83,7 @@ export default function WelcomePlan() {
         </div>
       ) : plans.error ? (
         <ApiErrorNotice error={plans.error} onRetry={() => void plans.refetch()} />
-      ) : !plans.data?.length ? (
+      ) : !availablePlans?.length ? (
         <Empty className="border border-dashed border-border">
           <EmptyHeader>
             <EmptyTitle>{t('welcome.plan.empty.title')}</EmptyTitle>
@@ -95,7 +97,7 @@ export default function WelcomePlan() {
           className="grid gap-3 md:grid-cols-2"
           aria-label={t('welcome.plan.title')}
         >
-          {plans.data.map((plan) => {
+          {availablePlans.map((plan) => {
             const isSelected = plan.key === selected;
             const isContact = plan.key === CONTACT_PLAN_KEY;
             return (
