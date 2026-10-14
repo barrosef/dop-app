@@ -128,7 +128,11 @@ Connecting = `POST /resources {kind: "integration", name, config: {category:
 "git", provider: <key>, base_url?}}` then `PUT /resources/{id}/credential`
 (`secret_base64`). *Test connection* = `POST /resources/{id}/check`; render its
 `operated`, `ok`, `identity` and `message` as they come — a non-operated
-provider is an honest answer, not an error. Several connections may be made;
+provider is an honest answer, not an error. **The token can be replaced at
+any time** — from the connected view and from every connection in the list —
+by calling `PUT /resources/{id}/credential` again on the same resource: a
+refused token never traps the person, and never creates a second connection.
+Several connections may be made;
 the step is done with `steps/code {status: "done"}` — **the API refuses it
 with 412 when there is no git connection**; render that refusal.
 

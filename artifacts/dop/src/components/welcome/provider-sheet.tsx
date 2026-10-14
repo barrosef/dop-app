@@ -7,6 +7,7 @@ import {
   useCreateResource,
   useSetCredential,
   type ProviderSummary,
+  type ResourceSummary,
 } from '@workspace/api-client-react';
 
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,11 @@ function CopyButton({ value, label }: { value: string; label: string }) {
   );
 }
 
+function configString(resource: ResourceSummary | null | undefined, key: string): string {
+  const value = resource?.config?.[key];
+  return typeof value === 'string' ? value : '';
+}
+
 /**
  * The provider's method, in a side panel: credential kind, the permissions
  * the token needs (listed and copyable), the docs, the base URL when the API
@@ -61,14 +67,22 @@ function CopyButton({ value, label }: { value: string; label: string }) {
  * Connecting = create the integration resource, then store its credential.
  * If the second call fails the resource already exists: the retry only stores
  * the credential, it never creates a second resource.
+ *
+ * A token can be replaced at any time: from the connected view (the test said
+ * the provider refused it) or from the list of connections made (`resource`).
+ * Replacing stores a new credential on the SAME resource — the core
+ * overwrites the secret under the same reference; nothing is created.
  */
 export function ProviderSheet({
   provider,
+  resource = null,
   category,
   open,
   onOpenChange,
 }: {
   provider: ProviderSummary | null;
+  /** An existing connection whose token is being replaced. */
+  resource?: ResourceSummary | null;
   category: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -81,6 +95,11 @@ export function ProviderSheet({
   const [baseUrl, setBaseUrl] = useState('');
   const [token, setToken] = useState('');
   const [resourceId, setResourceId] = useState<string | null>(null);
+  // The resource already holds a credential: the form replaces it, the
+  // success message says "updated" rather than "connected".
+  const [hasCredential, setHasCredential] = useState(false);
+  // The last store replaced a credential (not the first of this resource).
+  const [replaced, setReplaced] = useState(false);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
@@ -93,14 +112,23 @@ export function ProviderSheet({
   useEffect(() => {
     showing.current = provider?.key ?? null;
     if (!provider) return;
+    setToken('');
+    setConnected(false);
+    setReplaced(false);
+    setError(null);
+    if (resource) {
+      setName(resource.name);
+      setBaseUrl(configString(resource, 'base_url'));
+      setResourceId(resource.id);
+      setHasCredential(Boolean(resource.credential_ref));
+      return;
+    }
     const partial = partials.current.get(provider.key);
     setName(partial?.name ?? provider.name);
     setBaseUrl('');
-    setToken('');
     setResourceId(partial?.id ?? null);
-    setConnected(false);
-    setError(null);
-  }, [provider]);
+    setHasCredential(false);
+  }, [provider, resource]);
 
   function requestOpenChange(next: boolean) {
     // The panel cannot close mid-connection: the token typed belongs to it.
@@ -110,6 +138,7 @@ export function ProviderSheet({
 
   if (!provider) return null;
   const permissions = provider.permissions ?? [];
+  const replacing = Boolean(resourceId) && hasCredential;
 
   async function connect() {
     if (!provider || pending) return;
@@ -136,9 +165,12 @@ export function ProviderSheet({
       partials.current.delete(key);
       if (showing.current === key) {
         setToken('');
+        setReplaced(hasCredential);
+        setHasCredential(true);
         setConnected(true);
       }
     } catch (failure) {
+      // The token stays in the field: the person corrects it and tries again.
       if (showing.current === key) setError(failure);
     } finally {
       setPending(false);
@@ -148,6 +180,31 @@ export function ProviderSheet({
       void queryClient.invalidateQueries({ queryKey: getOnboardingQueryKey() });
     }
   }
+
+  // Back to the form with the same resource: only the token is asked again.
+  function replaceToken() {
+    setConnected(false);
+    setToken('');
+    setError(null);
+  }
+
+  // Changed their mind: the stored token stays. From the list the panel just
+  // closes; from the connected view it goes back there.
+  function keepToken() {
+    if (resource) {
+      requestOpenChange(false);
+      return;
+    }
+    setToken('');
+    setError(null);
+    setConnected(true);
+  }
+
+  const connectLabel = replacing
+    ? t('welcome.sheet.saveNewToken')
+    : resourceId
+      ? t('welcome.sheet.retryCredential')
+      : t('welcome.sheet.connect', { name: provider.name });
 
   return (
     <Sheet open={open} onOpenChange={requestOpenChange}>
@@ -217,17 +274,28 @@ export function ProviderSheet({
 
           {connected && resourceId ? (
             <section className="space-y-4">
-              <div className="flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm">
+              <div className="flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm" data-testid="status-connected">
                 <Check className="h-4 w-4 text-primary" />
-                {t('welcome.sheet.connected', { name })}
+                {replaced ? t('welcome.sheet.replaced', { name }) : t('welcome.sheet.connected', { name })}
               </div>
               <CheckConnection resourceId={resourceId} />
-              <Button variant="outline" className="w-full" onClick={() => requestOpenChange(false)}>
-                {t('welcome.sheet.close')}
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button variant="outline" className="flex-1" onClick={replaceToken} data-testid="button-replace-token">
+                  <KeyRound />
+                  {t('welcome.sheet.replaceToken')}
+                </Button>
+                <Button variant="ghost" className="flex-1" onClick={() => requestOpenChange(false)}>
+                  {t('welcome.sheet.close')}
+                </Button>
+              </div>
             </section>
           ) : (
             <section className="space-y-4">
+              {replacing ? (
+                <p className="text-sm text-muted-foreground" data-testid="text-replace-lead">
+                  {t('welcome.sheet.replaceLead')}
+                </p>
+              ) : null}
               <div className="space-y-1.5">
                 <Label htmlFor="connection-name">{t('welcome.sheet.name')}</Label>
                 <Input
@@ -238,7 +306,7 @@ export function ProviderSheet({
                   data-testid="input-connection-name"
                 />
               </div>
-              {provider.needs_base_url ? (
+              {provider.needs_base_url || (replacing && baseUrl) ? (
                 <div className="space-y-1.5">
                   <Label htmlFor="connection-base-url">{t('welcome.sheet.baseUrl')}</Label>
                   <Input
@@ -252,7 +320,9 @@ export function ProviderSheet({
                     className="font-mono"
                     data-testid="input-connection-base-url"
                   />
-                  <p className="text-[11px] text-muted-foreground">{t('welcome.sheet.baseUrlHint')}</p>
+                  {!resourceId ? (
+                    <p className="text-[11px] text-muted-foreground">{t('welcome.sheet.baseUrlHint')}</p>
+                  ) : null}
                 </div>
               ) : null}
               <div className="space-y-1.5">
@@ -263,6 +333,7 @@ export function ProviderSheet({
                   autoComplete="off"
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
+                  autoFocus={replacing}
                   data-testid="input-connection-token"
                 />
                 <p className="text-[11px] text-muted-foreground">{t('welcome.sheet.tokenHint')}</p>
@@ -274,11 +345,14 @@ export function ProviderSheet({
                 disabled={pending || !name.trim() || !token}
                 data-testid="button-connect"
               >
-                {pending ? <Loader2 className="animate-spin" /> : <PlugZap />}
-                {resourceId
-                  ? t('welcome.sheet.retryCredential')
-                  : t('welcome.sheet.connect', { name: provider.name })}
+                {pending ? <Loader2 className="animate-spin" /> : replacing ? <KeyRound /> : <PlugZap />}
+                {connectLabel}
               </Button>
+              {replacing ? (
+                <Button variant="ghost" className="w-full" onClick={keepToken} data-testid="button-replace-cancel">
+                  {t('welcome.sheet.keepToken')}
+                </Button>
+              ) : null}
             </section>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Cable } from 'lucide-react';
+import { Cable, KeyRound } from 'lucide-react';
 import {
   getListProvidersQueryKey,
   getListResourcesQueryKey,
@@ -9,6 +9,7 @@ import {
   type ResourceSummary,
 } from '@workspace/api-client-react';
 
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Empty,
@@ -57,6 +58,8 @@ export function ConnectionStep({
     },
   );
   const [selected, setSelected] = useState<ProviderSummary | null>(null);
+  // Set when the panel opens to replace the token of a connection already made.
+  const [selectedResource, setSelectedResource] = useState<ResourceSummary | null>(null);
   const [open, setOpen] = useState(false);
 
   const tiles = useMemo(
@@ -68,6 +71,21 @@ export function ConnectionStep({
     [resources.data, category],
   );
   const providerOf = (key: string) => (providers.data ?? []).find((p) => p.key === key);
+
+  function openForProvider(p: ProviderSummary) {
+    setSelected(p);
+    setSelectedResource(null);
+    setOpen(true);
+  }
+
+  // A connection whose provider left the catalogue still gets the panel: the
+  // token can be replaced with what the resource itself knows.
+  function openForResource(r: ResourceSummary) {
+    const key = configString(r, 'provider');
+    setSelected(providerOf(key) ?? { key, category, name: key });
+    setSelectedResource(r);
+    setOpen(true);
+  }
 
   return (
     <div className="space-y-8">
@@ -102,8 +120,17 @@ export function ConnectionStep({
                         {r.credential_ref ? '' : ` · ${t('welcome.connections.noCredential')}`}
                       </p>
                     </div>
-                    <div className="sm:w-52">
+                    <div className="flex flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                       <CheckConnection resourceId={r.id} compact />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openForResource(r)}
+                        data-testid={`button-replace-${r.id}`}
+                      >
+                        <KeyRound />
+                        {t('welcome.sheet.replaceToken')}
+                      </Button>
                     </div>
                   </li>
                 );
@@ -142,10 +169,7 @@ export function ConnectionStep({
                 key={p.key}
                 provider={p}
                 connections={existing.filter((r) => configString(r, 'provider') === p.key).length}
-                onSelect={() => {
-                  setSelected(p);
-                  setOpen(true);
-                }}
+                onSelect={() => openForProvider(p)}
               />
             ))}
           </div>
@@ -154,7 +178,13 @@ export function ConnectionStep({
 
       {children(existing.length)}
 
-      <ProviderSheet provider={selected} category={category} open={open} onOpenChange={setOpen} />
+      <ProviderSheet
+        provider={selected}
+        resource={selectedResource}
+        category={category}
+        open={open}
+        onOpenChange={setOpen}
+      />
     </div>
   );
 }
