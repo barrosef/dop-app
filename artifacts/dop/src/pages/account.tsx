@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Building2, Mail, ShieldCheck, Users } from 'lucide-react';
 
 import { useAccount } from '../lib/platform/account';
@@ -15,7 +16,10 @@ type Tab = 'members' | 'invites' | 'security' | 'organization';
 export default function Account() {
   const t = useI18n((s) => s.t);
   const { accounts, activeAccount, loading, error } = useAccount();
-  const [selectedTab, setActiveTab] = useState<Tab>('members');
+  const location = useLocation();
+  const [selectedTab, setActiveTab] = useState<Tab>(
+    () => (location.state as { tab?: Tab } | null)?.tab ?? 'members',
+  );
   const activeTab = !loading && !activeAccount ? 'organization' : selectedTab;
 
   const currentAccountInfo = accounts.find(a => a.id === activeAccount);

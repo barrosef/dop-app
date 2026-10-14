@@ -1,3 +1,4 @@
+import type React from 'react';
 import {
   BrowserRouter,
   Routes,
@@ -30,7 +31,26 @@ import Account from '@/pages/account';
 import WorkspaceCockpit from '@/pages/workspace-cockpit';
 import WorkspaceCreate from '@/pages/workspace-create';
 import NotFound from '@/pages/not-found';
-import Onboarding from '@/pages/onboarding';
+import ProjectCreate from '@/pages/project-create';
+import WelcomeProfile from '@/pages/welcome/profile';
+import WelcomeContact from '@/pages/welcome/contact';
+import WelcomeCode from '@/pages/welcome/code';
+import WelcomeTasks from '@/pages/welcome/tasks';
+import WelcomePlan from '@/pages/welcome/plan';
+import WelcomeReady from '@/pages/welcome/ready';
+import {
+  PersonalAccountGuard,
+  WelcomeGate,
+  WelcomeIndex,
+  WelcomeLayout,
+  WelcomeSkeleton,
+} from '@/components/welcome/welcome-layout';
+import { ApiErrorNotice } from '@/components/welcome/api-error';
+import { JourneyExitScope } from '@/components/welcome/journey-exit';
+import { useJourney } from '@/hooks/use-welcome-step';
+import { useAccount } from '@/lib/platform/account';
+import { welcomePathFor } from '@/lib/platform/welcome';
+import { getMeQueryKey, useMe } from '@workspace/api-client-react';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -140,6 +160,69 @@ function CardRedirect() {
 }
 
 /**
+ * The onboarding gate, in the same place as the session gate: an account whose
+ * `/me` says `onboarded === false` sees only the journey, at the step the API
+ * calls `current`. With no active account there is nothing to ask `/me` (it
+ * needs one) and nothing to onboard into, so the shell decides as before.
+ */
+function OnboardingGate({ children }: { children: React.ReactNode }) {
+  const { activeAccount } = useAccount();
+  const me = useMe({ query: { queryKey: getMeQueryKey(), enabled: Boolean(activeAccount) } });
+  const pending = me.data?.onboarded === false;
+  const journey = useJourney();
+
+  if (!activeAccount) return <>{children}</>;
+  if (me.error) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6">
+        <div className="w-full max-w-md">
+          <ApiErrorNotice error={me.error} onRetry={() => void me.refetch()} />
+        </div>
+      </div>
+    );
+  }
+  if (me.isLoading || !me.data) return <WelcomeSkeleton />;
+  if (!pending) return <>{children}</>;
+  if (journey.error) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6">
+        <div className="w-full max-w-md">
+          <ApiErrorNotice error={journey.error} onRetry={() => void journey.refetch()} />
+        </div>
+      </div>
+    );
+  }
+  if (!journey.data) return <WelcomeSkeleton />;
+  return <Navigate to={welcomePathFor(journey.data.current)} replace />;
+}
+
+/**
+ * `/welcome/*`: outside the shell (no sidebar, no tree), behind the same
+ * session and e-mail gates, inside the personal account.
+ */
+function WelcomeRoute() {
+  const { user, loading } = useSession();
+
+  if (loading) return <Restoring />;
+  if (!user) return <Navigate to="/sign-in" replace />;
+  if (needsEmailVerification(user)) return <Navigate to="/verify-email" replace />;
+
+  return (
+    <JourneyExitScope key={user.uid}>
+      <AccountProvider>
+        <PersonalAccountGuard>
+          <SecondFactorGate>
+            <WelcomeGate>
+              <WelcomeLayout />
+            </WelcomeGate>
+          </SecondFactorGate>
+        </PersonalAccountGuard>
+      </AccountProvider>
+    </JourneyExitScope>
+  );
+}
+
+/**
  * The shell of the screens wired to the real BFF. They only exist after the
  * session: with no token there is no active account, and with no active account
  * the BFF refuses everything — which is its right behaviour (the SP-0 rule), not
@@ -159,9 +242,11 @@ function AuthenticatedShell() {
           challenge, and somebody with no factor in an account that requires one
           is sent to register it (ADR-0020 §5). */}
       <SecondFactorGate>
-        <Shell>
-          <Outlet />
-        </Shell>
+        <OnboardingGate>
+          <Shell>
+            <Outlet />
+          </Shell>
+        </OnboardingGate>
       </SecondFactorGate>
     </AccountProvider>
   );
@@ -195,7 +280,7 @@ function App() {
                   <Route path="/" element={<Start />} />
                   <Route path="/workspaces" element={<Navigate to="/" replace />} />
                   <Route path="/demands" element={<Navigate to="/" replace />} />
-                  <Route path="/onboarding" element={<><Start /><Onboarding /></>} />
+                  <Route path="/projects/new" element={<ProjectCreate />} />
                   <Route path="/projects/:projectId" element={<Project />} />
                   <Route path="/demands/:demandId" element={<Demand />} />
                   <Route path="/account" element={<Account />} />
@@ -206,6 +291,17 @@ function App() {
                   <Route path="/workspaces/:id/cards/:cardId" element={<CardRedirect />} />
                   <Route path="/workspaces/:id/demands" element={<CardsRedirect />} />
                   <Route path="/workspaces/:id/demands/:demandId" element={<CardRedirect />} />
+                </Route>
+
+                <Route path="/welcome" element={<WelcomeRoute />}>
+                  <Route index element={<WelcomeIndex />} />
+                  <Route path="profile" element={<WelcomeProfile />} />
+                  <Route path="contact" element={<WelcomeContact />} />
+                  <Route path="code" element={<WelcomeCode />} />
+                  <Route path="tasks" element={<WelcomeTasks />} />
+                  <Route path="plan" element={<WelcomePlan />} />
+                  <Route path="ready" element={<WelcomeReady />} />
+                  <Route path="*" element={<WelcomeIndex />} />
                 </Route>
 
                 {/* The invite's link lands here, and it is OUTSIDE the shell:

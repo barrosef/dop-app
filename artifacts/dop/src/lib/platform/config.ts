@@ -43,3 +43,11 @@ export const FIREBASE_AUTH_DOMAIN: string =
  */
 export const FIREBASE_AUTH_EMULATOR_URL: string =
   import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_URL ?? '';
+
+/**
+ * Where *talk to us* on the enterprise plan points (a `mailto:`), until a form
+ * exists. Empty means not configured: the plan screen says the channel is not
+ * available instead of inventing an address.
+ */
+export const ENTERPRISE_CONTACT_EMAIL: string =
+  (import.meta.env.VITE_ENTERPRISE_CONTACT_EMAIL ?? '').trim();

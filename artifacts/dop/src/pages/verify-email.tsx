@@ -12,7 +12,10 @@
  */
 import React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { AlertTriangle, MailCheck } from 'lucide-react';
+import { AlertTriangle, MailCheck, RotateCw } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { resendDelaySeconds } from '@/lib/platform/welcome';
 
 import { useSession } from '../lib/platform/session';
 import { decideFromAuthError, type AuthDecision } from '../lib/platform/auth-errors';
@@ -69,6 +72,22 @@ export default function VerifyEmail() {
   const [retryAfterSeconds, setRetryAfterSeconds] = React.useState<number | null>(null);
   const [notYet, setNotYet] = React.useState(false);
   const [checking, setChecking] = React.useState(false);
+  const [resending, setResending] = React.useState(false);
+  // The visible countdown: sign-up already sent one message, so the first
+  // resend waits too; each later send waits longer. A `Retry-After` from the
+  // server always wins when it is longer.
+  const [sends, setSends] = React.useState(1);
+  const [cooldown, setCooldown] = React.useState(() => resendDelaySeconds(1));
+
+  React.useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = window.setTimeout(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => window.clearTimeout(id);
+  }, [cooldown]);
+
+  React.useEffect(() => {
+    if (retryAfterSeconds !== null) setCooldown((c) => Math.max(c, retryAfterSeconds));
+  }, [retryAfterSeconds]);
 
   const user = auth.currentUser;
 
@@ -92,6 +111,8 @@ export default function VerifyEmail() {
   if (!user) return <Navigate to="/sign-in" replace />;
 
   async function onResend() {
+    if (resending || cooldown > 0) return;
+    setResending(true);
     setResent(false);
     setResendError('');
     setResendDetail('');
@@ -101,7 +122,12 @@ export default function VerifyEmail() {
       // A null response means the Firebase identity changed while the
       // request was in flight. Session state was discarded; do not claim a
       // resend for the new identity.
-      if (response) setResent(true);
+      if (response) {
+        setResent(true);
+        const next = sends + 1;
+        setSends(next);
+        setCooldown(resendDelaySeconds(next));
+      }
     } catch (failure) {
       // Unlike `signUp`'s own send, this button IS the person's recourse —
       // letting the rejection (routinely `auth/too-many-requests`, since the
@@ -114,6 +140,8 @@ export default function VerifyEmail() {
         setResendDetail,
         setRetryAfterSeconds,
       );
+    } finally {
+      setResending(false);
     }
   }
 
@@ -124,6 +152,13 @@ export default function VerifyEmail() {
   async function onSignOut() {
     await signOut();
     navigate('/sign-in');
+  }
+
+  // *I typed the wrong address*: the address is the credential's, so the way
+  // to fix it is to leave this session and sign up again with the right one.
+  async function onWrongAddress() {
+    await signOut();
+    navigate('/sign-up');
   }
 
   async function onCheck() {
@@ -149,7 +184,7 @@ export default function VerifyEmail() {
   }
 
   return (
-    <div className="flex h-screen items-center justify-center bg-background px-4 text-foreground">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 text-foreground">
       <div
         className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-card p-6"
         data-testid="form-verify-email"
@@ -190,7 +225,7 @@ export default function VerifyEmail() {
               ) : null}
               {retryAfterSeconds !== null ? (
                 <span className="block" data-testid="text-verify-retry-after">
-                  {t('wizard.onboarding.phone.retryAfter', {
+                  {t('welcome.error.retryAfter', {
                     s: retryAfterSeconds,
                   })}
                 </span>
@@ -199,35 +234,52 @@ export default function VerifyEmail() {
           </div>
         ) : null}
 
-        <button
-          type="button"
+        <Button
           disabled={checking}
           onClick={onCheck}
-          className="h-9 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+          className="w-full"
           data-testid="button-verify-check"
         >
           {t('auth.verify.check')}
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
+          variant="outline"
           onClick={onResend}
-          className="h-9 w-full rounded-md border border-border bg-background text-sm font-medium transition-opacity hover:opacity-90"
+          disabled={cooldown > 0 || resending}
+          className="w-full"
           data-testid="button-verify-resend"
         >
-          {t('auth.verify.resend')}
-        </button>
+          <RotateCw />
+          {cooldown > 0 ? (
+            <span className="tabular-nums" data-testid="text-verify-countdown">
+              {t('auth.verify.resendIn', { s: cooldown })}
+            </span>
+          ) : (
+            t('auth.verify.resend')
+          )}
+        </Button>
 
-        <p className="text-center text-xs text-muted-foreground">
-          <button
-            type="button"
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <Button
+            variant="link"
+            size="sm"
+            onClick={onWrongAddress}
+            className="h-auto p-0 text-muted-foreground"
+            data-testid="link-verify-wrong-address"
+          >
+            {t('auth.verify.wrongAddress')}
+          </Button>
+          <Button
+            variant="link"
+            size="sm"
             onClick={onSignOut}
-            className="underline-offset-2 hover:underline"
+            className="h-auto p-0 text-muted-foreground"
             data-testid="link-verify-sign-out"
           >
             {t('auth.verify.signOut')}
-          </button>
-        </p>
+          </Button>
+        </div>
       </div>
     </div>
   );
