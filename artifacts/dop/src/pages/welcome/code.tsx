@@ -9,11 +9,7 @@ export default function WelcomeCode() {
   const step = useWelcomeStep('code');
   return (
     <div className="space-y-8">
-      <StepHeader
-        kicker={t('welcome.code.kicker')}
-        title={t('welcome.code.title')}
-        lead={t('welcome.code.lead')}
-      />
+      <StepHeader step="code" title={t('welcome.code.title')} lead={t('welcome.code.lead')} />
       <ConnectionStep category="git">
         {(connections) => (
           <StepActions

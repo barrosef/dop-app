@@ -1,28 +1,72 @@
 import type { ReactNode } from 'react';
-import { CornerDownRight, Loader2 } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
 import { useJourney } from '@/hooks/use-welcome-step';
 import { ApiErrorNotice } from './api-error';
+import { narrativeFor } from './step-copy';
 
-/** The header every step shares: a channel index, a title and one line. */
-export function StepHeader({
-  kicker,
-  title,
-  lead,
-}: {
-  kicker: string;
-  title: string;
-  lead: string;
-}) {
+/**
+ * The header every step shares: where this step sits in the API's order, a
+ * question as the title, one line that answers it, and — folded — why the
+ * platform asks. The position is read from `OnboardingState.steps`; a step
+ * the API does not list (the final "ready" screen) shows no position.
+ */
+export function StepHeader({ step, title, lead }: { step: string; title: string; lead: string }) {
+  const t = useI18n((s) => s.t);
+  const journey = useJourney();
+  const steps = journey.data?.steps ?? [];
+  const index = steps.findIndex((s) => s.step === step);
+  const why = narrativeFor(step);
+
   return (
-    <header className="space-y-2">
-      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary">{kicker}</p>
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[28px]">{title}</h1>
-      <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">{lead}</p>
+    <header className="space-y-3">
+      {index >= 0 ? (
+        <p className="text-sm font-medium text-primary" data-testid="text-step-position">
+          {t('welcome.header.position', { n: index + 1, total: steps.length })}
+        </p>
+      ) : null}
+      <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-foreground sm:text-[32px]">
+        {title}
+      </h1>
+      <p className="text-base leading-relaxed text-muted-foreground">{lead}</p>
+      {why ? (
+        <Collapsible className="pt-1">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="group inline-flex items-center gap-1.5 rounded-md text-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              data-testid="button-step-why"
+            >
+              {t('welcome.header.why')}
+              <ChevronDown
+                className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180"
+                aria-hidden="true"
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-3 space-y-3 rounded-lg bg-muted/50 p-4 text-sm leading-relaxed text-foreground/90">
+            <p>{t(why.what)}</p>
+            <p>{t(why.does)}</p>
+            {why.skip ? <p className="text-muted-foreground">{t(why.skip)}</p> : null}
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
     </header>
+  );
+}
+
+/** The surface a step's form lives on. One per step, never nested. */
+export function StepPanel({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn('rounded-xl border border-border bg-card p-5 sm:p-6', className)}>{children}</div>
   );
 }
 
@@ -57,7 +101,6 @@ export function StepActions({
 
   return (
     <div className="space-y-4">
-      <Separator />
       {error ? <ApiErrorNotice error={error} stepKeys={stepKeys} testId="status-step-error" /> : null}
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         {onSkip ? (
@@ -68,7 +111,7 @@ export function StepActions({
             className="text-muted-foreground"
             data-testid="button-step-skip"
           >
-            {skipPending ? <Loader2 className="animate-spin" /> : <CornerDownRight />}
+            {skipPending ? <Loader2 className="animate-spin" /> : null}
             {t('welcome.action.skip')}
           </Button>
         ) : (
@@ -77,9 +120,10 @@ export function StepActions({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {extra}
           <Button
+            size="lg"
             onClick={onPrimary}
             disabled={busy || primaryDisabled}
-            className="min-w-44"
+            className="min-w-48"
             data-testid="button-step-primary"
           >
             {primaryPending ? <Loader2 className="animate-spin" /> : null}

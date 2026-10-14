@@ -21,6 +21,7 @@ import { useI18n } from '@/lib/i18n';
 import { useAccount } from '@/lib/platform/account';
 import { ApiErrorNotice } from './api-error';
 import { CheckConnection } from './check-connection';
+import { ProviderLogo } from './provider-logo';
 import { ProviderSheet } from './provider-sheet';
 import { ProviderTile } from './provider-tile';
 
@@ -66,25 +67,66 @@ export function ConnectionStep({
     () => (resources.data ?? []).filter((r) => configString(r, 'category') === category),
     [resources.data, category],
   );
-  const providerName = (key: string) =>
-    (providers.data ?? []).find((p) => p.key === key)?.name ?? key;
+  const providerOf = (key: string) => (providers.data ?? []).find((p) => p.key === key);
 
   return (
     <div className="space-y-8">
+      {existing.length > 0 || resources.isLoading || resources.error ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-foreground">
+            {t('welcome.connections.existing')}
+            <span className="ml-2 tabular-nums text-muted-foreground">{existing.length}</span>
+          </h2>
+          {resources.isLoading ? (
+            <Skeleton className="h-16 w-full rounded-lg" />
+          ) : resources.error ? (
+            <ApiErrorNotice error={resources.error} onRetry={() => void resources.refetch()} />
+          ) : (
+            <ul className="overflow-hidden rounded-lg border border-border" data-testid="list-connections">
+              {existing.map((r) => {
+                const provider = providerOf(configString(r, 'provider'));
+                return (
+                  <li
+                    key={r.id}
+                    className="flex flex-col gap-3 border-b border-border bg-card px-4 py-3 last:border-b-0 sm:flex-row sm:items-center"
+                  >
+                    <ProviderLogo
+                      provider={provider ?? { key: configString(r, 'provider'), name: r.name }}
+                      size="sm"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{r.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {provider?.name ?? configString(r, 'provider')}
+                        {configString(r, 'base_url') ? ` · ${configString(r, 'base_url')}` : ''}
+                        {r.credential_ref ? '' : ` · ${t('welcome.connections.noCredential')}`}
+                      </p>
+                    </div>
+                    <div className="sm:w-52">
+                      <CheckConnection resourceId={r.id} compact />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
       <section className="space-y-3">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-          {t('welcome.connections.catalogue')}
+        <h2 className="text-sm font-medium text-foreground">
+          {existing.length > 0 ? t('welcome.connections.addAnother') : t('welcome.connections.catalogue')}
         </h2>
         {providers.isLoading ? (
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             {Array.from({ length: 4 }, (_, i) => (
-              <Skeleton key={i} className="h-[66px] w-full" />
+              <Skeleton key={i} className="h-16 w-full rounded-lg" />
             ))}
           </div>
         ) : providers.error ? (
           <ApiErrorNotice error={providers.error} onRetry={() => void providers.refetch()} />
         ) : tiles.length === 0 ? (
-          <Empty className="border border-dashed border-border">
+          <Empty className="rounded-lg border border-dashed border-border">
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <Cable />
@@ -94,7 +136,7 @@ export function ConnectionStep({
             </EmptyHeader>
           </Empty>
         ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             {tiles.map((p) => (
               <ProviderTile
                 key={p.key}
@@ -107,40 +149,6 @@ export function ConnectionStep({
               />
             ))}
           </div>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-          {t('welcome.connections.existing')}
-          <span className="tabular-nums text-foreground">{existing.length}</span>
-        </h2>
-        {resources.isLoading ? (
-          <Skeleton className="h-12 w-full" />
-        ) : resources.error ? (
-          <ApiErrorNotice error={resources.error} onRetry={() => void resources.refetch()} />
-        ) : existing.length === 0 ? (
-          <p className="border border-dashed border-border px-4 py-3 text-xs text-muted-foreground">
-            {t('welcome.connections.none')}
-          </p>
-        ) : (
-          <ul className="divide-y divide-border border border-border" data-testid="list-connections">
-            {existing.map((r) => (
-              <li key={r.id} className="flex flex-col gap-2 border-l-2 border-l-primary px-3 py-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <p className="truncate text-sm text-foreground">{r.name}</p>
-                  <p className="font-mono text-[11px] text-muted-foreground">
-                    {providerName(configString(r, 'provider'))}
-                    {configString(r, 'base_url') ? ` · ${configString(r, 'base_url')}` : ''}
-                    {r.credential_ref ? '' : ` · ${t('welcome.connections.noCredential')}`}
-                  </p>
-                </div>
-                <div className="sm:w-56">
-                  <CheckConnection resourceId={r.id} compact />
-                </div>
-              </li>
-            ))}
-          </ul>
         )}
       </section>
 

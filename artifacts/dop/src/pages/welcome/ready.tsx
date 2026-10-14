@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, Check, Circle, CornerDownRight, Loader2, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Check, Circle, Loader2, Minus, ShieldCheck } from 'lucide-react';
 import {
   getListPlansQueryKey,
   getMeQueryKey,
@@ -11,7 +11,6 @@ import {
 } from '@workspace/api-client-react';
 
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiErrorNotice } from '@/components/welcome/api-error';
 import { StepHeader } from '@/components/welcome/step-frame';
@@ -38,13 +37,7 @@ function Row({
   testId: string;
 }) {
   return (
-    <li
-      className={cn(
-        'flex items-center gap-3 border-l-2 px-4 py-3',
-        tone === 'done' ? 'border-l-primary' : 'border-l-transparent',
-      )}
-      data-testid={testId}
-    >
+    <li className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0" data-testid={testId}>
       <span
         className={cn(
           'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border',
@@ -57,7 +50,7 @@ function Row({
         {tone === 'done' ? (
           <Check className="h-3.5 w-3.5" />
         ) : tone === 'skipped' ? (
-          <CornerDownRight className="h-3 w-3" />
+          <Minus className="h-3 w-3" />
         ) : (
           <Circle className="h-2 w-2" />
         )}
@@ -65,7 +58,7 @@ function Row({
       <span className="flex-1 text-sm text-foreground">{label}</span>
       <Link
         to={to}
-        className="text-right font-mono text-xs tabular-nums text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        className="text-right text-sm tabular-nums text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
       >
         {value}
       </Link>
@@ -139,13 +132,9 @@ export default function WelcomeReady() {
 
   return (
     <div className="space-y-8">
-      <StepHeader
-        kicker={t('welcome.ready.kicker')}
-        title={t('welcome.ready.title')}
-        lead={t('welcome.ready.lead')}
-      />
+      <StepHeader step="ready" title={t('welcome.ready.title')} lead={t('welcome.ready.lead')} />
 
-      <ul className="divide-y divide-border border border-border" data-testid="list-ready-checklist">
+      <ul className="overflow-hidden rounded-xl border border-border bg-card" data-testid="list-ready-checklist">
         <Row tone={toneOf('profile')} label={t('welcome.ready.profile')} value={t('welcome.ready.profileValue')} to={welcomePathFor('profile')} testId="row-ready-profile" />
         <Row tone={s.phone_verified ? 'done' : toneOf('contact')} label={t('welcome.ready.phone')} value={phoneValue} to={welcomePathFor('contact')} testId="row-ready-phone" />
         <Row
@@ -169,7 +158,7 @@ export default function WelcomeReady() {
         <ApiErrorNotice error={plans.error} onRetry={() => void plans.refetch()} testId="status-ready-plans-error" />
       ) : null}
 
-      <div className="flex flex-col gap-3 border border-border bg-muted/30 p-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4 sm:flex-row sm:items-center">
         <ShieldCheck className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
         <div className="flex-1 space-y-0.5">
           <p className="text-sm font-medium text-foreground">{t('welcome.ready.protect.title')}</p>
@@ -191,8 +180,6 @@ export default function WelcomeReady() {
         <ApiErrorNotice error={complete.error} stepKeys={stepKeys} testId="status-complete-error" />
       ) : null}
 
-      <Separator />
-
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Button
           variant="ghost"
@@ -204,6 +191,7 @@ export default function WelcomeReady() {
           {t('welcome.ready.cockpit')}
         </Button>
         <Button
+          size="lg"
           className="min-w-56"
           disabled={pendingExit !== null}
           onClick={() =>

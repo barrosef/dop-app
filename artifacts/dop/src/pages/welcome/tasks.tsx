@@ -9,11 +9,7 @@ export default function WelcomeTasks() {
   const step = useWelcomeStep('tasks');
   return (
     <div className="space-y-8">
-      <StepHeader
-        kicker={t('welcome.tasks.kicker')}
-        title={t('welcome.tasks.title')}
-        lead={t('welcome.tasks.lead')}
-      />
+      <StepHeader step="tasks" title={t('welcome.tasks.title')} lead={t('welcome.tasks.lead')} />
       <ConnectionStep category="task_manager">
         {(connections) => (
           <StepActions

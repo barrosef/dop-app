@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { BadgeCheck, Check, Loader2, X } from 'lucide-react';
+import { BadgeCheck, CalendarDays, Check, Loader2, X } from 'lucide-react';
 import {
   getHandleAvailabilityQueryKey,
   getListAccountsQueryKey,
@@ -13,6 +13,8 @@ import {
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,7 +27,7 @@ import {
 } from '@/components/ui/select';
 import { profileInitials } from '@/components/platform/profile-initials';
 import { ApiErrorNotice } from '@/components/welcome/api-error';
-import { StepActions, StepHeader } from '@/components/welcome/step-frame';
+import { StepActions, StepHeader, StepPanel } from '@/components/welcome/step-frame';
 import { useI18n } from '@/lib/i18n';
 import { useAccount } from '@/lib/platform/account';
 import {
@@ -38,6 +40,20 @@ import {
 import { useWelcomeStep } from '@/hooks/use-welcome-step';
 
 const LOCALE_OPTIONS = ['pt-BR', 'en-US', 'en-GB', 'es-ES', 'pt-PT'];
+
+/** ISO date ⇄ local Date, without the UTC shift `new Date('yyyy-mm-dd')` adds. */
+function parseIsoDate(value: string): Date | undefined {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(value);
+  if (!m) return undefined;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+function toIsoDate(d: Date): string {
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+const BIRTH_FIRST_YEAR = 1900;
 
 function useDebounced(value: string, ms: number): string {
   const [debounced, setDebounced] = useState(value);
@@ -63,6 +79,7 @@ export default function WelcomeProfile() {
   const [locale, setLocale] = useState('');
   const [timezone, setTimezone] = useState('');
   const [birthDate, setBirthDate] = useState('');
+  const [birthOpen, setBirthOpen] = useState(false);
   const initialized = useRef(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<unknown>(null);
@@ -138,23 +155,20 @@ export default function WelcomeProfile() {
 
   return (
     <div className="space-y-8">
-      <StepHeader
-        kicker={t('welcome.profile.kicker')}
-        title={t('welcome.profile.title')}
-        lead={t('welcome.profile.lead')}
-      />
+      <StepHeader step="profile" title={t('welcome.profile.title')} lead={t('welcome.profile.lead')} />
 
-      <div className="flex items-center gap-4 border border-border p-4">
-        <Avatar className="h-14 w-14 border border-border">
+      <StepPanel className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Avatar className="h-14 w-14">
           {me.data.avatar_url ? <AvatarImage src={me.data.avatar_url} alt="" /> : null}
-          <AvatarFallback className="font-mono text-sm">
+          <AvatarFallback className="text-sm font-medium">
             {profileInitials(name || me.data.name, me.data.email)}
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0 space-y-1">
           <p className="truncate text-base font-medium text-foreground">{name || me.data.name}</p>
-          <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span className="truncate font-mono">{me.data.email}</span>
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <span className="truncate">{me.data.email}</span>
             {me.data.email_verified ? (
               <span className="inline-flex items-center gap-1 text-primary" data-testid="badge-email-verified">
                 <BadgeCheck className="h-3.5 w-3.5" />
@@ -162,7 +176,7 @@ export default function WelcomeProfile() {
               </span>
             ) : null}
           </p>
-          <p className="text-[11px] text-muted-foreground">{t('welcome.profile.photoNote')}</p>
+          <p className="text-xs text-muted-foreground">{t('welcome.profile.photoNote')}</p>
         </div>
       </div>
 
@@ -181,7 +195,7 @@ export default function WelcomeProfile() {
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="profile-handle">{t('welcome.profile.handle')}</Label>
           <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-muted-foreground">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
               @
             </span>
             <Input
@@ -190,7 +204,7 @@ export default function WelcomeProfile() {
               onChange={(e) => setHandle(e.target.value)}
               autoComplete="off"
               spellCheck={false}
-              className="pl-7 font-mono"
+              className="pl-7"
               aria-describedby="profile-handle-status"
               data-testid="input-profile-handle"
             />
@@ -221,7 +235,7 @@ export default function WelcomeProfile() {
                   <Button
                     variant="link"
                     size="sm"
-                    className="h-auto p-0 font-mono"
+                    className="h-auto p-0"
                     onClick={() => setHandle(availability.data?.suggestion ?? '')}
                     data-testid="button-handle-suggestion"
                   >
@@ -242,9 +256,9 @@ export default function WelcomeProfile() {
             <SelectContent>
               {locales.map((l) => (
                 <SelectItem key={l} value={l}>
-                  <span className="font-mono">{l}</span>
+                  <span>{l}</span>
                   {l === detectedLocale() ? (
-                    <span className="ml-2 text-[11px] text-muted-foreground">{t('welcome.profile.detected')}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{t('welcome.profile.detected')}</span>
                   ) : null}
                 </SelectItem>
               ))}
@@ -262,7 +276,7 @@ export default function WelcomeProfile() {
               <SelectContent className="max-h-72">
                 {timezones.map((z) => (
                   <SelectItem key={z} value={z}>
-                    <span className="font-mono">{z}</span>
+                    {z}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -272,28 +286,60 @@ export default function WelcomeProfile() {
               id="profile-timezone"
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
-              className="font-mono"
             />
           )}
         </div>
-        <p className="-mt-3 text-[11px] text-muted-foreground sm:col-span-2">{t('welcome.profile.detectedNote')}</p>
+        <p className="-mt-3 text-xs text-muted-foreground sm:col-span-2">{t('welcome.profile.detectedNote')}</p>
 
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="profile-birth">
             {t('welcome.profile.birth')}{' '}
             <span className="font-normal text-muted-foreground">{t('welcome.profile.optional')}</span>
           </Label>
-          <Input
-            id="profile-birth"
-            type="date"
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            className="max-w-48 font-mono"
-            data-testid="input-profile-birth"
-          />
-          <p className="text-[11px] text-muted-foreground">{t('welcome.profile.birthWhy')}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Popover open={birthOpen} onOpenChange={setBirthOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  id="profile-birth"
+                  variant="outline"
+                  className="min-w-56 justify-start font-normal"
+                  data-testid="input-profile-birth"
+                >
+                  <CalendarDays className="text-muted-foreground" />
+                  {parseIsoDate(birthDate)
+                    ? parseIsoDate(birthDate)?.toLocaleDateString(locale || undefined, { dateStyle: 'long' })
+                    : t('welcome.profile.birthPick')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  captionLayout="dropdown"
+                  className="[--cell-size:2.25rem]"
+                  classNames={{ nav: 'hidden', dropdowns: 'flex w-full items-center justify-center gap-2' }}
+                  startMonth={new Date(BIRTH_FIRST_YEAR, 0)}
+                  endMonth={new Date()}
+                  defaultMonth={parseIsoDate(birthDate) ?? new Date(new Date().getFullYear() - 30, 0)}
+                  selected={parseIsoDate(birthDate)}
+                  disabled={{ after: new Date() }}
+                  onSelect={(d) => {
+                    setBirthDate(d ? toIsoDate(d) : '');
+                    setBirthOpen(false);
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+            {birthDate ? (
+              <Button variant="ghost" size="sm" onClick={() => setBirthDate('')} data-testid="button-profile-birth-clear">
+                <X />
+                {t('welcome.profile.birthClear')}
+              </Button>
+            ) : null}
+          </div>
+          <p className="text-xs text-muted-foreground">{t('welcome.profile.birthWhy')}</p>
         </div>
       </div>
+      </StepPanel>
 
       {saveError ? <ApiErrorNotice error={saveError} testId="status-profile-error" /> : null}
 

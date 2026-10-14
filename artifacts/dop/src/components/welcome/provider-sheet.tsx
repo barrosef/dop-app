@@ -24,7 +24,8 @@ import { useI18n } from '@/lib/i18n';
 import { toBase64 } from '@/lib/platform/welcome';
 import { ApiErrorNotice } from './api-error';
 import { CheckConnection } from './check-connection';
-import { OperatedBadge, ProviderMark } from './provider-tile';
+import { ProviderLogo } from './provider-logo';
+import { OperatedBadge } from './provider-tile';
 
 function CopyButton({ value, label }: { value: string; label: string }) {
   const t = useI18n((s) => s.t);
@@ -150,10 +151,10 @@ export function ProviderSheet({
 
   return (
     <Sheet open={open} onOpenChange={requestOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-md" data-testid="sheet-provider">
+      <SheetContent className="w-full overflow-y-auto sm:max-w-md [--radius:0.75rem]" data-testid="sheet-provider">
         <SheetHeader className="space-y-3 text-left">
           <div className="flex items-center gap-3">
-            <ProviderMark provider={provider} size="lg" />
+            <ProviderLogo provider={provider} size="lg" />
             <div className="min-w-0">
               <SheetTitle>{provider.name}</SheetTitle>
               <OperatedBadge operated={provider.operated} />
@@ -166,13 +167,13 @@ export function ProviderSheet({
 
         <div className="mt-6 space-y-6">
           <section className="space-y-2">
-            <h3 className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            <h3 className="text-sm font-medium text-foreground">
               {t('welcome.sheet.method')}
             </h3>
             <div className="flex items-center gap-2 text-sm">
               <KeyRound className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-              <span className="font-mono text-foreground">
-                {provider.credential_kind || t('welcome.sheet.kindUnknown')}
+              <span className="text-foreground">
+                {provider.credential_kind === 'token' ? t('welcome.sheet.kindToken') : provider.credential_kind || t('welcome.sheet.kindUnknown')}
               </span>
             </div>
             {provider.docs_url ? (
@@ -191,7 +192,7 @@ export function ProviderSheet({
 
           <section className="space-y-2">
             <div className="flex items-center justify-between">
-              <h3 className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              <h3 className="text-sm font-medium text-foreground">
                 {t('welcome.sheet.permissions')}
               </h3>
               {permissions.length > 0 ? (
@@ -199,9 +200,9 @@ export function ProviderSheet({
               ) : null}
             </div>
             {permissions.length > 0 ? (
-              <ul className="divide-y divide-border border border-border">
+              <ul className="overflow-hidden rounded-md border border-border">
                 {permissions.map((p) => (
-                  <li key={p} className="flex items-center justify-between gap-2 py-1 pl-3 pr-1">
+                  <li key={p} className="flex items-center justify-between gap-2 border-b border-border py-1 pl-3 pr-1 last:border-b-0">
                     <code className="truncate font-mono text-xs text-foreground">{p}</code>
                     <CopyButton value={p} label={t('welcome.sheet.copyOne', { p })} />
                   </li>
@@ -216,7 +217,7 @@ export function ProviderSheet({
 
           {connected && resourceId ? (
             <section className="space-y-4">
-              <div className="flex items-center gap-2 border-l-2 border-primary bg-primary/10 px-3 py-2 text-sm">
+              <div className="flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm">
                 <Check className="h-4 w-4 text-primary" />
                 {t('welcome.sheet.connected', { name })}
               </div>
@@ -262,7 +263,6 @@ export function ProviderSheet({
                   autoComplete="off"
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
-                  className="font-mono"
                   data-testid="input-connection-token"
                 />
                 <p className="text-[11px] text-muted-foreground">{t('welcome.sheet.tokenHint')}</p>

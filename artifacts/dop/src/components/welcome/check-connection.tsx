@@ -18,11 +18,11 @@ export function CheckConnection({ resourceId, compact = false }: { resourceId: s
   return (
     <div className="space-y-2">
       <Button
-        variant={compact ? 'ghost' : 'outline'}
+        variant="outline"
         size="sm"
         onClick={() => check.mutate({ resourceId })}
         disabled={check.isPending}
-        className={cn(!compact && 'w-full')}
+        className={cn('w-full', compact && 'sm:w-auto')}
         data-testid={`button-check-${resourceId}`}
       >
         {check.isPending ? <Loader2 className="animate-spin" /> : <Activity />}
@@ -32,14 +32,14 @@ export function CheckConnection({ resourceId, compact = false }: { resourceId: s
       {result ? (
         <div
           className={cn(
-            'space-y-1 border-l-2 px-3 py-2 text-xs',
-            !result.operated && 'border-muted-foreground/50 bg-muted/40',
-            result.operated && result.ok && 'border-primary bg-primary/10',
-            result.operated && !result.ok && 'border-destructive bg-destructive/10',
+            'space-y-1 rounded-md px-3 py-2 text-xs',
+            !result.operated && 'bg-muted text-muted-foreground',
+            result.operated && result.ok && 'bg-primary/10 text-foreground',
+            result.operated && !result.ok && 'bg-destructive/10 text-foreground',
           )}
           data-testid="status-check-result"
         >
-          <p className="font-medium text-foreground">
+          <p className="font-medium">
             {!result.operated
               ? t('welcome.check.notOperated')
               : result.ok
@@ -48,7 +48,7 @@ export function CheckConnection({ resourceId, compact = false }: { resourceId: s
           </p>
           {result.identity ? (
             <p className="text-muted-foreground">
-              {t('welcome.check.identity')} <span className="font-mono text-foreground">{result.identity}</span>
+              {t('welcome.check.identity')} <span className="font-medium text-foreground">{result.identity}</span>
             </p>
           ) : null}
           {result.message ? <p className="text-muted-foreground">{result.message}</p> : null}

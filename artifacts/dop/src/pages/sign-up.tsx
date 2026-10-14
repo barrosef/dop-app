@@ -14,10 +14,13 @@ import { useForm } from 'react-hook-form';
 import { validatePassword, type PasswordValidationStatus } from 'firebase/auth';
 import {
   AlertTriangle,
+  Bot,
   Check,
   Chrome,
   Circle,
+  GitBranch,
   Github,
+  KanbanSquare,
   Loader2,
   Mail,
   TerminalSquare,
@@ -178,14 +181,14 @@ export default function SignUp() {
   }
 
   const promise = [
-    { n: '01', title: t('auth.signUp.promise.code'), body: t('auth.signUp.promise.codeBody') },
-    { n: '02', title: t('auth.signUp.promise.cards'), body: t('auth.signUp.promise.cardsBody') },
-    { n: '03', title: t('auth.signUp.promise.agent'), body: t('auth.signUp.promise.agentBody') },
+    { Icon: GitBranch, title: t('auth.signUp.promise.code'), body: t('auth.signUp.promise.codeBody') },
+    { Icon: KanbanSquare, title: t('auth.signUp.promise.cards'), body: t('auth.signUp.promise.cardsBody') },
+    { Icon: Bot, title: t('auth.signUp.promise.agent'), body: t('auth.signUp.promise.agentBody') },
   ];
 
   return (
-    <div className="grid min-h-[100dvh] bg-background text-foreground lg:grid-cols-2">
-      <section className="relative flex flex-col justify-between overflow-hidden border-b border-border bg-muted/30 px-6 py-8 sm:px-12 lg:border-b-0 lg:border-r lg:py-14">
+    <div className="grid min-h-[100dvh] bg-background text-foreground [--radius:0.75rem] lg:grid-cols-2">
+      <section className="relative flex flex-col justify-between overflow-hidden border-b border-border bg-muted/40 px-6 py-8 sm:px-12 lg:border-b-0 lg:border-r lg:py-14">
         <div className="flex items-center gap-2">
           <TerminalSquare className="h-5 w-5 text-primary" aria-hidden="true" />
           <span className="font-semibold tracking-tight">DOP</span>
@@ -194,36 +197,34 @@ export default function SignUp() {
           <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
             {t('auth.signUp.headline')}
           </h1>
-          <ol className="space-y-5">
-            {promise.map((p, i) => (
-              <li
-                key={p.n}
-                className="flex gap-4 animate-in fade-in slide-in-from-left-2 fill-mode-both duration-500"
-                style={{ animationDelay: `${120 + i * 110}ms` }}
-              >
-                <span className="pt-0.5 font-mono text-xs tabular-nums text-primary">{p.n}</span>
+          <ul className="space-y-5">
+            {promise.map(({ Icon, title, body }) => (
+              <li key={title} className="flex gap-4">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Icon className="h-4.5 w-4.5" aria-hidden="true" />
+                </span>
                 <span className="space-y-1">
-                  <span className="block text-base font-medium">{p.title}</span>
-                  <span className="block text-sm leading-relaxed text-muted-foreground">{p.body}</span>
+                  <span className="block text-base font-medium">{title}</span>
+                  <span className="block text-sm leading-relaxed text-muted-foreground">{body}</span>
                 </span>
               </li>
             ))}
-          </ol>
+          </ul>
         </div>
-        <p className="hidden font-mono text-[11px] text-muted-foreground lg:block">{t('auth.signUp.footnote')}</p>
+        <p className="hidden text-sm text-muted-foreground lg:block">{t('auth.signUp.footnote')}</p>
       </section>
 
       <section className="flex items-center justify-center px-6 py-10 sm:px-12">
         <div className="w-full max-w-sm space-y-6" data-testid="form-sign-up">
           <div className="space-y-1.5">
-            <h2 className="text-xl font-semibold tracking-tight">{t('auth.signUp.how')}</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">{t('auth.signUp.how')}</h2>
             <p className="text-sm text-muted-foreground">{t('auth.signUp.subtitle')}</p>
           </div>
 
           <div className="space-y-2">
             <Button
               variant="outline"
-              className="h-10 w-full justify-start"
+              className="h-11 w-full justify-start text-[15px]"
               onClick={() => onProvider('google')}
               disabled={providerPending !== null}
               data-testid="button-google"
@@ -233,7 +234,7 @@ export default function SignUp() {
             </Button>
             <Button
               variant="outline"
-              className="h-10 w-full justify-start"
+              className="h-11 w-full justify-start text-[15px]"
               onClick={() => onProvider('github')}
               disabled={providerPending !== null}
               data-testid="button-github"
@@ -243,7 +244,7 @@ export default function SignUp() {
             </Button>
             <Button
               variant={emailOpen ? 'secondary' : 'outline'}
-              className="h-10 w-full justify-start"
+              className="h-11 w-full justify-start text-[15px]"
               onClick={() => setEmailOpen((o) => !o)}
               aria-expanded={emailOpen}
               aria-controls="sign-up-email"
@@ -259,7 +260,7 @@ export default function SignUp() {
               <form
                 id="sign-up-email"
                 onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4 border-l-2 border-primary pl-4 animate-in fade-in slide-in-from-top-1 duration-200"
+                className="space-y-4 rounded-lg border border-border bg-card p-4 animate-in fade-in slide-in-from-top-1 duration-200"
               >
                 <FormField
                   control={form.control}
@@ -316,20 +317,20 @@ export default function SignUp() {
           ) : null}
 
           {error ? (
-            <div className="flex items-start gap-2 border-l-2 border-destructive bg-destructive/10 px-3 py-2 text-xs" role="alert">
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm" role="alert">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
               <span data-testid="text-sign-up-error">{error}</span>
             </div>
           ) : null}
 
-          <p className="text-center text-xs text-muted-foreground">
+          <p className="text-center text-sm text-muted-foreground">
             <Link to="/sign-in" className="underline-offset-4 hover:underline" data-testid="link-sign-in">
               {t('auth.signUp.haveAccount')}
             </Link>
           </p>
 
           {FIREBASE_AUTH_EMULATOR_URL ? (
-            <p className="text-center font-mono text-[10px] text-muted-foreground">
+            <p className="text-center text-[11px] text-muted-foreground">
               {t('auth.emulator', { url: FIREBASE_AUTH_EMULATOR_URL })}
             </p>
           ) : null}

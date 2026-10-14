@@ -11,6 +11,7 @@ import {
 } from '@workspace/api-client-react';
 
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ApiErrorNotice } from '@/components/welcome/api-error';
-import { StepActions, StepHeader } from '@/components/welcome/step-frame';
+import { StepActions, StepHeader, StepPanel } from '@/components/welcome/step-frame';
 import { useI18n } from '@/lib/i18n';
 import { useAccount } from '@/lib/platform/account';
 import { retryAfterSeconds } from '@/lib/platform/api-error';
@@ -64,6 +65,9 @@ export default function WelcomeContact() {
   const step = useWelcomeStep('contact');
 
   const [phone, setPhone] = useState('+55');
+  // WhatsApp is the default: in this market a mobile number that is not on
+  // WhatsApp is the exception, and the person unticks it in one gesture.
+  const [whatsapp, setWhatsapp] = useState(true);
   const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
   const [code, setCode] = useState('');
   const [sends, setSends] = useState(0);
@@ -79,7 +83,10 @@ export default function WelcomeContact() {
   useEffect(() => {
     if (initialized.current || !me.data) return;
     initialized.current = true;
-    if (me.data.phone) setPhone(me.data.phone);
+    if (me.data.phone) {
+      setPhone(me.data.phone);
+      setWhatsapp(me.data.phone_whatsapp ?? true);
+    }
   }, [me.data]);
 
   useEffect(() => {
@@ -109,7 +116,9 @@ export default function WelcomeContact() {
       if (!isResend) {
         // The phone is saved BEFORE enrolment: a number typed and never
         // confirmed still lives on the profile; the reminder is the box's job.
-        const updated = await updateProfile.mutateAsync({ data: { phone: normalized } });
+        const updated = await updateProfile.mutateAsync({
+          data: { phone: normalized, phone_whatsapp: whatsapp },
+        });
         queryClient.setQueryData(getMeQueryKey(), updated);
       }
       const response = await enroll.mutateAsync({
@@ -183,57 +192,66 @@ export default function WelcomeContact() {
 
   return (
     <div className="space-y-8">
-      <StepHeader
-        kicker={t('welcome.contact.kicker')}
-        title={t('welcome.contact.title')}
-        lead={t('welcome.contact.lead')}
-      />
+      <StepHeader step="contact" title={t('welcome.contact.title')} lead={t('welcome.contact.lead')} />
 
       {!enrolment ? (
-        <section className="space-y-3">
-          <Label htmlFor="contact-phone">{t('welcome.contact.phone')}</Label>
-          <div className="flex gap-2">
-            <Select value={dial} onValueChange={pickDial}>
-              <SelectTrigger className="w-28 font-mono" aria-label={t('welcome.contact.country')} data-testid="select-dial-code">
-                <SelectValue placeholder="+" />
-              </SelectTrigger>
-              <SelectContent>
-                {DIAL_CODES.map((d) => (
-                  <SelectItem key={d.country} value={d.code}>
-                    <span className="font-mono">
+        <StepPanel className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="contact-phone">{t('welcome.contact.phone')}</Label>
+            <div className="flex gap-2">
+              <Select value={dial} onValueChange={pickDial}>
+                <SelectTrigger className="w-28" aria-label={t('welcome.contact.country')} data-testid="select-dial-code">
+                  <SelectValue placeholder="+" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DIAL_CODES.map((d) => (
+                    <SelectItem key={d.country} value={d.code}>
                       {d.country} +{d.code}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              id="contact-phone"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="flex-1 font-mono tabular-nums"
-              data-testid="input-contact-phone"
-            />
-          </div>
-          <p className="text-[11px] text-muted-foreground">
-            {shapeOk || normalized.length < 4 ? t('welcome.contact.phoneHint') : t('welcome.contact.phoneShape')}
-          </p>
-          {me.data?.phone && !me.data.phone_verified ? (
-            <p className="text-[11px] text-muted-foreground">
-              {t('welcome.contact.savedUnverified', { phone: me.data.phone })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                id="contact-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="flex-1 tabular-nums"
+                data-testid="input-contact-phone"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {shapeOk || normalized.length < 4 ? t('welcome.contact.phoneHint') : t('welcome.contact.phoneShape')}
             </p>
-          ) : null}
-        </section>
+            {me.data?.phone && !me.data.phone_verified ? (
+              <p className="text-xs text-muted-foreground">
+                {t('welcome.contact.savedUnverified', { phone: me.data.phone })}
+              </p>
+            ) : null}
+          </div>
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-muted/50 p-3" htmlFor="contact-whatsapp">
+            <Checkbox
+              id="contact-whatsapp"
+              checked={whatsapp}
+              onCheckedChange={(v) => setWhatsapp(v === true)}
+              className="mt-0.5"
+              data-testid="checkbox-contact-whatsapp"
+            />
+            <span className="space-y-0.5">
+              <span className="block text-sm font-medium text-foreground">{t('welcome.contact.whatsapp')}</span>
+              <span className="block text-xs text-muted-foreground">{t('welcome.contact.whatsappHint')}</span>
+            </span>
+          </label>
+        </StepPanel>
       ) : (
-        <section className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-l-2 border-primary bg-muted/40 px-3 py-2">
+        <StepPanel className="space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2">
             <p className="flex items-center gap-2 text-sm">
               <MessageSquareText className="h-4 w-4 text-primary" />
               {t('welcome.contact.sentTo')}{' '}
-              <span className="font-mono tabular-nums">{enrolment.masked || enrolment.destination}</span>
+              <span className="font-medium tabular-nums">{enrolment.masked || enrolment.destination}</span>
             </p>
             <Button variant="ghost" size="sm" onClick={correctNumber} disabled={busy || confirmed} data-testid="button-correct-number">
               <Pencil />
@@ -245,12 +263,12 @@ export default function WelcomeContact() {
             <InputOTP id="contact-code" maxLength={6} value={code} onChange={setCode} disabled={busy || confirmed} data-testid="input-contact-code">
               <InputOTPGroup>
                 {Array.from({ length: 6 }, (_, i) => (
-                  <InputOTPSlot key={i} index={i} className="font-mono" />
+                  <InputOTPSlot key={i} index={i} className="h-11 w-11 text-base" />
                 ))}
               </InputOTPGroup>
             </InputOTP>
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <Button
               variant="outline"
               size="sm"
@@ -265,7 +283,7 @@ export default function WelcomeContact() {
             </Button>
             <span>{t('welcome.contact.notArrived')}</span>
           </div>
-        </section>
+        </StepPanel>
       )}
 
       {error ? <ApiErrorNotice error={error} testId="status-contact-error" /> : null}

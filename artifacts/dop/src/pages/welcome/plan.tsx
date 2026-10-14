@@ -32,6 +32,12 @@ import { useJourney, useWelcomeStep } from '@/hooks/use-welcome-step';
  */
 const CONTACT_PLAN_KEY = 'enterprise';
 
+/**
+ * Every plan the API lists, in the API's order, no price and no hole where a
+ * price would go (spec D-6). The first listed plan is preselected unless the
+ * journey already recorded one. Which plans exist is the catalogue's call —
+ * nothing is filtered here.
+ */
 export default function WelcomePlan() {
   const t = useI18n((s) => s.t);
   const queryClient = useQueryClient();
@@ -43,18 +49,15 @@ export default function WelcomePlan() {
   const setPlan = useSetPlan();
   const step = useWelcomeStep('plan');
   const [selected, setSelected] = useState('');
-  // Current product scope: only the API's Community plan is offered.
-  const availablePlans = plans.data?.filter((plan) => plan.key === 'community');
+  const listed = plans.data;
 
   useEffect(() => {
-    if (selected || !availablePlans?.length) return;
+    if (selected || !listed?.length) return;
     const recorded = journey.data?.plan_key;
-    setSelected(
-      recorded && availablePlans.some((p) => p.key === recorded) ? recorded : availablePlans[0].key,
-    );
-  }, [availablePlans, journey.data?.plan_key, selected]);
+    setSelected(recorded && listed.some((p) => p.key === recorded) ? recorded : listed[0].key);
+  }, [listed, journey.data?.plan_key, selected]);
 
-  const chosen = availablePlans?.find((p) => p.key === selected);
+  const chosen = listed?.find((p) => p.key === selected);
 
   async function choose() {
     if (!chosen) return;
@@ -69,35 +72,34 @@ export default function WelcomePlan() {
 
   return (
     <div className="space-y-8">
-      <StepHeader
-        kicker={t('welcome.plan.kicker')}
-        title={t('welcome.plan.title')}
-        lead={t('welcome.plan.lead')}
-      />
+      <StepHeader step="plan" title={t('welcome.plan.title')} lead={t('welcome.plan.lead')} />
 
       {plans.isLoading ? (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-3">
           {Array.from({ length: 3 }, (_, i) => (
-            <Skeleton key={i} className="h-44 w-full" />
+            <Skeleton key={i} className="h-24 w-full rounded-lg" />
           ))}
         </div>
       ) : plans.error ? (
         <ApiErrorNotice error={plans.error} onRetry={() => void plans.refetch()} />
-      ) : !availablePlans?.length ? (
-        <Empty className="border border-dashed border-border">
+      ) : !listed?.length ? (
+        <Empty className="rounded-xl border border-dashed border-border">
           <EmptyHeader>
             <EmptyTitle>{t('welcome.plan.empty.title')}</EmptyTitle>
             <EmptyDescription>{t('welcome.plan.empty.body')}</EmptyDescription>
           </EmptyHeader>
+          <Button variant="outline" onClick={() => void plans.refetch()}>
+            {t('welcome.error.retry')}
+          </Button>
         </Empty>
       ) : (
         <RadioGroup
           value={selected}
           onValueChange={setSelected}
-          className="grid gap-3 md:grid-cols-2"
+          className="grid gap-3"
           aria-label={t('welcome.plan.title')}
         >
-          {availablePlans.map((plan) => {
+          {listed.map((plan) => {
             const isSelected = plan.key === selected;
             const isContact = plan.key === CONTACT_PLAN_KEY;
             return (
@@ -106,45 +108,43 @@ export default function WelcomePlan() {
                 htmlFor={`plan-${plan.key}`}
                 data-testid={`card-plan-${plan.key}`}
                 className={cn(
-                  'relative flex cursor-pointer flex-col gap-3 border p-4 font-normal transition-colors',
-                  isSelected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/40',
+                  'flex cursor-pointer items-start gap-4 rounded-lg border bg-card p-4 font-normal transition-colors sm:p-5',
+                  isSelected ? 'border-primary ring-1 ring-primary' : 'border-border hover:border-foreground/25',
                 )}
               >
-                <div className="flex items-start gap-3">
-                  <RadioGroupItem id={`plan-${plan.key}`} value={plan.key} className="mt-1" />
-                  <div className="min-w-0 flex-1">
+                <RadioGroupItem id={`plan-${plan.key}`} value={plan.key} className="mt-1" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <p className="text-base font-semibold text-foreground">{plan.name}</p>
                     {plan.tagline ? (
-                      <p className="text-xs leading-relaxed text-muted-foreground">{plan.tagline}</p>
+                      <p className="text-sm text-muted-foreground">{plan.tagline}</p>
                     ) : null}
                   </div>
-                </div>
-                {plan.features?.length ? (
-                  <ul className="space-y-1.5 pl-7">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2 text-[13px] text-foreground/85">
-                        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                {isContact ? (
-                  <div className="mt-auto pl-7 pt-1">
-                    {ENTERPRISE_CONTACT_EMAIL ? (
-                      <Button asChild variant="outline" size="sm" data-testid="link-plan-contact">
+                  {plan.features?.length ? (
+                    <ul className="flex flex-wrap gap-x-4 gap-y-1.5">
+                      {plan.features.map((f) => (
+                        <li key={f} className="flex items-center gap-1.5 text-sm text-foreground/85">
+                          <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {isContact ? (
+                    ENTERPRISE_CONTACT_EMAIL ? (
+                      <Button asChild variant="outline" size="sm" className="mt-1" data-testid="link-plan-contact">
                         <a href={`mailto:${ENTERPRISE_CONTACT_EMAIL}`}>
                           <Mail />
                           {t('welcome.plan.contact')}
                         </a>
                       </Button>
                     ) : (
-                      <p className="text-[11px] text-muted-foreground" data-testid="text-plan-contact-unavailable">
+                      <p className="text-xs text-muted-foreground" data-testid="text-plan-contact-unavailable">
                         {t('welcome.plan.contactUnavailable')}
                       </p>
-                    )}
-                  </div>
-                ) : null}
+                    )
+                  ) : null}
+                </div>
               </Label>
             );
           })}

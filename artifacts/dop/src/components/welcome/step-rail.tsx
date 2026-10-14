@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Check, CornerDownRight } from 'lucide-react';
+import { Check, Minus } from 'lucide-react';
 import type { OnboardingState } from '@workspace/api-client-react';
 
 import { cn } from '@/lib/utils';
@@ -16,64 +16,72 @@ function visualOf(step: string, status: string, current: string): Visual {
   return 'pending';
 }
 
+function Dot({ visual, index }: { visual: Visual; index: number }) {
+  return (
+    <span
+      className={cn(
+        'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums transition-colors',
+        visual === 'done' && 'border-primary bg-primary text-primary-foreground',
+        visual === 'current' && 'border-primary text-primary',
+        visual === 'skipped' && 'border-dashed border-muted-foreground/60 text-muted-foreground',
+        visual === 'pending' && 'border-border text-muted-foreground',
+      )}
+      aria-hidden="true"
+    >
+      {visual === 'done' ? (
+        <Check className="h-3.5 w-3.5" />
+      ) : visual === 'skipped' ? (
+        <Minus className="h-3.5 w-3.5" />
+      ) : (
+        index + 1
+      )}
+    </span>
+  );
+}
+
 /**
- * The rail: every step the API lists, in the API's order. `viewing` is the
- * step on screen (the URL), which may differ from the API's `current` when the
- * person walks back to revisit one.
+ * The stepper: every step the API lists, in the API's order, as a row across
+ * the top. `viewing` is the step on screen (the URL), which may differ from
+ * the API's `current` when the person walks back to revisit one. Skipped is
+ * a choice, drawn as such — not as an error.
  */
 export function StepRail({ state, viewing }: { state: OnboardingState; viewing: string }) {
   const t = useI18n((s) => s.t);
   return (
-    <ol className="space-y-px" data-testid="rail-steps">
+    <ol className="flex items-center gap-1" data-testid="rail-steps">
       {state.steps.map((s, index) => {
         const visual = visualOf(s.step, s.status, state.current);
         const onScreen = s.step === viewing;
         return (
-          <li key={s.step}>
+          <li key={s.step} className="flex items-center gap-1">
+            {index > 0 ? (
+              <span
+                className={cn('h-px w-5 xl:w-8', visual === 'pending' ? 'bg-border' : 'bg-primary/50')}
+                aria-hidden="true"
+              />
+            ) : null}
             <Link
               to={welcomePathFor(s.step)}
               aria-current={onScreen ? 'step' : undefined}
               data-testid={`rail-step-${s.step}`}
               data-state={visual}
+              title={
+                visual === 'done'
+                  ? t('welcome.rail.done')
+                  : visual === 'skipped'
+                    ? t('welcome.rail.skipped')
+                    : visual === 'current'
+                      ? t('welcome.rail.current')
+                      : t('welcome.rail.pending')
+              }
               className={cn(
-                'group relative flex items-center gap-3 border-l-2 py-2.5 pl-4 pr-3 text-sm outline-none transition-colors focus-visible:bg-muted',
-                onScreen ? 'border-primary bg-muted/60' : 'border-transparent hover:bg-muted/40',
+                'flex items-center gap-2 rounded-full py-1 pl-1 pr-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+                onScreen ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
               )}
             >
-              <span
-                className={cn(
-                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[10px] tabular-nums',
-                  visual === 'done' && 'border-primary bg-primary text-primary-foreground',
-                  visual === 'current' && 'border-primary text-primary',
-                  visual === 'skipped' && 'border-dashed border-muted-foreground/60 text-muted-foreground',
-                  visual === 'pending' && 'border-border text-muted-foreground',
-                )}
-                aria-hidden="true"
-              >
-                {visual === 'done' ? (
-                  <Check className="h-3.5 w-3.5" />
-                ) : visual === 'skipped' ? (
-                  <CornerDownRight className="h-3 w-3" />
-                ) : (
-                  String(index + 1).padStart(2, '0')
-                )}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span
-                  className={cn(
-                    'block truncate',
-                    visual === 'pending' ? 'text-muted-foreground' : 'text-foreground',
-                    visual === 'current' && 'font-medium',
-                  )}
-                >
-                  {stepLabel(t, s.step)}
-                </span>
-                <span className="block text-[11px] text-muted-foreground">
-                  {visual === 'done' && t('welcome.rail.done')}
-                  {visual === 'skipped' && t('welcome.rail.skipped')}
-                  {visual === 'current' && t('welcome.rail.current')}
-                  {visual === 'pending' && t('welcome.rail.pending')}
-                </span>
+              <Dot visual={visual} index={index} />
+              <span className={cn('hidden xl:inline', (onScreen || visual === 'current') && 'font-medium')}>
+                {stepLabel(t, s.step)}
               </span>
             </Link>
           </li>
@@ -83,39 +91,24 @@ export function StepRail({ state, viewing }: { state: OnboardingState; viewing: 
   );
 }
 
-/** Phone width: the rail collapses to a progress strip at the top. */
+/** Phone width: the stepper collapses to a position line and a progress bar. */
 export function StepStrip({ state, viewing }: { state: OnboardingState; viewing: string }) {
   const t = useI18n((s) => s.t);
   const index = state.steps.findIndex((s) => s.step === viewing);
+  const done = state.steps.filter((s) => s.status === 'done' || s.status === 'skipped').length;
+  const percent = state.steps.length ? Math.round((done / state.steps.length) * 100) : 0;
   return (
     <div className="space-y-2" data-testid="strip-steps">
-      <div className="flex items-baseline justify-between gap-3 text-xs">
+      <div className="flex items-baseline justify-between gap-3 text-sm">
         <span className="truncate font-medium text-foreground">{stepLabel(t, viewing)}</span>
         {index >= 0 ? (
-          <span className="shrink-0 font-mono tabular-nums text-muted-foreground">
+          <span className="shrink-0 tabular-nums text-muted-foreground">
             {t('welcome.rail.position', { n: index + 1, total: state.steps.length })}
           </span>
         ) : null}
       </div>
-      <div className="flex gap-1" aria-hidden="true">
-        {state.steps.map((s) => {
-          const visual = visualOf(s.step, s.status, state.current);
-          return (
-            <Link
-              key={s.step}
-              to={welcomePathFor(s.step)}
-              tabIndex={-1}
-              className={cn(
-                'h-1 flex-1 rounded-full',
-                visual === 'done' && 'bg-primary',
-                visual === 'current' && 'bg-primary/60',
-                visual === 'skipped' && 'bg-muted-foreground/40',
-                visual === 'pending' && 'bg-border',
-                s.step === viewing && 'ring-1 ring-primary ring-offset-1 ring-offset-background',
-              )}
-            />
-          );
-        })}
+      <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+        <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${percent}%` }} />
       </div>
     </div>
   );

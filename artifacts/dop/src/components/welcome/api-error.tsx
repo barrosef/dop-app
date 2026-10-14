@@ -42,44 +42,43 @@ export function ApiErrorNotice({
     <div
       role="alert"
       data-testid={testId}
-      className="border-l-2 border-destructive bg-destructive/10 px-3 py-2.5 text-sm"
+      className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm"
     >
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-3">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="text-[11px] uppercase tracking-wider text-destructive">
-            {status === 412
-              ? t('welcome.error.refused')
-              : t('welcome.error.title')}
-            {status ? <span className="ml-2 font-mono tabular-nums">{status}</span> : null}
+          <p className="font-medium text-foreground">
+            {status === 412 ? t('welcome.error.refused') : t('welcome.error.title')}
           </p>
-          <p className="text-foreground" data-testid={`${testId}-message`}>{message}</p>
+          <p className="text-foreground/90" data-testid={`${testId}-message`}>{message}</p>
           {attempts !== null ? (
-            <p className="font-mono text-xs tabular-nums text-muted-foreground">
+            <p className="text-xs tabular-nums text-muted-foreground">
               {t('welcome.error.attempts', { n: attempts })}
             </p>
           ) : null}
           {retryAfter !== null ? (
-            <p className="font-mono text-xs tabular-nums text-muted-foreground">
+            <p className="text-xs tabular-nums text-muted-foreground">
               {t('welcome.error.retryAfter', { s: retryAfter })}
             </p>
           ) : null}
-          <div className="flex flex-wrap gap-2 pt-1">
-            {named ? (
-              <Button asChild size="sm" variant="outline" data-testid="link-error-step">
-                <Link to={welcomePathFor(named)}>
-                  {t('welcome.error.goToStep', { step: stepLabel(t, named) })}
-                  <ArrowRight />
-                </Link>
-              </Button>
-            ) : null}
-            {onRetry ? (
-              <Button size="sm" variant="ghost" onClick={onRetry} data-testid="button-error-retry">
-                <RotateCw />
-                {t('welcome.error.retry')}
-              </Button>
-            ) : null}
-          </div>
+          {named || onRetry ? (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {named ? (
+                <Button asChild size="sm" variant="outline" data-testid="link-error-step">
+                  <Link to={welcomePathFor(named)}>
+                    {t('welcome.error.goToStep', { step: stepLabel(t, named) })}
+                    <ArrowRight />
+                  </Link>
+                </Button>
+              ) : null}
+              {onRetry ? (
+                <Button size="sm" variant="ghost" onClick={onRetry} data-testid="button-error-retry">
+                  <RotateCw />
+                  {t('welcome.error.retry')}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

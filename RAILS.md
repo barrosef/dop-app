@@ -142,6 +142,22 @@ danger        #F85149    a state
 - **Never a literal colour in a component.** A hex that is not a token will not
   follow the theme, and that is how a palette rots one screen at a time.
 
+**The exception: the first conversation.** `/sign-up` and `/welcome/*` are
+read once, slowly, by someone who has not yet decided to stay — not for hours
+beside an editor. The owner reviewed the control-room treatment there on
+2026-10-14 and rejected it ("a Matrix screen in other colours"). On those
+screens, and only there:
+
+- one centred column (640px) under a slim bar with the stepper — no side
+  rails, no briefing column, no three-pane grid;
+- the same tokens, with `--radius` widened to `0.75rem` on the journey's root
+  (`welcome-layout.tsx`); forms live on one `StepPanel` per step;
+- no monospace eyebrows, no tracked uppercase labels, no `01 ·` numbering —
+  the position is a sentence ("Passo 2 de 5"), the explanation folds under
+  the title ("Por que pedimos isso");
+- providers show their brand glyph (`provider-logo.tsx`, in `currentColor`),
+  never a coloured initials square.
+
 ---
 
 ## 6. Everything a person reads goes through i18n

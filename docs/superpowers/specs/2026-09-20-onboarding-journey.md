@@ -54,11 +54,15 @@ These were taken on the platform side and arrive here as facts:
 ## 3. The screens
 
 All journey routes live under `/welcome/*`, outside the shell (the sidebar and
-the tree have nothing to show yet). A **step rail** on the left reflects
+the tree have nothing to show yet). A **stepper** across the top bar reflects
 `OnboardingState.steps` — `done`, `skipped`, `pending`, and the `current` one —
-in the order the API lists them. Every screen has a **narrative panel**: what
-this step does, what the platform will do with the answer, and — on optional
-steps — what skipping costs. The person reads first and acts second.
+in the order the API lists them. Each screen is one centred column: the
+position ("Passo 2 de 5"), a question as the title, one line that answers it,
+and — folded under it, "Por que pedimos isso" — what the platform will do with
+the answer and, on optional steps, what skipping costs. The person reads first
+and acts second. (Revised 2026-10-14: the first version had a left rail and a
+briefing column; the owner found it mechanical, and RAILS.md §5 now states the
+journey's exception to the control-room treatment.)
 
 ### 0 · Entry — `/sign-up` (redesign)
 
@@ -182,25 +186,31 @@ asked twice.
 4. The `/onboarding` route and the old `onboarding.tsx` are removed once the
    contact step exists; nothing else may link to them.
 
-## 5. The rail and the narrative — what must be true
+## 5. The stepper and the explanation — what must be true
 
-- The rail shows every step the API lists, in that order, with four visual
+- The stepper shows every step the API lists, in that order, with four visual
   states (done, skipped, current, pending). A skipped step reads as a choice,
   not as an error.
-- Every step has a narrative panel with three parts: what this is, what the
-  platform does with it, what happens if skipped (optional steps only). It is
-  copy, in both i18n maps, not placeholder text.
+- Every step explains itself in three parts: what this is, what the platform
+  does with it, what happens if skipped (optional steps only). It is copy, in
+  both i18n maps, not placeholder text — folded under the title, not a column.
+- The code and tasks steps show each provider's brand glyph; the catalogue's
+  `brand_color` is not painted as a square.
+- The contact step asks whether the number is on WhatsApp (ticked by default)
+  and saves the answer with the phone (`phone_whatsapp`).
+- The birth date is picked from a calendar whose month and year are menus, so
+  a date decades back is three gestures, not thirty clicks.
 - Every step's primary action names what it does (*Save and continue*,
   *Connect GitHub*, *Choose Free*) — never a bare *Next*.
 - Loading, empty and error states exist for every API call. A failed call
   shows the API's message; a 412 shows its `detail`.
-- The journey works on a phone-width viewport: the rail collapses to a
-  progress strip at the top.
+- The journey works on a phone-width viewport: the stepper collapses to a
+  position line and a progress bar.
 
 ## 6. What is yours
 
 Composition, hierarchy, how the two halves of the entry screen relate, the
-rail's design, how a tile reads when selected and when non-operated, the side
+stepper's design, how a tile reads when selected and when non-operated, the side
 panel's rhythm, the transitions between steps, how the checklist celebrates
 without being loud. This is the screen the owner will judge the product by.
 
