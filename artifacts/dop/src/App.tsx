@@ -45,8 +45,8 @@ import {
   WelcomeLayout,
   WelcomeSkeleton,
 } from '@/components/welcome/welcome-layout';
-import { ApiErrorNotice } from '@/components/welcome/api-error';
 import { JourneyExitScope } from '@/components/welcome/journey-exit';
+import { GateRefusal } from '@/components/platform/gate-refusal';
 import { useJourney } from '@/hooks/use-welcome-step';
 import { useAccount } from '@/lib/platform/account';
 import { onboardingComplete, welcomePathFor } from '@/lib/platform/welcome';
@@ -173,25 +173,11 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
 
   if (loading) return <WelcomeSkeleton />;
   if (!activeAccount) return <>{children}</>;
-  if (me.error) {
-    return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6">
-        <div className="w-full max-w-md">
-          <ApiErrorNotice error={me.error} onRetry={() => void me.refetch()} />
-        </div>
-      </div>
-    );
-  }
+  if (me.error) return <GateRefusal error={me.error} onRetry={() => void me.refetch()} />;
   if (me.isLoading || !me.data) return <WelcomeSkeleton />;
   if (onboardingComplete(me.data.onboarded, journey.data?.complete) === true) return <>{children}</>;
   if (journey.error) {
-    return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6">
-        <div className="w-full max-w-md">
-          <ApiErrorNotice error={journey.error} onRetry={() => void journey.refetch()} />
-        </div>
-      </div>
-    );
+    return <GateRefusal error={journey.error} onRetry={() => void journey.refetch()} />;
   }
   if (!journey.data) return <WelcomeSkeleton />;
   return <Navigate to={welcomePathFor(journey.data.current)} replace />;

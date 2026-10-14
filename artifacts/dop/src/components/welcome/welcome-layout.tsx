@@ -18,6 +18,7 @@ import { useSession } from '@/lib/platform/session';
 import { onboardingComplete, safeJourneyExit, welcomePathFor } from '@/lib/platform/welcome';
 import { useJourneyExit } from './journey-exit';
 import { useJourney } from '@/hooks/use-welcome-step';
+import { GateRefusal } from '@/components/platform/gate-refusal';
 import { ApiErrorNotice } from './api-error';
 import { Narrative } from './narrative';
 import { StepRail, StepStrip } from './step-rail';
@@ -65,13 +66,7 @@ export function PersonalAccountGuard({ children }: { children: ReactNode }) {
     if (getActiveAccount() !== personal.id) switchAccount(personal.id);
   }, [loading, error, personal, switchAccount]);
 
-  if (error) {
-    return (
-      <CenteredState>
-        <ApiErrorNotice error={error} onRetry={() => window.location.reload()} />
-      </CenteredState>
-    );
-  }
+  if (error) return <GateRefusal error={error} onRetry={() => window.location.reload()} />;
   if (!loading && !personal) {
     return (
       <CenteredState>
@@ -99,20 +94,10 @@ export function WelcomeGate({ children }: { children: ReactNode }) {
   const journey = useJourney();
   const exitStore = useJourneyExit();
 
-  if (me.error) {
-    return (
-      <CenteredState>
-        <ApiErrorNotice error={me.error} onRetry={() => void me.refetch()} />
-      </CenteredState>
-    );
-  }
+  if (me.error) return <GateRefusal error={me.error} onRetry={() => void me.refetch()} />;
   if (me.isLoading || !me.data) return <WelcomeSkeleton />;
   if (me.data.onboarded === undefined && journey.error) {
-    return (
-      <CenteredState>
-        <ApiErrorNotice error={journey.error} onRetry={() => void journey.refetch()} />
-      </CenteredState>
-    );
+    return <GateRefusal error={journey.error} onRetry={() => void journey.refetch()} />;
   }
   if (onboardingComplete(me.data.onboarded, journey.data?.complete) === undefined) {
     return <WelcomeSkeleton />;

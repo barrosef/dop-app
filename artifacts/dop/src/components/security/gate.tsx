@@ -23,6 +23,7 @@ import { SecondFactorSettings } from './second-factor-settings';
 import { StepUp } from './step-up';
 import { useAccount } from '../../lib/platform/account';
 import { useI18n } from '../../lib/i18n';
+import { GateRefusal } from '../platform/gate-refusal';
 
 export function SecondFactorGate({ children }: { children: React.ReactNode }) {
   const t = useI18n((s) => s.t);
@@ -43,9 +44,7 @@ export function SecondFactorGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (accountError) {
-    return <p role="alert" className="p-6 text-sm text-destructive">{(accountError as Error).message}</p>;
-  }
+  if (accountError) return <GateRefusal error={accountError} onRetry={() => window.location.reload()} />;
 
   // A failure reading the state does NOT block the cockpit. The gate that
   // matters is the core's — it refuses the sensitive operations on its own —
