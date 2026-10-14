@@ -5398,6 +5398,11 @@
             "type": "boolean",
             "title": "Onboarded",
             "default": false
+          },
+          "phone_whatsapp": {
+            "type": "boolean",
+            "title": "Phone Whatsapp",
+            "default": false
           }
         },
         "type": "object",
@@ -6232,6 +6237,17 @@
               }
             ],
             "title": "Phone"
+          },
+          "phone_whatsapp": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Whatsapp"
           }
         },
         "type": "object",

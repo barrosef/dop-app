@@ -26,6 +26,7 @@ export const meApiV1MeGetResponsePhoneVerifiedDefault = false;
 export const meApiV1MeGetResponseEmailVerifiedDefault = false;
 export const meApiV1MeGetResponseBirthDateDefault = ``;
 export const meApiV1MeGetResponseOnboardedDefault = false;
+export const meApiV1MeGetResponsePhoneWhatsappDefault = false;
 
 export const MeApiV1MeGetResponse = zod.object({
   "subject": zod.string(),
@@ -42,7 +43,8 @@ export const MeApiV1MeGetResponse = zod.object({
   "phone_verified": zod.boolean().default(meApiV1MeGetResponsePhoneVerifiedDefault),
   "email_verified": zod.boolean().default(meApiV1MeGetResponseEmailVerifiedDefault),
   "birth_date": zod.string().default(meApiV1MeGetResponseBirthDateDefault),
-  "onboarded": zod.boolean().default(meApiV1MeGetResponseOnboardedDefault)
+  "onboarded": zod.boolean().default(meApiV1MeGetResponseOnboardedDefault),
+  "phone_whatsapp": zod.boolean().default(meApiV1MeGetResponsePhoneWhatsappDefault)
 })
 
 
@@ -55,7 +57,8 @@ export const UpdateProfileApiV1MePatchBody = zod.object({
   "birth_date": zod.union([zod.string(),zod.null()]).optional(),
   "locale": zod.union([zod.string(),zod.null()]).optional(),
   "timezone": zod.union([zod.string(),zod.null()]).optional(),
-  "phone": zod.union([zod.string(),zod.null()]).optional()
+  "phone": zod.union([zod.string(),zod.null()]).optional(),
+  "phone_whatsapp": zod.union([zod.boolean(),zod.null()]).optional()
 }).describe('A partial update: an absent field is untouched.\n\nAn empty string clears phone, locale and timezone and is refused for the\nname; an empty birth_date clears it. The rules are the core\'s — this model\nonly carries the shape.')
 
 export const updateProfileApiV1MePatchResponseAvatarUrlDefault = ``;
@@ -66,6 +69,7 @@ export const updateProfileApiV1MePatchResponsePhoneVerifiedDefault = false;
 export const updateProfileApiV1MePatchResponseEmailVerifiedDefault = false;
 export const updateProfileApiV1MePatchResponseBirthDateDefault = ``;
 export const updateProfileApiV1MePatchResponseOnboardedDefault = false;
+export const updateProfileApiV1MePatchResponsePhoneWhatsappDefault = false;
 
 export const UpdateProfileApiV1MePatchResponse = zod.object({
   "subject": zod.string(),
@@ -82,7 +86,8 @@ export const UpdateProfileApiV1MePatchResponse = zod.object({
   "phone_verified": zod.boolean().default(updateProfileApiV1MePatchResponsePhoneVerifiedDefault),
   "email_verified": zod.boolean().default(updateProfileApiV1MePatchResponseEmailVerifiedDefault),
   "birth_date": zod.string().default(updateProfileApiV1MePatchResponseBirthDateDefault),
-  "onboarded": zod.boolean().default(updateProfileApiV1MePatchResponseOnboardedDefault)
+  "onboarded": zod.boolean().default(updateProfileApiV1MePatchResponseOnboardedDefault),
+  "phone_whatsapp": zod.boolean().default(updateProfileApiV1MePatchResponsePhoneWhatsappDefault)
 })
 
 

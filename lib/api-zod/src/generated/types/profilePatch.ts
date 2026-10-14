@@ -19,4 +19,5 @@ export interface ProfilePatch {
   locale?: string | null;
   timezone?: string | null;
   phone?: string | null;
+  phone_whatsapp?: boolean | null;
 }

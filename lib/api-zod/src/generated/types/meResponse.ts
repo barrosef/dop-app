@@ -22,4 +22,5 @@ export interface MeResponse {
   email_verified?: boolean;
   birth_date?: string;
   onboarded?: boolean;
+  phone_whatsapp?: boolean;
 }

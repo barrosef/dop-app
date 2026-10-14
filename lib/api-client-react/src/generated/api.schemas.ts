@@ -461,6 +461,7 @@ export interface MeResponse {
   email_verified?: boolean;
   birth_date?: string;
   onboarded?: boolean;
+  phone_whatsapp?: boolean;
 }
 
 export interface MemberRole {
@@ -726,6 +727,7 @@ export interface ProfilePatch {
   locale?: string | null;
   timezone?: string | null;
   phone?: string | null;
+  phone_whatsapp?: boolean | null;
 }
 
 /**
